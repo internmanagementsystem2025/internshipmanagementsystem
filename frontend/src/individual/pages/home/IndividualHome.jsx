@@ -295,7 +295,7 @@ const IndividualHome = ({ darkMode }) => {
               style={cardStyle(darkMode, hoveredCard === "report-placement")}
             >
               <Card.Body className="d-flex flex-column align-items-center justify-content-between">
-                <Card.Title className="text-center">Report Internship Placement</Card.Title>
+                <Card.Title className="text-center">Report</Card.Title>
                 <FiUserCheck size={40} />
               </Card.Body>
             </Card>
