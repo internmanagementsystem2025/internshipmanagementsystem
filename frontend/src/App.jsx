@@ -24,7 +24,6 @@ import IndividualAddCV from "./individual/pages/requestinternship/IndividualAddC
 import BankDetails from "./individual/pages/bank/BankDetails";
 import HelpAndSupport from "./individual/pages/Help/HelpAndSupport";
 import StatusReport from "./individual/pages/status/StatusReport";
-import ReportInternshipPlacement from "./individual/pages/report/ReportInternshipPlacement";
 import TrainingCertificateRequest from "./individual/pages/certificaterequest/TrainingCertificateRequest";
 import InstituteHome from "./institute/pages/home/InstituteHome";
 import InstituteAllApplications from "./institute/pages/instituteapplication/InstituteAllApplications";
@@ -105,6 +104,7 @@ import BulkCVUploadForm from "./institute/pages/bulkUploadCV";
 import EmailVerification  from "./components/login/EmailVerification";
 import InternCertificateRequest  from "./admin/pages/certificaterequest/InternCertificateRequest";
 import ViewCertificateRequest  from "./components/pages/ViewCertificateRequest";
+import DownloadCertificate  from "./individual/pages/certificaterequest/DownloadCertificate";
 
 function App() {
   const [darkMode, setDarkMode] = useState(
@@ -155,8 +155,8 @@ function App() {
     "/bank-details",
     "/help-support",
     "/status-report",
-    "/report-placement",
     "/request-certificate",
+    "/download-certificate"
   ];
 
   const instituteRoutes = [
@@ -220,7 +220,12 @@ function App() {
     "/add-bank-details",
     "/edit-bank-details",
     "/intern-certificate-request",
-    "/view-certificate-request/:id"
+    "/view-certificate-request/:id",
+    "/all-rotational-stations",
+    "/schedule-rotations",
+    "/add-new-station",
+    "/view-rotational-stations/:id",
+    "/edit-rotational-stations/:id",
   ];
 
   const staffRoutes = [
@@ -310,8 +315,8 @@ function App() {
     <Route path="/bank-details" element={<BankDetails darkMode={darkMode} />} />
     <Route path="/help-support" element={<HelpAndSupport darkMode={darkMode} />} />
     <Route path="/status-report" element={<StatusReport darkMode={darkMode} />} />
-    <Route path="/report-placement" element={<ReportInternshipPlacement darkMode={darkMode} />} />
     <Route path="/request-certificate" element={<TrainingCertificateRequest darkMode={darkMode} />} />
+    <Route path="/download-certificate" element={<DownloadCertificate darkMode={darkMode} />} />
     <Route path="/user-profile/:id" element={<UserProfile darkMode={darkMode} />} />
 
     {/* Institute */}
@@ -358,29 +363,29 @@ function App() {
     <Route path="/view-acceptance-letter/:nic" element={<ViewAcceptanceLetter darkMode={darkMode} />} />
     <Route path="/admin-help-support" element={<AdminHelp darkMode={darkMode} />} />
     <Route path="/staff-intern-request" element={<StaffInternRequest darkMode={darkMode} />} />
-              <Route path="/all-certificate" element={<AllCertificate darkMode={darkMode} />} />
-              <Route path="/add-certificate" element={<AddCertificate darkMode={darkMode} />} />
-              <Route path="/edit-certificate/:id" element={<EditCertificate darkMode={darkMode} />} />
-              <Route path="/view-certificate/:id" element={<ViewCertificate darkMode={darkMode} />} />
-              <Route path="/all-certificate-letters" element={<AllCertificateLetters darkMode={darkMode} />} />
-              <Route path="/add-certificate-letter" element={<AddCertificateLetter darkMode={darkMode} />} />
-              <Route path="/edit-certificate-letter/:id" element={<EditCertificateLetter darkMode={darkMode} />} />
-              <Route path="/view-certificate-letter/:id" element={<ViewCertificateLetter darkMode={darkMode} />} />
-              <Route path="/all-placement-letters" element={<AllPlacementLetters darkMode={darkMode} />} />
-              <Route path="/add-new-placement-letter" element={<AddPlacementLetter darkMode={darkMode} />} />
-              <Route path="/edit-placement-letter/:id" element={<EditPlacementLetter darkMode={darkMode} />} />
-              <Route path="/view-placement-letter/:id" element={<ViewPlacementLetter darkMode={darkMode} />} />
-              <Route path="/intern-status" element={<InternsStatus darkMode={darkMode} />} />
-              <Route path="/intern-bank-details" element={<InternBankDetails darkMode={darkMode} />} />
-              <Route path="/add-bank-details" element={<AddBankDetails darkMode={darkMode} />} />
-              <Route path="/edit-bank-details/:id" element={<EditBankDetails darkMode={darkMode} />} />
-              <Route path="/add-new-station" element={<AddNewStation darkMode={darkMode} />} />
-              <Route path="/all-rotational-stations" element={<AllRotationalStation darkMode={darkMode} />} />
-              <Route path="/view-rotational-stations/:id" element={<ViewRotationalStation darkMode={darkMode} />} />
-              <Route path="/edit-rotational-stations/:id" element={<EditStation darkMode={darkMode} />} />
-              <Route path="/schedule-rotations" element={<ScheduleRotations darkMode={darkMode} />} />
-              <Route path="/intern-certificate-request" element={<InternCertificateRequest darkMode={darkMode} />} />
-              <Route path="/view-certificate-request/:id" element={<ViewCertificateRequest darkMode={darkMode} />} />
+    <Route path="/all-certificate" element={<AllCertificate darkMode={darkMode} />} />
+    <Route path="/add-certificate" element={<AddCertificate darkMode={darkMode} />} />
+    <Route path="/edit-certificate/:id" element={<EditCertificate darkMode={darkMode} />} />
+    <Route path="/view-certificate/:id" element={<ViewCertificate darkMode={darkMode} />} />
+    <Route path="/all-certificate-letters" element={<AllCertificateLetters darkMode={darkMode} />} />
+    <Route path="/add-certificate-letter" element={<AddCertificateLetter darkMode={darkMode} />} />
+    <Route path="/edit-certificate-letter/:id" element={<EditCertificateLetter darkMode={darkMode} />} />
+    <Route path="/view-certificate-letter/:id" element={<ViewCertificateLetter darkMode={darkMode} />} />
+    <Route path="/all-placement-letters" element={<AllPlacementLetters darkMode={darkMode} />} />
+    <Route path="/add-new-placement-letter" element={<AddPlacementLetter darkMode={darkMode} />} />
+    <Route path="/edit-placement-letter/:id" element={<EditPlacementLetter darkMode={darkMode} />} />
+    <Route path="/view-placement-letter/:id" element={<ViewPlacementLetter darkMode={darkMode} />} />
+    <Route path="/intern-status" element={<InternsStatus darkMode={darkMode} />} />
+    <Route path="/intern-bank-details" element={<InternBankDetails darkMode={darkMode} />} />
+    <Route path="/add-bank-details" element={<AddBankDetails darkMode={darkMode} />} />
+    <Route path="/edit-bank-details/:id" element={<EditBankDetails darkMode={darkMode} />} />
+    <Route path="/add-new-station" element={<AddNewStation darkMode={darkMode} />} />
+    <Route path="/all-rotational-stations" element={<AllRotationalStation darkMode={darkMode} />} />
+    <Route path="/view-rotational-stations/:id" element={<ViewRotationalStation darkMode={darkMode} />} />
+    <Route path="/edit-rotational-stations/:id" element={<EditStation darkMode={darkMode} />} />
+    <Route path="/schedule-rotations" element={<ScheduleRotations darkMode={darkMode} />} />
+    <Route path="/intern-certificate-request" element={<InternCertificateRequest darkMode={darkMode} />} />
+    <Route path="/view-certificate-request/:id" element={<ViewCertificateRequest darkMode={darkMode} />} />
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+/* import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Card, Button, Form, Alert} from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
@@ -153,7 +153,6 @@ const ReportInternshipPlacement = ({ darkMode }) => {
 
   return (
     <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
-      {/* Notification Component */}
       <Notification 
         show={showNotification}
         onClose={handleNotificationClose}
@@ -161,18 +160,17 @@ const ReportInternshipPlacement = ({ darkMode }) => {
         variant={notificationVariant}
       />
       
-      {/* Info Banner */}
+
       <div className={`alert ${darkMode ? "alert-info" : "alert-warning"} text-center`} role="alert">
         This page is for authorized users only.
       </div>
 
-      {/* Header */}
       <Container className="text-center mt-4 mb-3">
         <img src={logo} alt="SLT Mobitel Logo" className="mx-auto d-block" style={{ height: "50px" }} />
         <h3 className="mt-3">REPORT INTERNSHIP PLACEMENT</h3>
       </Container>
 
-      {/* Main Form Section */}
+
       <Container className={`p-4 rounded shadow ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"} mb-5`}>
         <Row>
           <Col md={12}>
@@ -180,7 +178,7 @@ const ReportInternshipPlacement = ({ darkMode }) => {
             <Card className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}>
               <Card.Body>
                 <Form onSubmit={handleSubmit}>
-                  {/* Form Fields */}
+  
                   <Form.Group controlId="internId" className="mb-3">
                     <Form.Label>Intern ID</Form.Label>
                     <Form.Control
@@ -304,7 +302,6 @@ const ReportInternshipPlacement = ({ darkMode }) => {
                     />
                   </Form.Group>
 
-                  {/* Keep the Alert components for any form-related messages */}
                   {successMessage && <Alert variant="success">{successMessage}</Alert>}
                   {errorMessage && <Alert variant="danger">{errorMessage}</Alert>}
 
@@ -328,4 +325,4 @@ ReportInternshipPlacement.propTypes = {
   darkMode: PropTypes.bool.isRequired,
 };
 
-export default ReportInternshipPlacement;
+export default ReportInternshipPlacement; */

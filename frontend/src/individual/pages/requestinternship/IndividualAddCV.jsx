@@ -79,7 +79,10 @@ const IndividualAddCVs = ({ darkMode }) => {
     message: "",
     variant: "success",
     isLoading: false,
+    onClose: null,
   });
+  const [formModified, setFormModified] = useState(false);
+  const [showBackConfirmation, setShowBackConfirmation] = useState(false);
   const navigate = useNavigate();
 
   // Fetch districts and institutes on mount
@@ -120,6 +123,25 @@ const IndividualAddCVs = ({ darkMode }) => {
     fetchInstitutes();
   }, []);
 
+  // Handle back navigation with confirmation if form is modified
+  const handleBackClick = () => {
+    if (formModified) {
+      setShowBackConfirmation(true);
+    } else {
+      navigate(-1);
+    }
+  };
+
+  // Handle confirmation dialog responses
+  const handleConfirmBack = () => {
+    setShowBackConfirmation(false);
+    navigate(-1);
+  };
+
+  const handleCancelBack = () => {
+    setShowBackConfirmation(false);
+  };
+
   // Handle Role Change
   const handleRoleChange = (event) => {
     const role = event.target.value;
@@ -128,13 +150,21 @@ const IndividualAddCVs = ({ darkMode }) => {
       ...prevState,
       selectedRole: role,
     }));
+    setFormModified(true);
     // Clear role-specific errors when changing roles
-    setFormErrors({});
+    const commonErrors = {};
+    Object.entries(formErrors).forEach(([key, value]) => {
+      if (!key.includes('roleData')) {
+        commonErrors[key] = value;
+      }
+    });
+    setFormErrors(commonErrors);
   };
 
   // Handle Input Change with improved nested object handling
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setFormModified(true);
     
     // Handle nested paths like "roleData.dataEntry.proficiency.msWord"
     if (name.includes(".")) {
@@ -170,25 +200,73 @@ const IndividualAddCVs = ({ darkMode }) => {
         ...prevState,
         [name]: value
       }));
+      
+      // Clear error for this field if it exists
+      if (formErrors[name]) {
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     }
   };
 
   // Handle File Upload
   const handleFileChange = (e) => {
     const { name, files } = e.target;
+    setFormModified(true);
     setCvData((prevState) => ({
       ...prevState,
       [name]: files[0] || null,
     }));
+    
+    // Clear error for this field if it exists
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   // Validate form before submission
   const validateForm = () => {
     const errors = {};
     
+    // Basic validation for user info section
+    const requiredUserFields = [
+      'fullName', 'nameWithInitials', 'gender', 'postalAddress', 
+      'district', 'birthday', 'nic', 'mobileNumber', 
+      'emailAddress', 'institute'
+    ];
+    
+    requiredUserFields.forEach(field => {
+      if (!cvData[field]) {
+        errors[field] = `This field is required`;
+      }
+    });
+    
+    // Email validation
+    if (cvData.emailAddress && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cvData.emailAddress)) {
+      errors.emailAddress = "Please enter a valid email address";
+    }
+    
+    // Mobile number validation
+    if (cvData.mobileNumber && !/^\d{10}$/.test(cvData.mobileNumber)) {
+      errors.mobileNumber = "Mobile number must be 10 digits";
+    }
+    
+    // Emergency contact validation
+    if (!cvData.emergencyContactName1 || !cvData.emergencyContactNumber1) {
+      errors.emergencyContactName1 = !cvData.emergencyContactName1 ? "Primary emergency contact name is required" : undefined;
+      errors.emergencyContactNumber1 = !cvData.emergencyContactNumber1 ? "Primary emergency contact number is required" : undefined;
+    }
+    
     // Check if a role is selected
     if (!cvData.selectedRole) {
-      errors["selectedRole"] = "Please select a role";
+      errors.selectedRole = "Please select a role";
     }
     
     // Data Entry specific validations
@@ -214,11 +292,20 @@ const IndividualAddCVs = ({ darkMode }) => {
       }
     }
     
+    // Required files validation
+    if (!cvData.updatedCv) {
+      errors.updatedCv = "CV upload is required";
+    }
+    
+    if (!cvData.nicFile) {
+      errors.nicFile = "NIC scan is required";
+    }
+    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  // Form Submission - FIXED VERSION
+  // Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -226,9 +313,15 @@ const IndividualAddCVs = ({ darkMode }) => {
     if (!validateForm()) {
       setNotification({
         show: true,
-        message: "Please fill in all required fields.",
+        message: "Please fill in all required fields and correct any errors.",
         variant: "danger",
       });
+      
+      // Scroll to first error
+      const firstErrorElement = document.querySelector('.is-invalid');
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
@@ -304,12 +397,6 @@ const IndividualAddCVs = ({ darkMode }) => {
       }
     });
 
-    // Log the form data for debugging purposes
-    console.log("Form Data entries:");
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`);
-    }
-
     try {
       // Set loading state
       setNotification({
@@ -318,6 +405,11 @@ const IndividualAddCVs = ({ darkMode }) => {
         variant: "info",
         isLoading: true,
       });
+      
+      // Ensure form is properly validated
+      if (Object.keys(formErrors).length > 0) {
+        throw new Error("Please fix all form errors before submitting");
+      }
 
       const response = await fetch("http://localhost:5000/api/cvs/addcv", {
         method: "POST",
@@ -330,18 +422,23 @@ const IndividualAddCVs = ({ darkMode }) => {
       const result = await response.json();
 
       if (response.ok) {
-        // Show success notification
+        setFormModified(false); // Reset form modified state
         setNotification({
           show: true,
           message: "CV successfully added!",
           variant: "success",
           isLoading: false,
+          // Define onClose callback to navigate after notification is closed
+          onClose: () => {
+            // Use replace instead of push to prevent back button from returning to the form
+            navigate("/individual-home", { replace: true });
+          }
         });
-
-        // Navigate after a delay
+        
+        // Set a short timeout then navigate
         setTimeout(() => {
-          navigate("/individual-home");
-        }, 2000);
+          navigate("/individual-home", { replace: true });
+        }, 1500);
       } else {
         console.error("Failed to submit CV:", result);
         // Better error handling
@@ -372,7 +469,7 @@ const IndividualAddCVs = ({ darkMode }) => {
       console.error("Error submitting CV:", error);
       setNotification({
         show: true,
-        message: "Error submitting CV! Please check the console for details.",
+        message: `Error submitting CV: ${error.message || "Unknown error"}`,
         variant: "danger",
         isLoading: false,
       });
@@ -437,18 +534,69 @@ const IndividualAddCVs = ({ darkMode }) => {
               setFormErrors={setFormErrors}
             />
 
-            <button type="submit" className={`btn w-100 mt-3 ${darkMode ? "btn-primary" : "btn-success"}`}>
-              Submit CV
-            </button>
+            {/* Form Navigation Buttons - Repositioned */}
+            <div className="d-flex justify-content-between mt-4">
+              <button 
+                type="button" 
+                className={`btn ${darkMode ? "btn-outline-light" : "btn-outline-secondary"} px-5`}
+                onClick={handleBackClick}
+              >
+                Back
+              </button>
+              <button 
+                type="submit" 
+                className={`btn ${darkMode ? "btn-primary" : "btn-success"} px-5`}
+              >
+                Submit CV
+              </button>
+            </div>
           </form>
         </div>
       </main>
 
+      {/* Back Confirmation Modal */}
+      {showBackConfirmation && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1050 }}>
+          <div className={`card ${darkMode ? "bg-dark text-white" : "bg-white"}`} style={{ maxWidth: '400px' }}>
+            <div className="card-header">
+              <h5>Unsaved Changes</h5>
+            </div>
+            <div className="card-body">
+              <p>You have unsaved changes. Are you sure you want to go back?</p>
+              <div className="d-flex justify-content-end gap-2">
+                <button 
+                  className={`btn ${darkMode ? "btn-outline-light" : "btn-outline-secondary"}`}
+                  onClick={handleCancelBack}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn btn-danger" 
+                  onClick={handleConfirmBack}
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Notification
         show={notification.show}
-        onClose={() => setNotification({ ...notification, show: false })}
+        onClose={() => {
+          // First close the notification
+          setNotification({ ...notification, show: false });
+          
+          // Then execute any onClose callback if it exists
+          if (notification.onClose && typeof notification.onClose === 'function') {
+            notification.onClose();
+          }
+        }}
         message={notification.message}
         variant={notification.variant}
+        isLoading={notification.isLoading}
       />
     </div>
   );

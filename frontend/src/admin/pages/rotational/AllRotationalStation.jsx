@@ -8,6 +8,7 @@ import {
   Alert,
   Form,
   Modal,
+  Badge,
 } from "react-bootstrap";
 import { FaChevronLeft, FaChevronRight, FaCalendarCheck } from "react-icons/fa";
 import axios from "axios";
@@ -129,18 +130,21 @@ const AllRotationalStation = ({ darkMode }) => {
     try {
       setLoadingCVs(true);
       setCurrentStationName(stationName);
+      setError(null);
 
+      // Make sure this URL matches your backend route
       const response = await axios.get(
-        `${API_BASE_URL}/rotational/station-cvs/${stationId}`
+        `${API_BASE_URL}/rotational/get-cvs/${stationId}`
       );
 
-      // Transform data to match frontend expectations
+      if (!response.data.success) {
+        throw new Error(response.data.error || "Failed to fetch CVs");
+      }
+
       const transformedCVs = response.data.data.map((cv) => ({
         ...cv,
-        // Ensure dates are in correct format
-        startDate: cv.startDate ? new Date(cv.startDate).toISOString() : null,
-        endDate: cv.endDate ? new Date(cv.endDate).toISOString() : null,
-        // Calculate remaining days if not provided
+        startDate: cv.startDate ? new Date(cv.startDate) : null,
+        endDate: cv.endDate ? new Date(cv.endDate) : null,
         remainingDays: cv.remainingDays || calculateRemainingDays(cv.endDate),
       }));
 
@@ -150,14 +154,13 @@ const AllRotationalStation = ({ darkMode }) => {
       console.error("Error fetching CVs:", error);
       setError(
         error.response?.data?.error ||
-          error.response?.data?.message ||
+          error.message ||
           "Failed to load CVs for this station."
       );
     } finally {
       setLoadingCVs(false);
     }
   };
-
   return (
     <div
       className={`d-flex flex-column min-vh-100 ${
@@ -390,7 +393,7 @@ const AllRotationalStation = ({ darkMode }) => {
       <Modal
         show={showCVsModal}
         onHide={() => setShowCVsModal(false)}
-        size="lg"
+        size="xl"
         centered
         className={darkMode ? "dark-modal" : ""}
       >
@@ -410,6 +413,8 @@ const AllRotationalStation = ({ darkMode }) => {
               />
               <p>Loading CVs...</p>
             </div>
+          ) : error ? (
+            <Alert variant="danger">{error}</Alert>
           ) : stationCVs.length > 0 ? (
             <div className="table-responsive">
               <Table
@@ -421,29 +426,47 @@ const AllRotationalStation = ({ darkMode }) => {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>NIC</th>
+                    <th>Ref No</th>
                     <th>Full Name</th>
-                    <th>Intern Type</th>
+                    <th>NIC</th>
+                    <th>Role</th>
                     <th>Start Date</th>
                     <th>End Date</th>
-                    <th>Remaining Days</th>
+                    <th>Days Remaining</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stationCVs.map((cv, index) => {
-                    const remainingDays = calculateRemainingDays(cv.endDate);
+                    const daysRemaining = cv.remainingDays;
+                    const isExpired = daysRemaining <= 0;
+
                     return (
-                      <tr key={cv._id || index}>
+                      <tr key={cv._id}>
                         <td>{index + 1}</td>
-                        <td>{cv.nic || "N/A"}</td>
-                        <td>{cv.fullName || "N/A"}</td>
-                        <td>{cv.selectedRole || "N/A"}</td>
+                        <td>{cv.refNo || "N/A"}</td>
+                        <td>{cv.fullName}</td>
+                        <td>{cv.nic}</td>
+                        <td>{cv.selectedRole}</td>
                         <td>{formatDate(cv.startDate)}</td>
                         <td>{formatDate(cv.endDate)}</td>
                         <td>
-                          {remainingDays !== null
-                            ? `${Math.max(0, remainingDays)} days`
-                            : "N/A"}
+                          <Badge
+                            bg={
+                              isExpired
+                                ? "danger"
+                                : daysRemaining <= 7
+                                ? "warning"
+                                : "success"
+                            }
+                          >
+                            {isExpired ? "Expired" : `${daysRemaining} days`}
+                          </Badge>
+                        </td>
+                        <td>
+                          <Badge bg={isExpired ? "secondary" : "primary"}>
+                            {isExpired ? "Completed" : "Active"}
+                          </Badge>
                         </td>
                       </tr>
                     );

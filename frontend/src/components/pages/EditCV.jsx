@@ -14,16 +14,34 @@ const EditCV = ({ darkMode }) => {
   const { cvId } = useParams();
   const navigate = useNavigate();
 
-  // CV Data State
+  // CV Data State with proper structure matching the backend schema
   const [cvData, setCvData] = useState({
     fullName: "",
+    nameWithInitials: "",
+    gender: "",
     emailAddress: "",
     nic: "",
-    phoneNumber: "",
-    address: "",
+    birthday: "",
+    mobileNumber: "",
+    landPhone: "",
+    postalAddress: "",
     district: "",
     institute: "",
-    proficiency: { msWord: 0, msExcel: 0, msPowerPoint: 0 },
+    // Initialize roleData with proper structure
+    roleData: {
+      dataEntry: {
+        proficiency: { msWord: 0, msExcel: 0, msPowerPoint: 0 },
+        olResults: {},
+        alResults: {},
+        preferredLocation: "",
+        otherQualifications: ""
+      },
+      internship: {
+        categoryOfApply: "",
+        higherEducation: "",
+        otherQualifications: ""
+      }
+    }
   });
 
   const [districts, setDistricts] = useState([]);
@@ -32,6 +50,7 @@ const EditCV = ({ darkMode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const [formErrors, setFormErrors] = useState({});
 
   // File State
   const [files, setFiles] = useState({
@@ -59,8 +78,11 @@ const EditCV = ({ darkMode }) => {
 
         setDistricts(districtsRes.data || []);
         setInstitutes(institutesRes.data?.institutes || []);
-        setCvData(cvRes.data);
-        setSelectedRole(cvRes.data?.selectedRole || "");
+        
+        // Set CV data with proper structure
+        const fetchedCV = cvRes.data || {};
+        setCvData(fetchedCV);
+        setSelectedRole(fetchedCV.selectedRole || "");
       } catch (err) {
         console.error("Error fetching data:", err.message);
         setError("Failed to fetch data. Please try again.");
@@ -72,46 +94,94 @@ const EditCV = ({ darkMode }) => {
     if (cvId) fetchData();
   }, [cvId, navigate]);
 
-  // Handle Input Changes
+  // Handle Input Changes with proper nesting for roleData
   const handleInputChange = (e) => {
     const { name, value } = e.target;
   
     setCvData((prevData) => {
+      // Handle proficiency within roleData.dataEntry
       if (name.startsWith("proficiency.")) {
         const proficiencyKey = name.split(".")[1]; 
         return {
           ...prevData,
-          proficiency: {
-            ...prevData.proficiency,
-            [proficiencyKey]: value, 
-          },
+          roleData: {
+            ...prevData.roleData,
+            dataEntry: {
+              ...prevData.roleData.dataEntry,
+              proficiency: {
+                ...prevData.roleData.dataEntry.proficiency,
+                [proficiencyKey]: parseInt(value, 10) || 0,
+              }
+            }
+          }
         };
       }
   
-      // Handling nested olResults updates
+      // Handling olResults within roleData.dataEntry
       if (name.startsWith("olResults.")) {
         const olKey = name.split(".")[1];
         return {
           ...prevData,
-          olResults: {
-            ...prevData.olResults,
-            [olKey]: value,
-          },
+          roleData: {
+            ...prevData.roleData,
+            dataEntry: {
+              ...prevData.roleData.dataEntry,
+              olResults: {
+                ...prevData.roleData.dataEntry.olResults,
+                [olKey]: value,
+              }
+            }
+          }
         };
       }
   
-      // Handling nested alResults updates
+      // Handling alResults within roleData.dataEntry
       if (name.startsWith("alResults.")) {
         const alKey = name.split(".")[1];
         return {
           ...prevData,
-          alResults: {
-            ...prevData.alResults,
-            [alKey]: value,
-          },
+          roleData: {
+            ...prevData.roleData,
+            dataEntry: {
+              ...prevData.roleData.dataEntry,
+              alResults: {
+                ...prevData.roleData.dataEntry.alResults,
+                [alKey]: value,
+              }
+            }
+          }
+        };
+      }
+      
+      // Handle internship fields
+      if (name === "categoryOfApply" || name === "higherEducation" || (name === "otherQualifications" && selectedRole === "internship")) {
+        return {
+          ...prevData,
+          roleData: {
+            ...prevData.roleData,
+            internship: {
+              ...prevData.roleData.internship,
+              [name]: value
+            }
+          }
+        };
+      }
+      
+      // Handle dataEntry specific fields
+      if (name === "preferredLocation" || (name === "otherQualifications" && selectedRole === "dataEntry")) {
+        return {
+          ...prevData,
+          roleData: {
+            ...prevData.roleData,
+            dataEntry: {
+              ...prevData.roleData.dataEntry,
+              [name]: value
+            }
+          }
         };
       }
   
+      // Regular top-level fields
       return { ...prevData, [name]: value };
     });
   };
@@ -132,20 +202,63 @@ const EditCV = ({ darkMode }) => {
     setSuccessMessage("");
     setError(null);
 
+    // Check if there are any form errors
+    if (Object.keys(formErrors).length > 0) {
+      setError("Please fix all the validation errors before submitting.");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
 
-      // Append updated text data
-      Object.keys(cvData).forEach((key) => {
-        if (typeof cvData[key] === "object") {
-          Object.keys(cvData[key]).forEach((subKey) => {
-            formData.append(`proficiency[${subKey}]`, cvData[key][subKey]);
-          });
-        } else {
-          formData.append(key, cvData[key]);
+      // Manually structure the roleData for the form
+      // Set selectedRole separately
+      formData.append('selectedRole', selectedRole);
+      
+      // Add non-nested properties first
+      const topLevelFields = [
+        'fullName', 'nameWithInitials', 'gender', 'emailAddress', 'nic', 
+        'birthday', 'mobileNumber', 'landPhone', 'postalAddress', 'district', 
+        'institute', 'emergencyContactName1', 'emergencyContactNumber1',
+        'emergencyContactName2', 'emergencyContactNumber2', 'previousTraining'
+      ];
+      
+      topLevelFields.forEach(field => {
+        if (cvData[field] !== undefined) {
+          formData.append(field, cvData[field] === null ? '' : cvData[field]);
         }
       });
+      
+      // Handle nested roleData structure correctly
+      // For dataEntry role
+      if (cvData.roleData?.dataEntry) {
+        // Proficiency
+        Object.entries(cvData.roleData.dataEntry.proficiency || {}).forEach(([key, value]) => {
+          formData.append(`roleData[dataEntry][proficiency][${key}]`, value);
+        });
+        
+        // OL Results
+        Object.entries(cvData.roleData.dataEntry.olResults || {}).forEach(([key, value]) => {
+          formData.append(`roleData[dataEntry][olResults][${key}]`, value || '');
+        });
+        
+        // AL Results
+        Object.entries(cvData.roleData.dataEntry.alResults || {}).forEach(([key, value]) => {
+          formData.append(`roleData[dataEntry][alResults][${key}]`, value || '');
+        });
+        
+        // Other dataEntry fields
+        formData.append('roleData[dataEntry][preferredLocation]', cvData.roleData.dataEntry.preferredLocation || '');
+        formData.append('roleData[dataEntry][otherQualifications]', cvData.roleData.dataEntry.otherQualifications || '');
+      }
+      
+      // For internship role
+      if (cvData.roleData?.internship) {
+        formData.append('roleData[internship][categoryOfApply]', cvData.roleData.internship.categoryOfApply || '');
+        formData.append('roleData[internship][higherEducation]', cvData.roleData.internship.higherEducation || '');
+        formData.append('roleData[internship][otherQualifications]', cvData.roleData.internship.otherQualifications || '');
+      }
 
       // Append uploaded files if any
       Object.keys(files).forEach((key) => {
@@ -155,7 +268,7 @@ const EditCV = ({ darkMode }) => {
       });
 
       // Send update request
-      await axios.put(`${API_BASE_URL}/api/cvs/${cvId}`, formData, {
+      const response = await axios.put(`${API_BASE_URL}/api/cvs/${cvId}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
@@ -171,7 +284,9 @@ const EditCV = ({ darkMode }) => {
   };
 
   if (loading) return <div className="text-center text-white">Loading...</div>;
-  if (error) return <div className="text-danger text-center">{error}</div>;
+  if (error && error !== "Please fix all the validation errors before submitting.") {
+    return <div className="text-danger text-center">{error}</div>;
+  }
 
   return (
     <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
@@ -188,6 +303,11 @@ const EditCV = ({ darkMode }) => {
           <p className="text-start">Update your CV details below.</p>
           <hr />
 
+          {/* Error Message */}
+          {error === "Please fix all the validation errors before submitting." && (
+            <div className="alert alert-danger mb-3">{error}</div>
+          )}
+
           {/* Form */}
           <form onSubmit={handleSubmit}>
             <UserInfoSection
@@ -196,6 +316,8 @@ const EditCV = ({ darkMode }) => {
               districts={districts}
               institutes={institutes}
               darkMode={darkMode}
+              errors={formErrors}
+              setFormErrors={setFormErrors}
             />
             <InternshipTypeSection
               selectedRole={selectedRole} 

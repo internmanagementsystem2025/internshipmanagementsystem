@@ -41,6 +41,18 @@ const TrainingCertificateRequest = ({ darkMode }) => {
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationVariant, setNotificationVariant] = useState("success");
 
+  // Section/Unit options
+  const sectionUnitOptions = [
+    "Digital Platform",
+    "Digital Lab",
+    "Network Operations",
+    "Customer Support",
+    "Human Resources",
+    "Finance",
+    "Marketing",
+    "Research & Development"
+  ];
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     
@@ -313,14 +325,18 @@ const TrainingCertificateRequest = ({ darkMode }) => {
                   <Form.Group controlId="sectionUnit" className="mb-3">
                     <Form.Label>Section/Unit</Form.Label>
                     <Form.Control
-                      type="text"
-                      placeholder="Enter section/unit"
+                      as="select"
                       name="sectionUnit"
                       value={certificateRequest.sectionUnit}
                       onChange={handleInputChange}
                       className={`form-control ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"}`}
                       required
-                    />
+                    >
+                      <option value="">Select Section/Unit</option>
+                      {sectionUnitOptions.map((option, index) => (
+                        <option key={index} value={option}>{option}</option>
+                      ))}
+                    </Form.Control>
                   </Form.Group>
 
                   <Form.Group controlId="trainingCategory" className="mb-3">

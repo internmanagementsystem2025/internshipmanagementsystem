@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const {
+  getAllRotationalCVs,
+  getPendingRotationalCVs,
   getAssignedCVs,
   assignCVsToStation,
   getUnassignedRotationalCVs,
@@ -13,15 +15,17 @@ const {
 } = require("../controllers/rotationalController");
 
 // Rotational CVs
+router.get("/all-rotational", getAllRotationalCVs);
+router.get("/pending-rotational", getPendingRotationalCVs);
 router.get("/assigned-rotational", getAssignedCVs);
 router.post("/assign-to-station", assignCVsToStation);
 router.get("/unassigned-rotational", getUnassignedRotationalCVs);
 router.get("/check-assigned", checkAssignedCVs);
 router.get("/analytics", getStationAnalytics);
-
+// In your routes file
+router.get("/get-cvs/:stationId", getCVsForStation);
 router.get("/assignment-history/:cvId", getCVAssignmentHistory);
 router.post("/reassign-cv", reassignCVToNewStation);
 router.delete("/remove-from-station/:cvId", removeFromStation);
-router.get("/station-cvs/:stationId", getCVsForStation);
 
 module.exports = router;

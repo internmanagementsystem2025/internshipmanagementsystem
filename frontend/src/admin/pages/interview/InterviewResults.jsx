@@ -19,10 +19,12 @@ import {
   FaFileExcel,
   FaFilePdf,
   FaSearch,
+  FaCalendarAlt,
 } from "react-icons/fa";
 import logo from "../../../assets/logo.png";
 import PassModal from "../../../components/notifications/PassModal";
 import FailModal from "../../../components/notifications/FailModal";
+import RescheduleInterviewModal from "../../../components/notifications/RescheduleInterviewModal"; 
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -41,11 +43,15 @@ const InterviewResults = ({ darkMode }) => {
   // Modal states
   const [showPassModal, setShowPassModal] = useState(false);
   const [showFailModal, setShowFailModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false); 
   const [selectedCvId, setSelectedCvId] = useState(null);
   const [selectedCvRef, setSelectedCvRef] = useState("");
   const [isBulkAction, setIsBulkAction] = useState(false);
+  const [currentInterviewId, setCurrentInterviewId] = useState(null); 
+  const [currentInterviewName, setCurrentInterviewName] = useState(""); 
 
   const token = localStorage.getItem("token");
+  const API_BASE_URL = "http://localhost:5000/api"; 
 
   const api = axios.create({
     baseURL: "http://localhost:5000/api/cvs",
@@ -114,7 +120,7 @@ const InterviewResults = ({ darkMode }) => {
       const response = await api.get("/scheduled-interviews");
 
       // Access the data array from response.data.data
-      const interviewData = response.data.data || []; // Fallback to empty array
+      const interviewData = response.data.data || []; 
 
       // No need for additional filtering since backend already filtered
       setCvData(interviewData);
@@ -187,14 +193,57 @@ const InterviewResults = ({ darkMode }) => {
     setShowFailModal(true);
   };
 
-  // Handle pass interview
+  // Open reschedule modal
+  const openRescheduleModal = (id, refNo, interviewId, interviewName) => {
+    setSelectedCvId(id);
+    setSelectedCvRef(refNo);
+    setCurrentInterviewId(interviewId);
+    setCurrentInterviewName(interviewName);
+    setShowRescheduleModal(true);
+  };
 
+  // Handle reschedule interview
+  const handleRescheduleInterview = async (newInterviewId, currentInterviewId, reason) => {
+    setError("");
+    try {
+      if (!token) {
+        navigate("/login");
+        return false;
+      }
+  
+      // Make the API call to reschedule the interview with new interview ID
+      const response = await api.patch(`/${selectedCvId}/reschedule-interview`, {
+        interviewId: currentInterviewId,
+        newInterviewId: newInterviewId, // Send the new interview ID
+        notes: reason
+      });
+  
+      setSuccessMessage(`Interview for ${selectedCvRef} has been rescheduled successfully!`);
+      
+      // Close modal and refresh data after successful rescheduling
+      setTimeout(() => {
+        setShowRescheduleModal(false);
+        fetchCVs();
+      }, 1500);
+      
+      return true;
+    } catch (error) {
+      console.error("Reschedule error:", error);
+      const errorMessage = error.response?.data?.message || 
+        error.response?.data?.error || 
+        "Failed to reschedule interview. Please try again.";
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  // Handle pass interview
   const handlePassInterview = async () => {
     setError("");
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        // navigate("/login");
         return;
       }
 
@@ -294,7 +343,7 @@ const InterviewResults = ({ darkMode }) => {
           cv.interview?.interviews[0]?.interviewId?.interviewName || "N/A",
         "Interview Date": cv.interview?.interviews[0]?.interviewId
           ?.interviewDate
-          ? new Date(cv.interview.interviewDate).toLocaleDateString()
+          ? new Date(cv.interview.interviews[0].interviewId.interviewDate).toLocaleDateString()
           : "N/A",
         "Interview Time":
           cv.interview?.interviews[0]?.interviewId?.interviewTime || "N/A",
@@ -369,12 +418,12 @@ const InterviewResults = ({ darkMode }) => {
           cv.refNo || "N/A",
           cv.fullName || "N/A",
           cv.selectedRole || "N/A",
-          cv.interview?.interviewName || "N/A",
-          cv.interview?.interviewDate
-            ? new Date(cv.interview.interviewDate).toLocaleDateString()
+          cv.interview?.interviews[0]?.interviewId?.interviewName || "N/A",
+          cv.interview?.interviews[0]?.interviewId?.interviewDate
+            ? new Date(cv.interview.interviews[0].interviewId.interviewDate).toLocaleDateString()
             : "N/A",
-          cv.interview?.interviewTime || "N/A",
-          cv.interview?.location || "N/A",
+          cv.interview?.interviews[0]?.interviewId?.interviewTime || "N/A",
+          cv.interview?.interviews[0]?.interviewId?.location || "N/A",
           cv.interviewStatus ? cv.interviewStatus.toUpperCase() : "SCHEDULED",
         ];
         tableRows.push(cvData);
@@ -434,6 +483,13 @@ const InterviewResults = ({ darkMode }) => {
   const currentCvs = filteredCvData.slice(indexOfFirstCv, indexOfLastCv);
   const totalPages = Math.ceil(filteredCvData.length / itemsPerPage);
 
+  // Clear messages
+  const clearMessages = () => {
+    setError("");
+    setSuccessMessage("");
+  };
+
+  // Updated columns to include "Re-Schedule" column
   const columns = [
     "Select",
     "Ref. No.",
@@ -448,6 +504,7 @@ const InterviewResults = ({ darkMode }) => {
     "View",
     "Pass",
     "Fail",
+    "Reschedule"
   ];
 
   return (
@@ -575,6 +632,17 @@ const InterviewResults = ({ darkMode }) => {
           </Alert>
         )}
 
+        {successMessage && (
+          <Alert
+            variant="success"
+            className="text-center mb-3"
+            onClose={() => setSuccessMessage("")}
+            dismissible
+          >
+            {successMessage}
+          </Alert>
+        )}
+
         {loading ? (
           <div className="text-center">
             <Spinner animation="border" variant={darkMode ? "light" : "dark"} />
@@ -671,6 +739,21 @@ const InterviewResults = ({ darkMode }) => {
                           Fail
                         </Button>
                       </td>
+                      <td>
+                        <Button
+                          size="sm"
+                          variant="outline-info"
+                          onClick={() => openRescheduleModal(
+                            cv._id, 
+                            cv.refNo, 
+                            cv.interview?.interviews[0]?.interviewId?._id,
+                            cv.interview?.interviews[0]?.interviewId?.interviewName
+                          )}
+                          className="fw-semibold"
+                        >
+                          Reschedule
+                        </Button>
+                      </td>
                     </tr>
                   ))
                 ) : (
@@ -763,6 +846,20 @@ const InterviewResults = ({ darkMode }) => {
         refNo={selectedCvRef}
         isBulk={isBulkAction}
         darkMode={darkMode}
+      />
+
+      {/* Reschedule Modal */}
+      <RescheduleInterviewModal
+        show={showRescheduleModal}
+        onClose={() => setShowRescheduleModal(false)}
+        onConfirm={handleRescheduleInterview}
+        refNo={selectedCvRef}
+        darkMode={darkMode}
+        successMessage={successMessage}
+        errorMessage={error}
+        onClearMessages={clearMessages}
+        currentInterviewId={currentInterviewId}
+        currentInterviewName={currentInterviewName}
       />
     </div>
   );

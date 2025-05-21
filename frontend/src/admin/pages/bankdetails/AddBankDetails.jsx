@@ -78,10 +78,6 @@ const AddBankDetails = ({ darkMode }) => {
 
   return (
     <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
-      {/* Message Banner */}
-      <div className={`alert ${darkMode ? "alert-info" : "alert-warning"} text-center`} role="alert">
-        This form is available for all users to submit their bank details.
-      </div>
 
       {/* Header */}
       <div className="text-center mt-4 mb-3">

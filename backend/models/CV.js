@@ -96,72 +96,103 @@ const cvSchema = new mongoose.Schema(
       notes: { type: String },
     },
 
-    // Interview Details
-    interview: {
-      interviewScheduled: { type: Boolean, default: false },
-      status: {
-        type: String,
-        enum: [
-          "interview-not-scheduled",
-          "interview-scheduled",
-          "interview-completed",
-          "interview-failed",
-          "interview-no-show",
-          "interview-skipped",
-        ],
-        default: "interview-not-scheduled",
+// Interview Details
+interview: {
+  interviewScheduled: { type: Boolean, default: false },
+  status: {
+    type: String,
+    enum: [
+      "interview-not-scheduled",
+      "interview-scheduled",
+      "interview-completed",
+      "interview-failed",
+      "interview-re-scheduled",  
+      "interview-no-show",
+      "interview-skipped",
+    ],
+    default: "interview-not-scheduled",
+  },
+  interviews: [
+    {
+      interviewId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Interview",
       },
-      interviews: [
+      interviewName: { type: String },
+      interviewDate: { type: String },
+      interviewTime: { type: String },
+      location: { type: String },
+      rescheduleCount: { type: Number, default: 0 },  
+      rescheduleHistory: [
         {
-          interviewId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Interview",
-          },
-          interviewName: { type: String },
-
-          result: {
-            status: {
-              type: String,
-              enum: [
-                "interview-passed",
-                "interview-failed",
-                "interview-pending",
-              ],
-            },
-            evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-            evaluatedDate: { type: Date },
-            feedback: { type: String },
-          },
-        },
+          previousDate: { type: String },
+          previousTime: { type: String },
+          previousLocation: { type: String },
+          rescheduledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          rescheduledDate: { type: Date },
+          notes: { type: String }
+        }
       ],
-    },
-
-    // Induction Details
-    induction: {
-      inductionAssigned: { type: Boolean, default: false },
-      status: {
-        type: String,
-        enum: [
-          "induction-not-assigned",
-          "induction-assigned",
-          "induction-completed",
-          "induction-failed",
-        ],
-        default: "induction-not-assigned",
-      },
-      inductionId: { type: mongoose.Schema.Types.ObjectId, ref: "Induction" },
-      inductionName: { type: String },
-
       result: {
         status: {
           type: String,
-          enum: ["induction-passed", "induction-failed", "induction-pending"],
+          enum: [
+            "interview-passed",
+            "interview-failed",
+            "interview-pending",
+          ],
         },
         evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         evaluatedDate: { type: Date },
         feedback: { type: String },
       },
     },
+  ],
+},
+
+  // Induction Details
+  induction: {
+  inductionAssigned: { type: Boolean, default: false },
+  status: {
+    type: String,
+    enum: [
+      "induction-not-scheduled",
+      "induction-scheduled",
+      "induction-completed",
+      "induction-failed",
+      "induction-assigned",
+      "induction-re-scheduled" // New status for rescheduled inductions
+    ],
+    default: "induction-not-scheduled",
+  },
+  inductionId: { type: mongoose.Schema.Types.ObjectId, ref: "Induction" },
+  inductionName: { type: String },
+  inductionStartDate: { type: String },
+  inductionEndDate: { type: String },
+  inductionLocation: { type: String },
+  rescheduleCount: { type: Number, default: 0 }, 
+  rescheduleHistory: [
+    {
+      previousStartDate: { type: String },
+      previousEndDate: { type: String },
+      previousLocation: { type: String },
+      rescheduledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      rescheduledDate: { type: Date },
+      notes: { type: String }
+    }
+  ],
+  result: {
+    status: {
+      type: String,
+      enum: ["induction-passed", "induction-failed", "induction-pending"],
+      default: "induction-pending"
+    },
+    evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    evaluatedDate: { type: Date },
+    feedback: { type: String },
+  },
+},
+
 
     // Schema Assignment
     schemaAssignment: {
@@ -178,10 +209,10 @@ const cvSchema = new mongoose.Schema(
       },
       schemeId: { type: mongoose.Schema.Types.ObjectId, ref: "Scheme" },
       schemeName: { type: String },
-      managerId: { type: String }, // 'generalManager', 'deputyManager', or 'supervisor'
+      managerId: { type: String }, 
       managerName: { type: String },
       managerRole: { type: String },
-      internshipPeriod: { type: Number }, // in months
+      internshipPeriod: { type: Number }, 
       startDate: { type: Date },
       endDate: { type: Date },
       forRequest: { type: String, enum: ["yes", "no"], default: "no" },
@@ -200,24 +231,27 @@ const cvSchema = new mongoose.Schema(
 
     // Overall CV Status
     currentStatus: {
-      type: String,
-      enum: [
-        "draft",
-        "cv-submitted",
-        "cv-approved",
-        "cv-rejected",
-        "interview-scheduled",
-        "interview-passed",
-        "interview-failed",
-        "induction-assigned",
-        "induction-passed",
-        "induction-failed",
-        "schema-assigned",
-        "schema-completed",
-        "terminated",
-      ],
-      default: "draft",
-    },
+  type: String,
+  enum: [
+    "draft",
+    "cv-submitted",
+    "cv-approved",
+    "cv-rejected",
+    "interview-scheduled",
+    "interview-re-scheduled",
+    "interview-passed",
+    "interview-failed",
+    "induction-scheduled",
+    "induction-re-scheduled", 
+    "induction-passed",
+    "induction-failed",
+    "induction-assigned", 
+    "schema-assigned",
+    "schema-completed",
+    "terminated",
+  ],
+  default: "draft",
+},
 
     // Tracking
     applicationDate: { type: Date, default: Date.now },
@@ -242,11 +276,11 @@ const cvSchema = new mongoose.Schema(
           station: { type: mongoose.Schema.Types.ObjectId, ref: "Station" },
           startDate: { type: Date },
           endDate: { type: Date },
-          serviceTimePeriod: { type: Number }, // Service time in days
+          serviceTimePeriod: { type: Number }, 
           isCurrent: { type: Boolean, default: false },
         },
       ],
-      internshipDuration: { type: Number, default: 24 }, // Default duration in weeks
+      internshipDuration: { type: Number, default: 24 }, 
     },
   },
   { timestamps: true }
@@ -262,88 +296,95 @@ cvSchema.pre("save", function (next) {
   // Update lastUpdated timestamp
   this.lastUpdated = new Date();
 
-  // Update currentStatus based on other statuses
-  if (
+  // Only update currentStatus if flag is not set
+  if (!this._skipStatusUpdate && (
     this.isModified("cvApproval.status") ||
     this.isModified("interview.status") ||
     this.isModified("induction.status") ||
     this.isModified("schemaAssignment.status")
-  ) {
+  )) {
     this.updateCurrentStatus();
   }
+
+  // Reset the flag to ensure future saves work normally
+  this._skipStatusUpdate = false;
 
   next();
 });
 
 // Method to update currentStatus based on other statuses
 cvSchema.methods.updateCurrentStatus = function () {
-  // First check CV rejection (highest priority)
-  if (this.cvApproval.status === "cv-rejected") {
-    this.currentStatus = "cv-rejected";
-    return;
-  }
+    // First check CV rejection (highest priority)
+    if (this.cvApproval.status === "cv-rejected") {
+      this.currentStatus = "cv-rejected";
+      return;
+    }
 
-  // Check schema assignment status
-  if (this.schemaAssignment.status === "schema-assigned") {
-    this.currentStatus = "schema-assigned";
-    return;
-  } else if (this.schemaAssignment.status === "schema-completed") {
-    this.currentStatus = "schema-completed";
-    return;
-  } else if (this.schemaAssignment.status === "terminated") {
-    this.currentStatus = "terminated";
-    return;
-  }
+    // Check schema assignment status
+    if (this.schemaAssignment.status === "schema-assigned") {
+      this.currentStatus = "schema-assigned";
+      return;
+    } else if (this.schemaAssignment.status === "schema-completed") {
+      this.currentStatus = "schema-completed";
+      return;
+    } else if (this.schemaAssignment.status === "terminated") {
+      this.currentStatus = "terminated";
+      return;
+    }
 
-  // Check induction status
-  if (this.induction.status === "induction-assigned") {
-    this.currentStatus = "induction-assigned";
-    return;
-  } else if (this.induction.result?.status === "induction-passed") {
-    this.currentStatus = "induction-passed";
-    return;
-  } else if (this.induction.result?.status === "induction-failed") {
-    this.currentStatus = "induction-failed";
-    return;
-  }
+    // Check induction status - handle all induction statuses including re-scheduled
+    if (this.induction.status === "induction-re-scheduled") {
+      this.currentStatus = "induction-re-scheduled";
+      return;
+    } else if (this.induction.status === "induction-assigned") {
+      this.currentStatus = "induction-assigned";
+      return;
+    } else if (this.induction.result?.status === "induction-passed") {
+      this.currentStatus = "induction-passed";
+      return;
+    } else if (this.induction.result?.status === "induction-failed") {
+      this.currentStatus = "induction-failed";
+      return;
+    }
 
-  // Check interview status
-  if (this.interview.status === "interview-scheduled") {
-    this.currentStatus = "interview-scheduled";
-    return;
-  } else if (
-    this.interview.interviews?.some(
-      (i) => i.result?.status === "interview-passed"
-    )
-  ) {
-    this.currentStatus = "interview-passed";
-    return;
-  } else if (
-    this.interview.interviews?.some(
-      (i) => i.result?.status === "interview-failed"
-    )
-  ) {
-    this.currentStatus = "interview-failed";
-    return;
-  }
+    // Check interview status
+    if (this.interview.status === "interview-re-scheduled") {
+      this.currentStatus = "interview-re-scheduled";
+      return;
+    } else if (this.interview.status === "interview-scheduled") {
+      this.currentStatus = "interview-scheduled";
+      return;
+    } else if (this.interview.status === "interview-completed" || 
+               this.interview.interviews?.some(
+                 (i) => i.result?.status === "interview-passed"
+               )) {
+      this.currentStatus = "interview-passed";
+      return;
+    } else if (this.interview.status === "interview-failed" ||
+               this.interview.interviews?.some(
+                 (i) => i.result?.status === "interview-failed"
+               )) {
+      this.currentStatus = "interview-failed";
+      return;
+    }
 
-  // Check CV approval status
-  if (this.cvApproval.status === "cv-approved") {
-    this.currentStatus = "cv-approved";
-    return;
-  } else if (this.cvApproval.status === "cv-submitted") {
-    this.currentStatus = "cv-submitted";
-    return;
-  }
+    // Check CV approval status
+    if (this.cvApproval.status === "cv-approved") {
+      this.currentStatus = "cv-approved";
+      return;
+    } else if (this.cvApproval.status === "cv-submitted") {
+      this.currentStatus = "cv-submitted";
+      return;
+    }
 
-  // Default fallback
-  this.currentStatus = "draft";
-};
+    // Default fallback
+    this.currentStatus = "draft";
+  };
 
 // Add indexes
 // Role-Specific Indexes
-cvSchema.index({ "roleData.internship.categoryOfApply": 1 }); // For filtering interns by category
-cvSchema.index({ "roleData.dataEntry.preferredLocation": 1 }); // For filtering DEOs by location
+cvSchema.index({ "roleData.internship.categoryOfApply": 1 }); 
+cvSchema.index({ "roleData.dataEntry.preferredLocation": 1 }); 
 
 // Combined Role + Status Index (Optimizes admin dashboards)
 cvSchema.index({ selectedRole: 1, "cvApproval.status": 1 });

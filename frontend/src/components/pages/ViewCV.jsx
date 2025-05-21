@@ -13,12 +13,13 @@ const API_BASE_URL = "http://localhost:5000";
 const ViewCV = ({ darkMode }) => {
   const { cvId } = useParams(); 
   const navigate = useNavigate(); 
-  const [cvData, setCvData] = useState(null);
+  const [cvData, setCvData] = useState({});
   const [districts, setDistricts] = useState([]);
   const [institutes, setInstitutes] = useState([]);
   const [selectedRole, setSelectedRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
 
   // Fetch data when the component is mounted
   useEffect(() => {
@@ -39,7 +40,7 @@ const ViewCV = ({ darkMode }) => {
 
         setDistricts(districtsRes.data || []);
         setInstitutes(institutesRes.data?.institutes || []);
-        setCvData(cvRes.data);
+        setCvData(cvRes.data || {});
         setSelectedRole(cvRes.data?.selectedRole || "");
       } catch (err) {
         console.error("Error fetching data:", err.message);
@@ -51,6 +52,12 @@ const ViewCV = ({ darkMode }) => {
 
     if (cvId) fetchData();
   }, [cvId, navigate]); // Re-run on cvId or navigate changes
+
+  // Dummy handleInputChange function since we're in read-only mode
+  const handleInputChange = () => {
+    // This function is required by UserInfoSection but won't do anything in view mode
+    console.log("Input change attempted in read-only mode");
+  };
 
   // Loading state
   if (loading) return <div className="text-center text-white">Loading...</div>;
@@ -78,8 +85,11 @@ const ViewCV = ({ darkMode }) => {
             cvData={cvData}
             districts={districts}
             institutes={institutes}
+            handleInputChange={handleInputChange}
             darkMode={darkMode}
             readOnly={true}
+            errors={formErrors}
+            setFormErrors={setFormErrors}
           />
           <InternshipTypeSection
             cvData={cvData}

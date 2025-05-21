@@ -95,7 +95,16 @@ const ViewAllCVs = ({ darkMode }) => {
               cv.currentStatus === "cv-pending"
             );
           } else if (statusFilter === "interview-scheduled") {
-            return cv.currentStatus === "interview-scheduled";
+            return (
+              cv.currentStatus === "interview-scheduled" ||
+              cv.currentStatus === "induction-scheduled" ||
+              cv.currentStatus === "schema-assigned" ||
+              cv.currentStatus?.includes("interview") ||
+              cv.currentStatus?.includes("induction") ||
+              cv.currentStatus?.includes("schema")
+            );
+          } else if (statusFilter === "cv-rejected") {
+            return cv.currentStatus === "cv-rejected";
           }
           return true;
         });
@@ -258,7 +267,7 @@ const ViewAllCVs = ({ darkMode }) => {
             className="me-2"
             style={{ fontSize: "1.2rem", color: darkMode ? "white" : "black" }}
           />
-          view All CVs
+          View All CVs
         </h5>
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
@@ -343,13 +352,13 @@ const ViewAllCVs = ({ darkMode }) => {
                 </Button>
                 <Button
                   variant={
-                    statusFilter === "approved"
+                    statusFilter === "cv-approved"
                       ? "outline-dark"
                       : "outline-dark"
                   }
-                  onClick={() => setStatusFilter("approved")}
+                  onClick={() => setStatusFilter("cv-approved")}
                   style={
-                    statusFilter === "approved"
+                    statusFilter === "cv-approved"
                       ? { backgroundColor: "#6c757d", color: "white" }
                       : {}
                   }
@@ -358,11 +367,11 @@ const ViewAllCVs = ({ darkMode }) => {
                 </Button>
                 <Button
                   variant={
-                    statusFilter === "pending" ? "outline-dark" : "outline-dark"
+                    statusFilter === "cv-pending" ? "outline-dark" : "outline-dark"
                   }
-                  onClick={() => setStatusFilter("pending")}
+                  onClick={() => setStatusFilter("cv-pending")}
                   style={
-                    statusFilter === "pending"
+                    statusFilter === "cv-pending"
                       ? { backgroundColor: "#6c757d", color: "white" }
                       : {}
                   }
@@ -371,18 +380,33 @@ const ViewAllCVs = ({ darkMode }) => {
                 </Button>
                 <Button
                   variant={
-                    statusFilter === "interview"
+                    statusFilter === "interview-scheduled"
                       ? "outline-dark"
                       : "outline-dark"
                   }
-                  onClick={() => setStatusFilter("interview")}
+                  onClick={() => setStatusFilter("interview-scheduled")}
                   style={
-                    statusFilter === "interview"
+                    statusFilter === "interview-scheduled"
                       ? { backgroundColor: "#6c757d", color: "white" }
                       : {}
                   }
                 >
                   Interview Stage
+                </Button>
+                <Button
+                  variant={
+                    statusFilter === "cv-rejected"
+                      ? "outline-dark" 
+                      : "outline-dark"
+                  }
+                  onClick={() => setStatusFilter("cv-rejected")}
+                  style={
+                    statusFilter === "cv-rejected"
+                      ? { backgroundColor: "#6c757d", color: "white" }
+                      : {}
+                  }
+                >
+                  Rejected CVs
                 </Button>
               </ButtonGroup>
             </div>
@@ -482,9 +506,9 @@ const ViewAllCVs = ({ darkMode }) => {
                       <td>
                         <span
                           className={`badge ${
-                            cv.currentStatus === "approved"
+                            cv.currentStatus === "cv-approved"
                               ? "bg-success"
-                              : cv.currentStatus === "rejected"
+                              : cv.currentStatus === "cv-rejected"
                               ? "bg-danger"
                               : cv.currentStatus === "interview-scheduled" ||
                                 cv.currentStatus === "induction-assigned" ||
@@ -494,7 +518,7 @@ const ViewAllCVs = ({ darkMode }) => {
                           }`}
                         >
                           {cv.currentStatus
-                            ? cv.currentStatus.toUpperCase().replace("-", " ")
+                            ? cv.currentStatus.toUpperCase().replace(/-/g, " ")
                             : "PENDING"}
                         </span>
                       </td>

@@ -19,14 +19,13 @@ import logo from "../../../assets/logo.png";
 
 const API_BASE_URL = import.meta.env.VITE_BASE_URL;
 
-const ScheduleCVs = ({ darkMode }) => {
+const ScheduleRotations = ({ darkMode }) => {
   const navigate = useNavigate();
-  const [unassignedCVs, setUnassignedCVs] = useState([]);
-  const [assignedCVs, setAssignedCVs] = useState([]);
+  const [CVs, setCVs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [view, setView] = useState("unassigned");
+  const [view, setView] = useState("all"); // 'all', 'pending', 'unassigned', 'assigned'
   const [selectedCVs, setSelectedCVs] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedStation, setSelectedStation] = useState("");
@@ -39,7 +38,9 @@ const ScheduleCVs = ({ darkMode }) => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [stationHistory, setStationHistory] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [assigning, setAssigning] = useState(false);
 
+  // Effect hooks
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(""), 5000);
@@ -63,40 +64,89 @@ const ScheduleCVs = ({ darkMode }) => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [view]);
 
+  // Helper functions
+  const formatDate = (dateString, format = "local") => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+
+    if (format === "ddmmyyyy") {
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
+    return date.toLocaleDateString();
+  };
+
+  const formatDuration = (startDate, endDate) => {
+    if (!startDate || !endDate) return "N/A";
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    // Set both dates to midnight to avoid timezone issues
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    // Calculate difference in days (inclusive of both dates)
+    const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+    const weeks = Math.floor(diffDays / 7);
+    const remainingDays = diffDays % 7;
+
+    return [
+      weeks > 0 && `${weeks} week${weeks !== 1 ? "s" : ""}`,
+      remainingDays > 0 &&
+        `${remainingDays} day${remainingDays !== 1 ? "s" : ""}`,
+    ]
+      .filter(Boolean)
+      .join(" and ");
+  };
+
+  // Data fetching
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [unassignedResponse, assignedResponse, stationsResponse] =
-        await Promise.all([
-          axios.get(`${API_BASE_URL}/rotational/unassigned-rotational`),
-          axios.get(`${API_BASE_URL}/rotational/assigned-rotational`),
-          axios.get(`${API_BASE_URL}/stations/all-stations`),
-        ]);
+      let endpoint;
 
-      const processCV = (cv, isAssigned) => {
-        const processedAssignments = Array.isArray(cv.assignedStation)
-          ? cv.assignedStation.map((as) => ({
-              ...as,
-              station: as.station || { stationName: "Unknown Station" },
-              startDate: as.startDate || null,
-              endDate: as.endDate || null,
-              serviceTimePeriod: as.serviceTimePeriod || 0,
-            }))
-          : [];
+      switch (view) {
+        case "all":
+          endpoint = "/rotational/all-rotational";
+          break;
+        case "pending":
+        case "unassigned":
+        case "assigned":
+          endpoint = `/rotational/${view}-rotational`;
+          break;
+        default:
+          endpoint = "/rotational/all-rotational";
+      }
+
+      const [cvResponse, stationsResponse] = await Promise.all([
+        axios.get(`${API_BASE_URL}${endpoint}`),
+        axios.get(`${API_BASE_URL}/stations/all-stations`),
+      ]);
+
+      const processCV = (cv) => {
+        const currentAssignment =
+          cv.rotationalAssignment?.assignedStations?.find((as) => as.isCurrent);
 
         return {
           ...cv,
-          isAssignedStation: isAssigned,
-          assignedStation: processedAssignments,
+          currentAssignment,
+          hasPreviousAssignments:
+            cv.rotationalAssignment?.assignedStations?.length > 0,
+          isPending: cv.rotationalAssignment?.status === "station-not-assigned",
+          isUnassigned:
+            !currentAssignment &&
+            cv.rotationalAssignment?.status === "station-assigned",
         };
       };
 
-      setUnassignedCVs(
-        unassignedResponse.data.map((cv) => processCV(cv, false))
-      );
-      setAssignedCVs(assignedResponse.data.map((cv) => processCV(cv, true)));
+      setCVs(cvResponse.data.map(processCV));
       setStations(stationsResponse.data);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -106,21 +156,10 @@ const ScheduleCVs = ({ darkMode }) => {
     }
   };
 
+  // Event handlers
   const handleSearch = (e) => {
     setSearchTerm(e.target.value.toLowerCase());
   };
-
-  const filteredUnassignedCVs = unassignedCVs.filter(
-    (cv) =>
-      (cv.nic && cv.nic.toLowerCase().includes(searchTerm)) ||
-      (cv.fullName && cv.fullName.toLowerCase().includes(searchTerm))
-  );
-
-  const filteredAssignedCVs = assignedCVs.filter(
-    (cv) =>
-      (cv.nic && cv.nic.toLowerCase().includes(searchTerm)) ||
-      (cv.fullName && cv.fullName.toLowerCase().includes(searchTerm))
-  );
 
   const handleCVSelection = (cvId) => {
     setSelectedCVs((prev) =>
@@ -134,6 +173,28 @@ const ScheduleCVs = ({ darkMode }) => {
       return;
     }
     setShowAssignModal(true);
+  };
+
+  const handleRotateCVs = () => {
+    if (selectedCVs.length === 0) {
+      setShowNoSelectionAlert(true);
+      return;
+    }
+    setShowReassignModal(true);
+    setCurrentCV(null); // Indicates this is a bulk operation
+  };
+
+  const handleDeleteCV = async (cvId) => {
+    if (window.confirm("Are you sure you want to delete this CV?")) {
+      try {
+        await axios.delete(`${API_BASE_URL}/cvs/${cvId}`);
+        setSuccessMessage("CV deleted successfully!");
+        fetchData();
+      } catch (error) {
+        console.error("Error deleting CV:", error);
+        setError("Failed to delete CV. Please try again.");
+      }
+    }
   };
 
   const handleStartDateChange = (e) => {
@@ -170,73 +231,181 @@ const ScheduleCVs = ({ darkMode }) => {
     }
   };
 
+  const handleAssignCV = (cv) => {
+    setCurrentCV(cv);
+    setShowAssignModal(true);
+    setSelectedStation("");
+    setStartDate("");
+    setEndDate("");
+    setError("");
+    setSuccessMessage("");
+  };
+
   const handleAssignCVs = async () => {
     if (!selectedStation || !startDate || !endDate) {
-      setError("Please select a station and start date.");
+      setError("Please select a station and valid dates.");
       return;
     }
 
     try {
-      await axios.post(`${API_BASE_URL}/rotational/assign-to-station`, {
-        cvIds: selectedCVs,
-        stationId: selectedStation,
-        startDate,
-        endDate,
-      });
-      setSuccessMessage("CVs assigned successfully!");
-      fetchData();
-      setShowAssignModal(false);
-      setSelectedCVs([]);
-      setSelectedStation("");
-      setStartDate("");
-      setEndDate("");
+      const assigningCVs = currentCV ? [currentCV._id] : selectedCVs;
+      if (assigningCVs.length === 0) {
+        setError("No CVs selected for assignment");
+        return;
+      }
+
+      setAssigning(true);
+      setError("");
+      setSuccessMessage("");
+
+      const response = await axios.post(
+        `${API_BASE_URL}/rotational/assign-to-station`,
+        {
+          cvIds: assigningCVs,
+          stationId: selectedStation,
+          startDate: new Date(startDate).toISOString(),
+          endDate: new Date(endDate).toISOString(),
+          status: "station-assigned",
+        }
+      );
+
+      setSuccessMessage(
+        `Successfully assigned ${assigningCVs.length} CV${
+          assigningCVs.length > 1 ? "s" : ""
+        } to station`
+      );
+
+      // Refresh data immediately
+      await fetchData();
+
+      // Close modal and reset states after slight delay
+      setTimeout(() => {
+        setShowAssignModal(false);
+        setAssigning(false);
+        resetAssignmentForm();
+      }, 1000);
     } catch (error) {
-      console.error("Error assigning CVs:", error);
-      setError(error.response?.data?.error || "Failed to assign CVs.");
+      setAssigning(false);
+      console.error("Assignment Error:", error);
+
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Failed to complete assignment. Please try again.";
+
+      setError(errorMessage);
     }
   };
 
-  const handleReassignCV = (cv) => {
-    setCurrentCV(cv);
-    setShowReassignModal(true);
+  const handleReassignCV = async () => {
+    if (!selectedStation || !startDate || !endDate) {
+      setError("All fields are required.");
+      return;
+    }
+
+    try {
+      setAssigning(true);
+      setError("");
+      setSuccessMessage("");
+
+      // Determine if we're doing bulk or single reassignment
+      const cvIds = currentCV ? [currentCV._id] : selectedCVs;
+
+      // First remove from current stations
+      const currentDate = new Date().toISOString().split("T")[0];
+      await Promise.all(
+        cvIds.map((cvId) =>
+          axios.delete(
+            `${API_BASE_URL}/rotational/remove-from-station/${cvId}`,
+            { data: { endDate: currentDate } }
+          )
+        )
+      );
+
+      // Then assign to new station
+      const response = await axios.post(
+        `${API_BASE_URL}/rotational/assign-to-station`,
+        {
+          cvIds,
+          stationId: selectedStation,
+          startDate: new Date(startDate).toISOString(),
+          endDate: new Date(endDate).toISOString(),
+          status: "station-assigned",
+        }
+      );
+
+      setSuccessMessage(
+        `Successfully rotated ${cvIds.length} CV${
+          cvIds.length > 1 ? "s" : ""
+        } to new station`
+      );
+
+      // Refresh data and reset states
+      await fetchData();
+      setShowReassignModal(false);
+      setSelectedCVs([]);
+      resetAssignmentForm();
+    } catch (error) {
+      setAssigning(false);
+      console.error("Error rotating CVs:", error);
+      setError(
+        error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Failed to rotate CVs. Please try again."
+      );
+    } finally {
+      setAssigning(false);
+    }
+  };
+  // Helper function to reset form
+  const resetAssignmentForm = () => {
+    setSelectedStation("");
     setStartDate("");
     setEndDate("");
-    setSelectedStation("");
+    setCurrentCV(null);
+    if (!currentCV) {
+      setSelectedCVs([]);
+    }
   };
 
   const handleRemoveFromStation = async (cvId) => {
     try {
-      const currentDate = new Date().toISOString().split("T")[0];
-      const cvToRemove = assignedCVs.find((cv) => cv._id === cvId);
-      if (!cvToRemove) {
-        throw new Error("CV not found in assigned list");
+      if (
+        !window.confirm(
+          "Are you sure you want to remove this CV from its current station?"
+        )
+      ) {
+        return;
       }
 
+      const currentDate = new Date().toISOString();
       const response = await axios.delete(
         `${API_BASE_URL}/rotational/remove-from-station/${cvId}`,
         { data: { endDate: currentDate } }
       );
 
-      setAssignedCVs((prev) => prev.filter((cv) => cv._id !== cvId));
-      setUnassignedCVs((prev) => {
-        const filtered = prev.filter((cv) => cv._id !== cvId);
-        return [
-          ...filtered,
-          {
-            ...cvToRemove,
-            isAssignedStation: false,
-            assignedStation:
-              response.data?.assignedStation || cvToRemove.assignedStation,
-          },
-        ];
-      });
+      setSuccessMessage(
+        response.data.message || "CV removed from station successfully!"
+      );
 
-      setSuccessMessage("CV removed from station successfully!");
+      // Force a complete refresh of the data
+      setLoading(true);
+      await fetchData();
+      setLoading(false);
     } catch (error) {
       console.error("Error removing CV:", error);
-      setError("Failed to remove CV from station. Please try again.");
-      fetchData();
+      setError(
+        error.response?.data?.error ||
+          error.response?.data?.details ||
+          "Failed to remove CV from station. Please try again."
+      );
     }
+  };
+  // Helper function to format date for input fields
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toISOString().split("T")[0];
   };
 
   const handleSubmitReassignment = async () => {
@@ -267,12 +436,14 @@ const ScheduleCVs = ({ darkMode }) => {
       const response = await axios.get(
         `${API_BASE_URL}/rotational/assignment-history/${cvId}`
       );
-      const isCurrentlyAssigned = assignedCVs.some((cv) => cv._id === cvId);
 
+      // Process the response data to match what your frontend expects
       const history = response.data.map((assignment, index, arr) => {
-        const isCurrent = isCurrentlyAssigned && index === arr.length - 1;
+        const isCurrent = assignment.isCurrent || false;
         return {
-          ...assignment,
+          station: assignment.station,
+          startDate: assignment.startDate,
+          endDate: assignment.endDate,
           isCurrent,
           duration: formatDuration(assignment.startDate, assignment.endDate),
         };
@@ -282,55 +453,24 @@ const ScheduleCVs = ({ darkMode }) => {
       setShowHistoryModal(true);
     } catch (error) {
       console.error("Error fetching history:", error);
-      setError("Failed to load station history.");
+      setError("Failed to load station history. Please try again.");
     }
-  };
-
-  const formatDate = (dateString, format = "local") => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-
-    if (format === "ddmmyyyy") {
-      const day = String(date.getDate()).padStart(2, "0");
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
-
-    return date.toLocaleDateString();
-  };
-
-  const formatDuration = (startDate, endDate) => {
-    if (!startDate || !endDate) return "N/A";
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end - start);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-    const weeks = Math.floor(diffDays / 7);
-    const remainingDays = diffDays % 7;
-
-    return [
-      weeks > 0 && `${weeks} week${weeks !== 1 ? "s" : ""}`,
-      remainingDays > 0 &&
-        `${remainingDays} day${remainingDays !== 1 ? "s" : ""}`,
-    ]
-      .filter(Boolean)
-      .join(" and ");
   };
 
   const renderStationsTooltip = (cv) => {
-    if (!cv.assignedStation || cv.assignedStation.length === 0) {
+    if (
+      !cv.rotationalAssignment?.assignedStations ||
+      cv.rotationalAssignment.assignedStations.length === 0
+    ) {
       return "No station history available";
     }
 
-    const assignmentsToShow = cv.isAssignedStation
-      ? cv.assignedStation.slice(0, -1)
-      : cv.assignedStation;
+    const assignmentsToShow = cv.currentAssignment
+      ? cv.rotationalAssignment.assignedStations.filter((as) => !as.isCurrent)
+      : cv.rotationalAssignment.assignedStations;
 
     if (assignmentsToShow.length === 0) {
-      return cv.isAssignedStation
+      return cv.currentAssignment
         ? "Currently assigned (no previous stations)"
         : "No station history";
     }
@@ -355,16 +495,38 @@ const ScheduleCVs = ({ darkMode }) => {
       </div>
     );
   };
-
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </Spinner>
-      </div>
+  const processCV = (cv) => {
+    const currentAssignment = cv.rotationalAssignment?.assignedStations?.find(
+      (as) => as.isCurrent
     );
-  }
+
+    return {
+      ...cv,
+      currentAssignment,
+
+      hasPreviousAssignments:
+        cv.rotationalAssignment?.assignedStations?.length > 0,
+      isPending: cv.rotationalAssignment?.status === "station-not-assigned",
+      isUnassigned:
+        !currentAssignment &&
+        cv.rotationalAssignment?.status === "station-assigned", // This will be true after removal
+    };
+  };
+  // Filter CVs based on search term
+  const filteredCVs = CVs.filter((cv) => {
+    const matchesSearch =
+      (cv.nic && cv.nic.toLowerCase().includes(searchTerm)) ||
+      (cv.fullName && cv.fullName.toLowerCase().includes(searchTerm));
+
+    if (view === "pending") {
+      return matchesSearch && cv.isPending;
+    } else if (view === "unassigned") {
+      return matchesSearch && cv.isUnassigned;
+    } else if (view === "assigned") {
+      return matchesSearch && cv.currentAssignment;
+    }
+    return matchesSearch;
+  });
 
   return (
     <div
@@ -379,7 +541,7 @@ const ScheduleCVs = ({ darkMode }) => {
           className="mx-auto d-block"
           style={{ height: "50px" }}
         />
-        <h3 className="mt-3">SCHEDULE CVs</h3>
+        <h3 className="mt-3">SCHEDULE ROTATIONS</h3>
       </Container>
 
       <Container
@@ -394,14 +556,26 @@ const ScheduleCVs = ({ darkMode }) => {
           <div className="d-flex align-items-center">
             <Dropdown className="me-3">
               <Dropdown.Toggle variant="primary">
-                {view === "unassigned" ? "Unassigned CVs" : "Assigned CVs"}
+                {view === "all"
+                  ? "All Rotational CVs"
+                  : view === "pending"
+                  ? "Pending CVs"
+                  : view === "unassigned"
+                  ? "Unassigned CVs"
+                  : "Assigned CVs"}
               </Dropdown.Toggle>
               <Dropdown.Menu>
+                <Dropdown.Item onClick={() => setView("all")}>
+                  All Rotational CVs
+                </Dropdown.Item>
+                <Dropdown.Item onClick={() => setView("pending")}>
+                  Pending CVs (Never Assigned)
+                </Dropdown.Item>
                 <Dropdown.Item onClick={() => setView("unassigned")}>
-                  Unassigned
+                  Unassigned CVs (Currently Available)
                 </Dropdown.Item>
                 <Dropdown.Item onClick={() => setView("assigned")}>
-                  Assigned
+                  Currently Assigned CVs
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -414,11 +588,22 @@ const ScheduleCVs = ({ darkMode }) => {
               style={{ width: "250px" }}
             />
           </div>
-          {view === "unassigned" && (
-            <Button variant="success" onClick={handleAssignButtonClick}>
-              Assign Selected CVs
-            </Button>
-          )}
+          <div className="d-flex">
+            {(view === "unassigned" || view === "pending") && (
+              <Button
+                variant="success"
+                onClick={handleAssignButtonClick}
+                className="me-2"
+              >
+                Assign Selected CVs
+              </Button>
+            )}
+            {view === "assigned" && (
+              <Button variant="primary" onClick={handleRotateCVs}>
+                Rotate Selected CVs
+              </Button>
+            )}
+          </div>
         </div>
 
         {showNoSelectionAlert && (
@@ -445,98 +630,77 @@ const ScheduleCVs = ({ darkMode }) => {
           </Alert>
         )}
 
-        {view === "unassigned" ? (
+        <div className="table-responsive">
           <Table striped bordered hover variant={darkMode ? "dark" : "light"}>
             <thead>
               <tr>
-                <th>Select</th>
+                {/* Select column for all views except 'all' */}
+                {view !== "all" && <th>Select</th>}
                 <th>Ref. No.</th>
                 <th>NIC</th>
                 <th>Full Name</th>
                 <th>Intern Type</th>
-                <th>CV From</th>
-                <th>District</th>
-                <th>Application Date</th>
-                <th>Previous Stations</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUnassignedCVs.map((cv) => (
-                <tr key={cv._id}>
-                  <td>
-                    <Form.Check
-                      type="checkbox"
-                      checked={selectedCVs.includes(cv._id)}
-                      onChange={() => handleCVSelection(cv._id)}
-                    />
-                  </td>
-                  <td>{cv.refNo || "N/A"}</td>
-                  <td>{cv.nic || "N/A"}</td>
-                  <td>{cv.fullName || "N/A"}</td>
-                  <td>{cv.selectedRole || "N/A"}</td>
-                  <td>{cv.userType || "N/A"}</td>
-                  <td>{cv.district || "N/A"}</td>
-                  <td>{formatDate(cv.applicationDate)}</td>
-                  <td>
-                    {cv.assignedStation && cv.assignedStation.length > 0 ? (
-                      <OverlayTrigger
-                        placement="left"
-                        overlay={
-                          <Tooltip id={`tooltip-${cv._id}`}>
-                            {renderStationsTooltip(cv)}
-                          </Tooltip>
-                        }
-                      >
-                        <Button
-                          variant="info"
-                          size="sm"
-                          onClick={() => handleViewHistory(cv._id)}
-                        >
-                          View History ({cv.assignedStation.length})
-                        </Button>
-                      </OverlayTrigger>
-                    ) : (
-                      "No previous stations"
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        ) : (
-          <Table striped bordered hover variant={darkMode ? "dark" : "light"}>
-            <thead>
-              <tr>
-                <th>Ref. No.</th>
-                <th>NIC</th>
-                <th>Full Name</th>
-                <th>Intern Type</th>
-                <th>CV From</th>
-                <th>District</th>
                 <th>Current Station</th>
-                <th>Start Date</th>
-                <th>End Date</th>
+                {view === "assigned" && (
+                  <>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                  </>
+                )}
                 <th>Previous Stations</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredAssignedCVs.map((cv) => {
-                const latestAssignment =
-                  cv.assignedStation?.[cv.assignedStation.length - 1];
-                return (
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan={view === "assigned" ? 10 : view !== "all" ? 9 : 7}
+                    className="text-center"
+                  >
+                    <Spinner animation="border" /> Loading...
+                  </td>
+                </tr>
+              ) : filteredCVs.length > 0 ? (
+                filteredCVs.map((cv) => (
                   <tr key={cv._id}>
+                    {/* Select checkbox for all views except 'all' */}
+                    {view !== "all" && (
+                      <td>
+                        <Form.Check
+                          type="checkbox"
+                          checked={selectedCVs.includes(cv._id)}
+                          onChange={() => handleCVSelection(cv._id)}
+                        />
+                      </td>
+                    )}
+
                     <td>{cv.refNo || "N/A"}</td>
                     <td>{cv.nic || "N/A"}</td>
                     <td>{cv.fullName || "N/A"}</td>
                     <td>{cv.selectedRole || "N/A"}</td>
-                    <td>{cv.userType || "N/A"}</td>
-                    <td>{cv.district || "N/A"}</td>
-                    <td>{latestAssignment?.station?.stationName || "N/A"}</td>
-                    <td>{formatDate(latestAssignment?.startDate)}</td>
-                    <td>{formatDate(latestAssignment?.endDate)}</td>
                     <td>
-                      {cv.assignedStation && cv.assignedStation.length > 1 ? (
+                      {cv.currentAssignment?.station?.stationName ||
+                        "Not Assigned"}
+                    </td>
+
+                    {view === "assigned" && (
+                      <>
+                        <td>
+                          {cv.currentAssignment?.startDate
+                            ? formatDate(cv.currentAssignment.startDate)
+                            : "N/A"}
+                        </td>
+                        <td>
+                          {cv.currentAssignment?.endDate
+                            ? formatDate(cv.currentAssignment.endDate)
+                            : "N/A"}
+                        </td>
+                      </>
+                    )}
+
+                    <td>
+                      {cv.hasPreviousAssignments ? (
                         <OverlayTrigger
                           placement="left"
                           overlay={
@@ -550,52 +714,95 @@ const ScheduleCVs = ({ darkMode }) => {
                             size="sm"
                             onClick={() => handleViewHistory(cv._id)}
                           >
-                            View History ({cv.assignedStation.length - 1})
+                            View History
                           </Button>
                         </OverlayTrigger>
                       ) : (
-                        "No previous stations"
+                        "None"
                       )}
                     </td>
+
                     <td>
                       <div className="d-flex gap-2">
                         <Button
-                          variant="success"
+                          variant="primary"
                           size="sm"
-                          onClick={() => handleReassignCV(cv)}
+                          onClick={() => navigate(`/view-cv/${cv._id}`)}
                         >
-                          Reassign
+                          View/Edit
                         </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleRemoveFromStation(cv._id)}
-                        >
-                          Remove
-                        </Button>
+                        {view !== "assigned" && (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleDeleteCV(cv._id)}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                        {view === "assigned" && (
+                          <>
+                            <Button
+                              variant="warning"
+                              size="sm"
+                              onClick={() => handleReassignCV(cv)}
+                            >
+                              Reassign
+                            </Button>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleRemoveFromStation(cv._id)}
+                            >
+                              Remove
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
-                );
-              })}
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={view === "assigned" ? 10 : view !== "all" ? 9 : 7}
+                    className="text-center"
+                  >
+                    No CVs found matching your criteria
+                  </td>
+                </tr>
+              )}
             </tbody>
           </Table>
-        )}
+        </div>
       </Container>
 
       {/* Assign CVs Modal */}
       <Modal
         show={showAssignModal}
         onHide={() => {
-          setShowAssignModal(false);
-          setError("");
+          if (!assigning) {
+            setShowAssignModal(false);
+            setError("");
+          }
         }}
         centered
       >
         <Modal.Header closeButton>
-          <Modal.Title>Assign CVs to Station</Modal.Title>
+          <Modal.Title>
+            {currentCV
+              ? `Assign CV (${currentCV.fullName})`
+              : view === "assigned"
+              ? `Rotate ${selectedCVs.length} CVs`
+              : `Assign ${selectedCVs.length} CVs`}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
+          {successMessage && (
+            <Alert variant="success" className="mb-3">
+              {successMessage}
+            </Alert>
+          )}
           {error && (
             <Alert variant="danger" onClose={() => setError("")} dismissible>
               {error}
@@ -634,11 +841,30 @@ const ScheduleCVs = ({ darkMode }) => {
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowAssignModal(false)}>
+          <Button
+            variant="secondary"
+            onClick={() => setShowAssignModal(false)}
+            disabled={assigning}
+          >
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleAssignCVs}>
-            Assign
+          <Button
+            variant="primary"
+            onClick={handleAssignCVs}
+            disabled={assigning || !selectedStation}
+          >
+            {assigning ? (
+              <>
+                <Spinner as="span" size="sm" animation="border" role="status" />
+                <span className="ms-2">
+                  {view === "assigned" ? "Rotating..." : "Assigning..."}
+                </span>
+              </>
+            ) : view === "assigned" ? (
+              "Rotate"
+            ) : (
+              "Assign"
+            )}
           </Button>
         </Modal.Footer>
       </Modal>
@@ -674,12 +900,7 @@ const ScheduleCVs = ({ darkMode }) => {
               </p>
               <p className="mb-1">
                 <strong>Current Station:</strong>{" "}
-                {currentCV.assignedStation &&
-                currentCV.assignedStation.length > 0
-                  ? currentCV.assignedStation[
-                      currentCV.assignedStation.length - 1
-                    ]?.station?.stationName || "N/A"
-                  : "N/A"}
+                {currentCV.currentAssignment?.station?.stationName || "N/A"}
               </p>
             </div>
           )}
@@ -799,4 +1020,4 @@ const ScheduleCVs = ({ darkMode }) => {
   );
 };
 
-export default ScheduleCVs;
+export default ScheduleRotations;

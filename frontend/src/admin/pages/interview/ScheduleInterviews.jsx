@@ -321,7 +321,7 @@ const ScheduleInterviews = ({ darkMode }) => {
           className="mx-auto d-block"
           style={{ height: "50px" }}
         />
-        <h3 className="mt-3">ALL CV APPLICATIONS</h3>
+        <h3 className="mt-3">INTERVIEW ASSIGNMENT</h3>
       </Container>
 
       <Container
