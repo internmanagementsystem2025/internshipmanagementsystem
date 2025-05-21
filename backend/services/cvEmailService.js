@@ -346,7 +346,7 @@ const sendApproveEmail = async (internName, emailAddress, referenceNumber) => {
 };
 
 // Send decline email
-const sendDeclineEmail = async (internName, emailAddress, referenceNumber) => {
+const sendDeclineEmail = async (internName, emailAddress, referenceNumber, declineReason) => {
   if (!internName || !emailAddress || !referenceNumber) {
     throw new Error("Missing required parameters for sending decline email");
   }
@@ -355,6 +355,15 @@ const sendDeclineEmail = async (internName, emailAddress, referenceNumber) => {
   try {
     transporter = createTransporter();
     await transporter.verify();
+
+    // Prepare the decline reason section for the email
+    const reasonSection = declineReason ? 
+      `<p><strong>Reason for Decline:</strong> ${declineReason}</p>` : 
+      '';
+    
+    const plainTextReasonSection = declineReason ? 
+      `\nReason for Decline: ${declineReason}\n` : 
+      '';
 
     const mailOptions = {
       from: {
@@ -372,6 +381,7 @@ const sendDeclineEmail = async (internName, emailAddress, referenceNumber) => {
           <li>Application Status: <span style="color: #d14836; font-weight: bold;">NOT SELECTED</span></li>
           <li>Review Date: ${new Date().toLocaleDateString()}</li>
         </ul>
+        ${reasonSection}
         <p>After careful consideration of your application, we regret to inform you that we are unable to proceed with your candidacy at this time. This decision does not necessarily reflect on your qualifications or abilities, but rather is the result of the competitive nature of our selection process and specific requirements for our current internship positions.</p>
         <p><strong>Next Steps:</strong></p>
         <ul>
@@ -398,7 +408,7 @@ const sendDeclineEmail = async (internName, emailAddress, referenceNumber) => {
         - Reference Number: ${referenceNumber}
         - Application Status: NOT SELECTED
         - Review Date: ${new Date().toLocaleDateString()}
-
+        ${plainTextReasonSection}
         After careful consideration of your application, we regret to inform you that we are unable to proceed with your candidacy at this time. This decision does not necessarily reflect on your qualifications or abilities, but rather is the result of the competitive nature of our selection process and specific requirements for our current internship positions.
 
         Next Steps:
@@ -446,14 +456,17 @@ const sendInterviewScheduleEmail = async (
   emailAddress,
   referenceNumber,
   interviewName,
-  interviewDate
+  interviewDate,
+  interviewTime,
+  interviewLocation
 ) => {
   if (
     !internName ||
     !emailAddress ||
     !referenceNumber ||
     !interviewName ||
-    !interviewDate
+    !interviewDate ||
+    !interviewLocation // Added check for location
   ) {
     throw new Error(
       "Missing required parameters for sending interview schedule email"
@@ -475,13 +488,14 @@ const sendInterviewScheduleEmail = async (
           year: "numeric",
           month: "long",
           day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
         });
       }
     } catch (e) {
       console.log("Date formatting error, using original string:", e);
     }
+
+    // Add time to the display if available
+    const timeDisplay = interviewTime ? `at ${interviewTime}` : "";
 
     const mailOptions = {
       from: {
@@ -497,8 +511,8 @@ const sendInterviewScheduleEmail = async (
         <ul>
           <li>Reference Number: ${referenceNumber}</li>
           <li>Interview: <strong>${interviewName}</strong></li>
-          <li>Date and Time: <strong>${formattedDate}</strong></li>
-          <li>Location: Sri Lanka Telecom Mobitel Head Office, Colombo</li>
+          <li>Date and Time: <strong>${formattedDate}</strong> ${timeDisplay}</li>
+          <li>Location: <strong>${interviewLocation}</strong></li>
         </ul>
         <p><strong>What to Bring:</strong></p>
         <ol>
@@ -527,8 +541,8 @@ const sendInterviewScheduleEmail = async (
         Interview Details:
         - Reference Number: ${referenceNumber}
         - Interview: ${interviewName}
-        - Date and Time: ${formattedDate}
-        - Location: Sri Lanka Telecom Mobitel Head Office, Colombo
+        - Date and Time: ${formattedDate} ${timeDisplay}
+        - Location: ${interviewLocation}
 
         What to Bring:
         1. National Identity Card or valid photo identification
@@ -574,6 +588,357 @@ const sendInterviewScheduleEmail = async (
   }
 };
 
+const sendInterviewRescheduleEmail = async (
+  internName,
+  emailAddress,
+  referenceNumber,
+  interviewName,
+  interviewDate,
+  interviewTime,
+  interviewLocation,
+  rescheduleReason
+) => {
+  if (
+    !internName ||
+    !emailAddress ||
+    !referenceNumber ||
+    !interviewName ||
+    !interviewDate ||
+    !interviewLocation // Added check for location
+  ) {
+    throw new Error(
+      "Missing required parameters for sending interview reschedule email"
+    );
+  }
+
+  let transporter;
+  try {
+    transporter = createTransporter();
+    await transporter.verify();
+
+    // Format interview date nicely if it's a valid date
+    let formattedDate = interviewDate;
+    try {
+      const dateObj = new Date(interviewDate);
+      if (!isNaN(dateObj.getTime())) {
+        formattedDate = dateObj.toLocaleString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+    } catch (e) {
+      console.log("Date formatting error, using original string:", e);
+    }
+
+    // Format time if provided
+    const timeDisplay = interviewTime ? `at ${interviewTime}` : "";
+
+    // Use a clean and professional reason display
+    const reasonDisplay = rescheduleReason || "Due to scheduling changes";
+
+    const mailOptions = {
+      from: {
+        name: "Mobitel Intern Management System",
+        address: process.env.EMAIL_USER,
+      },
+      to: emailAddress,
+      subject: "Interview Rescheduled - Mobitel Intern Management System",
+      html: `
+        <p>Dear ${internName},</p>
+        <p><strong>Important Notice:</strong> Your previously scheduled interview has been rescheduled.</p>
+        
+        <div style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0;">
+          <p><strong>Reason for Rescheduling:</strong> ${reasonDisplay}</p>
+        </div>
+        
+        <p><strong>New Interview Details:</strong></p>
+        <ul>
+          <li>Reference Number: ${referenceNumber}</li>
+          <li>Interview: <strong>${interviewName}</strong></li>
+          <li>New Date: <strong>${formattedDate}</strong> ${timeDisplay}</li>
+          <li>Location: <strong>${interviewLocation}</strong></li>
+        </ul>
+        
+        <p><strong>What to Bring:</strong></p>
+        <ol>
+          <li>National Identity Card or valid photo identification</li>
+          <li>A printed copy of your CV</li>
+          <li>Original educational certificates for verification</li>
+          <li>Any portfolio or work samples (if applicable)</li>
+        </ol>
+        
+        <p><strong>Important Notes:</strong></p>
+        <ul>
+          <li>Please arrive 15 minutes before your scheduled interview time</li>
+          <li>Dress professionally for the interview</li>
+          <li>Be prepared to discuss your educational background, skills, and career goals</li>
+          <li>The interview will last approximately 45-60 minutes</li>
+        </ul>
+        
+        <p>We apologize for any inconvenience this change may cause. If you are unable to attend the interview at the new scheduled time, please contact our HR team at hr.interns@mobitel.lk as soon as possible.</p>
+        
+        <p>We look forward to meeting you!</p>
+        <p>Best regards,<br>HR Department<br>Sri Lanka Telecom Mobitel</p>
+        <p>---<br>This is an automated message. Please do not reply directly to this email.</p>
+      `,
+      text: `
+        Dear ${internName},
+
+        IMPORTANT NOTICE: Your previously scheduled interview has been rescheduled.
+
+        Reason for Rescheduling: ${reasonDisplay}
+
+        New Interview Details:
+        - Reference Number: ${referenceNumber}
+        - Interview: ${interviewName}
+        - New Date: ${formattedDate} ${timeDisplay}
+        - Location: ${interviewLocation}
+
+        What to Bring:
+        1. National Identity Card or valid photo identification
+        2. A printed copy of your CV
+        3. Original educational certificates for verification
+        4. Any portfolio or work samples (if applicable)
+
+        Important Notes:
+        - Please arrive 15 minutes before your scheduled interview time
+        - Dress professionally for the interview
+        - Be prepared to discuss your educational background, skills, and career goals
+        - The interview will last approximately 45-60 minutes
+
+        We apologize for any inconvenience this change may cause. If you are unable to attend the interview at the new scheduled time, please contact our HR team at hr.interns@mobitel.lk as soon as possible.
+
+        We look forward to meeting you!
+
+        Best regards,
+        HR Department
+        Sri Lanka Telecom Mobitel
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Interview reschedule email sent:", {
+      messageId: info.messageId,
+      recipient: emailAddress,
+      timestamp: new Date().toISOString(),
+      reason: rescheduleReason
+    });
+
+    return info;
+  } catch (error) {
+    console.error("Error sending interview reschedule email:", {
+      error: error.message,
+      recipient: emailAddress,
+      timestamp: new Date().toISOString(),
+    });
+    throw error;
+  } finally {
+    if (transporter) {
+      transporter.close();
+    }
+  }
+};
+
+const sendInterviewPassEmail = async (
+  internName,
+  emailAddress,
+  referenceNumber,
+  interviewName,
+  nextSteps = "HR will contact you shortly with details regarding your internship offer."
+) => {
+  if (
+    !internName ||
+    !emailAddress ||
+    !referenceNumber ||
+    !interviewName
+  ) {
+    throw new Error(
+      "Missing required parameters for sending interview pass email"
+    );
+  }
+
+  let transporter;
+  try {
+    transporter = createTransporter();
+    await transporter.verify();
+
+    const mailOptions = {
+      from: {
+        name: "Mobitel Intern Management System",
+        address: process.env.EMAIL_USER,
+      },
+      to: emailAddress,
+      subject: "Interview Results - Congratulations! - Mobitel Intern Management System",
+      html: `
+        <p>Dear ${internName},</p>
+        <p>We are pleased to inform you that you have <strong>successfully passed</strong> your interview for the internship position at Sri Lanka Telecom Mobitel.</p>
+        
+        <div style="background-color: #e7f7e7; padding: 15px; border-left: 4px solid #28a745; margin: 15px 0;">
+          <p><strong>Congratulations!</strong> Your performance during the ${interviewName} interview process demonstrated the skills and qualities we value at Mobitel.</p>
+        </div>
+        
+        <p><strong>Application Details:</strong></p>
+        <ul>
+          <li>Reference Number: ${referenceNumber}</li>
+          <li>Interview: ${interviewName}</li>
+        </ul>
+        
+        <p><strong>Next Steps:</strong></p>
+        <p>${nextSteps}</p>
+        
+        <p>In the meantime, please ensure your contact information is up-to-date in our system. If you have any immediate questions, please contact our HR team at hr.interns@mobitel.lk.</p>
+        
+        <p>We look forward to your contributions to our team!</p>
+        <p>Best regards,<br>HR Department<br>Sri Lanka Telecom Mobitel</p>
+        <p>---<br>This is an automated message. Please do not reply directly to this email.</p>
+      `,
+      text: `
+        Dear ${internName},
+
+        We are pleased to inform you that you have successfully passed your interview for the internship position at Sri Lanka Telecom Mobitel.
+
+        Congratulations! Your performance during the ${interviewName} interview process demonstrated the skills and qualities we value at Mobitel.
+
+        Application Details:
+        - Reference Number: ${referenceNumber}
+        - Interview: ${interviewName}
+
+        Next Steps:
+        ${nextSteps}
+
+        In the meantime, please ensure your contact information is up-to-date in our system. If you have any immediate questions, please contact our HR team at hr.interns@mobitel.lk.
+
+        We look forward to your contributions to our team!
+
+        Best regards,
+        HR Department
+        Sri Lanka Telecom Mobitel
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Interview pass email sent:", {
+      messageId: info.messageId,
+      recipient: emailAddress,
+      timestamp: new Date().toISOString(),
+    });
+
+    return info;
+  } catch (error) {
+    console.error("Error sending interview pass email:", {
+      error: error.message,
+      recipient: emailAddress,
+      timestamp: new Date().toISOString(),
+    });
+    throw error;
+  } finally {
+    if (transporter) {
+      transporter.close();
+    }
+  }
+};
+
+const sendInterviewFailEmail = async (
+  internName,
+  emailAddress,
+  referenceNumber,
+  interviewName,
+  feedbackMessage = "We received many qualified applications, and while your profile shows potential, we have decided to proceed with other candidates whose qualifications better match our current requirements."
+) => {
+  if (
+    !internName ||
+    !emailAddress ||
+    !referenceNumber ||
+    !interviewName
+  ) {
+    throw new Error(
+      "Missing required parameters for sending interview fail email"
+    );
+  }
+
+  let transporter;
+  try {
+    transporter = createTransporter();
+    await transporter.verify();
+
+    const mailOptions = {
+      from: {
+        name: "Mobitel Intern Management System",
+        address: process.env.EMAIL_USER,
+      },
+      to: emailAddress,
+      subject: "Interview Results - Mobitel Intern Management System",
+      html: `
+        <p>Dear ${internName},</p>
+        <p>Thank you for attending the recent interview for the internship position at Sri Lanka Telecom Mobitel.</p>
+        
+        <div style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #6c757d; margin: 15px 0;">
+          <p>After careful consideration of all candidates, we regret to inform you that we will not be moving forward with your application at this time.</p>
+        </div>
+        
+        <p><strong>Application Details:</strong></p>
+        <ul>
+          <li>Reference Number: ${referenceNumber}</li>
+          <li>Interview: ${interviewName}</li>
+        </ul>
+        
+        <p><strong>Feedback:</strong></p>
+        <p>${feedbackMessage}</p>
+        
+        <p>We encourage you to apply for future opportunities at Mobitel that align with your skills and career objectives. Your profile will remain in our database, and we may contact you if a suitable position becomes available.</p>
+        
+        <p>We appreciate your interest in Sri Lanka Telecom Mobitel and wish you success in your future endeavors.</p>
+        <p>Best regards,<br>HR Department<br>Sri Lanka Telecom Mobitel</p>
+        <p>---<br>This is an automated message. Please do not reply directly to this email.</p>
+      `,
+      text: `
+        Dear ${internName},
+
+        Thank you for attending the recent interview for the internship position at Sri Lanka Telecom Mobitel.
+
+        After careful consideration of all candidates, we regret to inform you that we will not be moving forward with your application at this time.
+
+        Application Details:
+        - Reference Number: ${referenceNumber}
+        - Interview: ${interviewName}
+
+        Feedback:
+        ${feedbackMessage}
+
+        We encourage you to apply for future opportunities at Mobitel that align with your skills and career objectives. Your profile will remain in our database, and we may contact you if a suitable position becomes available.
+
+        We appreciate your interest in Sri Lanka Telecom Mobitel and wish you success in your future endeavors.
+
+        Best regards,
+        HR Department
+        Sri Lanka Telecom Mobitel
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Interview fail email sent:", {
+      messageId: info.messageId,
+      recipient: emailAddress,
+      timestamp: new Date().toISOString(),
+    });
+
+    return info;
+  } catch (error) {
+    console.error("Error sending interview fail email:", {
+      error: error.message,
+      recipient: emailAddress,
+      timestamp: new Date().toISOString(),
+    });
+    throw error;
+  } finally {
+    if (transporter) {
+      transporter.close();
+    }
+  }
+};
+
 const sendInductionAssignmentEmail = async ({
   recipientName = "Intern",
   recipientEmail,
@@ -589,10 +954,27 @@ const sendInductionAssignmentEmail = async ({
   if (!startDate) throw new Error("Start date is required");
   if (!endDate) throw new Error("End date is required");
 
+  // Import required modules if not already imported at the top level
+  const nodemailer = require('nodemailer');
+  
   let transporter;
   try {
-    transporter = createTransporter();
+    // Create transporter directly if createTransporter function is unavailable
+    transporter = typeof createTransporter === 'function' 
+      ? createTransporter() 
+      : nodemailer.createTransport({
+          host: process.env.EMAIL_HOST,
+          port: process.env.EMAIL_PORT,
+          secure: process.env.EMAIL_SECURE === 'true',
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+    
+    // Verify transporter configuration
     await transporter.verify();
+    console.log("Email transporter verified successfully");
 
     const formatDate = (dateString) => {
       try {
@@ -639,8 +1021,213 @@ const sendInductionAssignmentEmail = async ({
       `,
     };
 
+    console.log(`Attempting to send email to: ${recipientEmail}`);
     const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent to:", recipientEmail);
+    console.log("Email sent successfully:", info.messageId);
+    return info;
+  } catch (error) {
+    console.error("Email sending failed:", {
+      recipient: recipientEmail,
+      error: error.message,
+      stack: error.stack,
+    });
+    throw error;
+  } finally {
+    if (transporter && typeof transporter.close === 'function') {
+      transporter.close();
+    }
+  }
+};
+
+
+const sendInductionRescheduleEmail = async ({
+  recipientName = "Intern",
+  recipientEmail,
+  refNo = "N/A",
+  inductionName,
+  startDate,
+  endDate,
+  location = "Sri Lanka Telecom Mobitel Training Center, Colombo",
+  notes = "No additional information provided."
+}) => {
+  // Validate required fields
+  if (!recipientEmail) throw new Error("Recipient email is required");
+  if (!inductionName) throw new Error("Induction name is required");
+  if (!startDate) throw new Error("Start date is required");
+  if (!endDate) throw new Error("End date is required");
+
+  let transporter;
+  try {
+    transporter = createTransporter();
+    await transporter.verify();
+
+    const formatDate = (dateString) => {
+      try {
+        const date = new Date(dateString);
+        return isNaN(date.getTime())
+          ? dateString
+          : date.toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            });
+      } catch (e) {
+        console.error("Date formatting error:", e);
+        return dateString;
+      }
+    };
+
+    const mailOptions = {
+      from: {
+        name: "Mobitel Intern Management System",
+        address: process.env.EMAIL_USER,
+      },
+      to: recipientEmail,
+      subject: `Induction Rescheduled - ${inductionName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <p>Dear ${recipientName},</p>
+          
+          <p><strong>Important Notice:</strong> Your induction program has been rescheduled.</p>
+          
+          <h3>Updated Program Details</h3>
+          <ul>
+            <li><strong>Reference No:</strong> ${refNo}</li>
+            <li><strong>Program:</strong> ${inductionName}</li>
+            <li><strong>New Dates:</strong> ${formatDate(startDate)} to ${formatDate(endDate)}</li>
+            <li><strong>Location:</strong> ${location}</li>
+          </ul>
+          
+          <p><strong>Additional Information:</strong> ${notes}</p>
+          
+          <p>If you have any questions about this change, please contact the HR department as soon as possible.</p>
+          
+          <p>Best regards,<br>HR Department</p>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Reschedule email sent to:", recipientEmail);
+    return info;
+  } catch (error) {
+    console.error("Email sending failed:", {
+      recipient: recipientEmail,
+      error: error.message,
+    });
+    throw error;
+  } finally {
+    if (transporter) {
+      transporter.close();
+    }
+  }
+};
+
+// Function to send induction pass email
+const sendInductionPassEmail = async ({
+  recipientName = "Intern",
+  recipientEmail,
+  refNo = "N/A",
+  inductionName,
+  nextSteps = "HR will contact you shortly with details regarding your internship placement."
+}) => {
+  // Validate required fields
+  if (!recipientEmail) throw new Error("Recipient email is required");
+  if (!inductionName) throw new Error("Induction name is required");
+
+  let transporter;
+  try {
+    transporter = createTransporter();
+    await transporter.verify();
+
+    const mailOptions = {
+      from: {
+        name: "Mobitel Intern Management System",
+        address: process.env.EMAIL_USER,
+      },
+      to: recipientEmail,
+      subject: `Congratulations! Induction Successfully Completed - ${inductionName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <p>Dear ${recipientName},</p>
+          
+          <p>Congratulations! We are pleased to inform you that you have successfully completed the induction program: <strong>${inductionName}</strong>.</p>
+          
+          <h3>What's Next?</h3>
+          <p>${nextSteps}</p>
+          
+          <p>Reference No: ${refNo}</p>
+          
+          <p>We look forward to your contributions during your internship at Sri Lanka Telecom Mobitel.</p>
+          
+          <p>Best regards,<br>HR Department</p>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Induction pass email sent to:", recipientEmail);
+    return info;
+  } catch (error) {
+    console.error("Email sending failed:", {
+      recipient: recipientEmail,
+      error: error.message,
+    });
+    throw error;
+  } finally {
+    if (transporter) {
+      transporter.close();
+    }
+  }
+};
+
+// Function to send induction fail email
+const sendInductionFailEmail = async ({
+  recipientName = "Intern",
+  recipientEmail,
+  refNo = "N/A",
+  inductionName,
+  feedback = "Thank you for your participation in our induction program."
+}) => {
+  // Validate required fields
+  if (!recipientEmail) throw new Error("Recipient email is required");
+  if (!inductionName) throw new Error("Induction name is required");
+
+  let transporter;
+  try {
+    transporter = createTransporter();
+    await transporter.verify();
+
+    const mailOptions = {
+      from: {
+        name: "Mobitel Intern Management System",
+        address: process.env.EMAIL_USER,
+      },
+      to: recipientEmail,
+      subject: `Induction Program Update - ${inductionName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <p>Dear ${recipientName},</p>
+          
+          <p>Thank you for participating in our induction program: <strong>${inductionName}</strong>.</p>
+          
+          <p>After careful consideration, we regret to inform you that you have not met the requirements to proceed further in the internship program.</p>
+          
+          <h3>Feedback</h3>
+          <p>${feedback}</p>
+          
+          <p>Reference No: ${refNo}</p>
+          
+          <p>We appreciate your interest in Sri Lanka Telecom Mobitel and wish you success in your future endeavors.</p>
+          
+          <p>Best regards,<br>HR Department</p>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Induction fail email sent to:", recipientEmail);
     return info;
   } catch (error) {
     console.error("Email sending failed:", {
@@ -662,141 +1249,11 @@ module.exports = {
   sendApproveEmail,
   sendInductionAssignmentEmail,
   sendInterviewScheduleEmail,
+  sendInterviewRescheduleEmail,
+  createTransporter,
+  sendInterviewFailEmail,
+  sendInterviewPassEmail,
+  sendInductionFailEmail,
+  sendInductionPassEmail,
+  sendInductionRescheduleEmail,
 };
-/*const sendInductionAssignmentEmail = async ({
-  recipientName,
-  recipientEmail,
-  refNo,
-  inductionName,
-  startDate,
-  endDate,
-  location = "Sri Lanka Telecom Mobitel Training Center, Colombo",
-  requirements = "National ID, Notebook & Pen, Signed Agreement Form, Passport Photos",
-}) => {
-  // Validate required parameters
-  const requiredParams = {
-    recipientName,
-    recipientEmail,
-    refNo,
-    inductionName,
-    startDate,
-    endDate,
-  };
-  const missingParams = Object.entries(requiredParams)
-    .filter(([_, value]) => !value)
-    .map(([key]) => key);
-
-  if (missingParams.length > 0) {
-    throw new Error(`Missing required parameters: ${missingParams.join(", ")}`);
-  }
-
-  let transporter;
-  try {
-    transporter = createTransporter();
-    await transporter.verify();
-
-    // Format dates
-    const formatDate = (dateString) => {
-      try {
-        const date = new Date(dateString);
-        return isNaN(date.getTime())
-          ? dateString
-          : date.toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            });
-      } catch (e) {
-        console.error("Date formatting error:", e);
-        return dateString;
-      }
-    };
-
-    const formattedStartDate = formatDate(startDate);
-    const formattedEndDate = formatDate(endDate);
-
-    // Prepare requirements list
-    const requirementsList = requirements.split(",").map((item) => item.trim());
-
-    const mailOptions = {
-      from: {
-        name: "Mobitel Intern Management System",
-        address: process.env.EMAIL_USER,
-      },
-      to: recipientEmail,
-      subject: `Induction Program Assignment - ${inductionName}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-          <p>Dear ${recipientName},</p>
-          
-          <p>Congratulations! We are pleased to inform you that you have been selected to participate in our upcoming induction program at Sri Lanka Telecom Mobitel.</p>
-          
-          <h3 style="color: #0056b3;">Program Details</h3>
-          <ul>
-            <li><strong>Reference Number:</strong> ${refNo}</li>
-            <li><strong>Program Name:</strong> ${inductionName}</li>
-            <li><strong>Dates:</strong> ${formattedStartDate} to ${formattedEndDate}</li>
-            <li><strong>Reporting Time:</strong> 8:30 AM on first day</li>
-            <li><strong>Location:</strong> ${location}</li>
-          </ul>
-          
-          <h3 style="color: #0056b3;">What to Bring</h3>
-          <ol>
-            ${requirementsList.map((item) => `<li>${item}</li>`).join("")}
-          </ol>
-          
-          <h3 style="color: #0056b3;">Program Overview</h3>
-          <ul>
-            <li>Company introduction and orientation</li>
-            <li>Health and safety training</li>
-            <li>IT systems and security protocols</li>
-            <li>Departmental introductions</li>
-            <li>Intern policies and procedures</li>
-          </ul>
-          
-          <h3 style="color: #0056b3;">Important Notes</h3>
-          <ul>
-            <li>Please confirm your attendance via the intern portal</li>
-            <li>Full attendance is mandatory</li>
-            <li>Business casual attire required</li>
-            <li>Lunch will be provided</li>
-          </ul>
-          
-          <p>For questions or accommodations, contact <a href="mailto:hr.interns@mobitel.lk">hr.interns@mobitel.lk</a> at least 3 days prior.</p>
-          
-          <p>We look forward to welcoming you to the Mobitel team!</p>
-          
-          <p>Best regards,<br>
-          <strong>HR Department</strong><br>
-          Sri Lanka Telecom Mobitel</p>
-          
-          <p style="font-size: 0.8em; color: #666;">
-            This is an automated message. Please do not reply directly to this email.
-          </p>
-        </div>
-      `,
-      text: `/* Plain text version similar to HTML `,
-      };
-
-      const info = await transporter.sendMail(mailOptions);
-      console.log("Induction email sent successfully", {
-        to: recipientEmail,
-        messageId: info.messageId,
-        timestamp: new Date().toISOString(),
-      });
-  
-      return info;
-    } catch (error) {
-      console.error("Failed to send induction email:", {
-        error: error.message,
-        recipient: recipientEmail,
-        timestamp: new Date().toISOString(),
-      });
-      throw error;
-    } finally {
-      if (transporter) {
-        transporter.close();
-      }
-    }
-  };*/

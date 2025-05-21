@@ -24,12 +24,12 @@ const ScheduleScheme = ({ darkMode }) => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [internToAssign, setInternToAssign] = useState(null);
   const [batchAssign, setBatchAssign] = useState(false);
-  const [error, setError] = useState([]);
+  const [error, setError] = useState("");
   const [selectedCvId, setSelectedCvId] = useState(null);
   const token = localStorage.getItem("token");
 
   const api = axios.create({
-    baseURL: "http://localhost:5000/api/cvs",
+    baseURL: "http://localhost:5000/api",
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -42,13 +42,7 @@ const ScheduleScheme = ({ darkMode }) => {
         return;
       }
 
-      const response = await api.get("/get-cvs-for-scheme-assignment", {
-        params: {
-          "induction.status": "induction-completed",
-          "schemaAssignment.status": "schema-not-assigned",
-        },
-      });
-
+      const response = await api.get("/cvs/get-cvs-for-scheme-assignment");
       setInternData(response.data);
     } catch (error) {
       setError("Failed to fetch intern data.");
@@ -60,25 +54,25 @@ const ScheduleScheme = ({ darkMode }) => {
 
   useEffect(() => {
     fetchInterns();
-  }, [navigate]);
+  }, []);
 
   // Assign scheme
   const handleAssignScheme = async (schemeData) => {
     try {
       if (batchAssign) {
         // Batch assignment
-        const response = await api.post(`/batch-assign-scheme`, {
+        const response = await api.post(`/cvs/batch-assign-scheme`, {
           cvIds: selectedRows,
           ...schemeData,
         });
-        return response.data; // Return the response data
+        return response.data;
       } else {
         // Single assignment
         const response = await api.post(
-          `/${internToAssign._id}/assign-scheme`,
+          `/cvs/${internToAssign._id}/assign-scheme`,
           schemeData
         );
-        return response.data; // Return the response data
+        return response.data;
       }
     } catch (error) {
       console.error("Error assigning scheme:", error);
@@ -86,24 +80,6 @@ const ScheduleScheme = ({ darkMode }) => {
     }
   };
 
-  // Update the modal usage:
-  <AssignSchemeModal
-    show={showAssignModal}
-    onClose={() => {
-      setShowAssignModal(false);
-      setBatchAssign(false);
-      setInternToAssign(null);
-      setSelectedRows([]);
-      fetchInterns(); // Refresh data after closing
-    }}
-    onConfirm={handleAssignScheme}
-    refNo={
-      batchAssign
-        ? `${selectedRows.length} selected candidates`
-        : internToAssign?.refNo
-    }
-    darkMode={darkMode}
-  />;
   // Handle row selection
   const handleSelectRow = (id) => {
     setSelectedRows((prevSelected) =>
@@ -181,6 +157,7 @@ const ScheduleScheme = ({ darkMode }) => {
         </h5>
 
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
+
         {/* Filter Input with Batch Button */}
         <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center mb-3">
           <div className="mb-2 mb-sm-0">
@@ -207,6 +184,8 @@ const ScheduleScheme = ({ darkMode }) => {
             </Button>
           </div>
         </div>
+
+        {error && <Alert variant="danger">{error}</Alert>}
 
         {loading ? (
           <div className="text-center">

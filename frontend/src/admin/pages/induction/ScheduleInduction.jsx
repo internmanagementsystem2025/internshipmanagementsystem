@@ -61,27 +61,41 @@ const ScheduleInduction = ({ darkMode }) => {
         navigate("/login");
         return;
       }
-
-      const response = await api.get("/assign-cvs-for-induction", {
-        params: {
-          populate: "interview.interviews.interviewId", // Add this to populate interview data
-        },
-      });
-
-      const filteredData = response.data.filter(
-        (cv) =>
-          cv.interview?.status === "interview-completed" &&
-          (!cv.induction?.status ||
-            cv.induction.status === "induction-not-assigned")
-      );
-      setCvData(filteredData);
+  
+      console.log("Fetching CVs for induction assignment");
+      const response = await api.get("/assign-cvs-for-induction");
+      console.log(`API returned ${response.data.length} records`);
+      
+      // Check if we have any data
+      if (response.data.length === 0) {
+        setError("No interview-passed candidates found for induction assignment");
+        setCvData([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Debug logging
+      if (response.data.length > 0) {
+        console.log("Sample CV data:", {
+          id: response.data[0]._id,
+          refNo: response.data[0].refNo,
+          interviewStatus: response.data[0].interview?.status,
+          hasInterviews: response.data[0].interview?.interviews?.length > 0,
+          inductionStatus: response.data[0].induction?.status,
+        });
+      }
+  
+      // No additional filtering needed as backend should return only eligible candidates
+      setCvData(response.data);
     } catch (error) {
-      console.error("Error fetching CVs:", error.message);
-      setError("Failed to fetch CV data");
+      console.error("Error fetching CVs:", error);
+      setError(`Failed to fetch CV data: ${error.response?.data?.message || error.message}`);
+      setCvData([]);
     } finally {
       setLoading(false);
     }
   };
+  
   useEffect(() => {
     fetchCVs();
   }, [navigate]);

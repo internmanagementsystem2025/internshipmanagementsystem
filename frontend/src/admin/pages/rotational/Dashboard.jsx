@@ -8,95 +8,110 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Row, Col } from "react-bootstrap"; // Import Row and Col for layout
+import { Card, Row, Col, Alert } from "react-bootstrap";
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
 const Dashboard = ({ stationAnalytics, darkMode }) => {
-  // Colors for the pie chart
-  const COLORS = ["#0088FE", "#00C49F"];
-
-  // Check if stationAnalytics is defined and is an array
-  if (!stationAnalytics || !Array.isArray(stationAnalytics)) {
-    return <div>No analytics data available.</div>;
+  if (!stationAnalytics || stationAnalytics.length === 0) {
+    return (
+      <Alert variant="info" className="mt-3">
+        No station analytics data available. Stations may not have any
+        assignments yet.
+      </Alert>
+    );
   }
 
   return (
-    <div className="mb-4">
-      <h5 className="mb-3">Station Analytics</h5>
+    <div className={`mb-4 ${darkMode ? "text-white" : ""}`}>
+      <h5 className="mb-3">Station Utilization Overview</h5>
       <hr className={darkMode ? "border-light" : "border-dark"} />
 
-      {/* Render pie charts in a grid layout */}
       <Row>
-        {stationAnalytics.map((station) => (
-          <Col
-            key={station.stationId}
-            xs={12}
-            sm={6}
-            md={4}
-            lg={3}
-            className="mb-4"
-          >
-            <div className="text-center">
-              <h6>{station.stationName}</h6>
+        {stationAnalytics.map((station) => {
+          const pieData = [
+            { name: "Assigned", value: station.assignedCVs },
+            { name: "Available", value: station.availableSeats },
+          ];
 
-              {/* Small Pie Chart for Assigned CVs vs Available Seats */}
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: "Assigned CVs", value: station.assignedCVs },
-                      {
-                        name: "Available Seats",
-                        value: station.availableSeats,
-                      },
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80} // Smaller radius for compact size
-                    fill="#8884d8"
-                    dataKey="value"
-                    label
-                  >
-                    {[
-                      { name: "Assigned CVs", value: station.assignedCVs },
-                      {
-                        name: "Available Seats",
-                        value: station.availableSeats,
-                      },
-                    ].map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend
-                    wrapperStyle={{
-                      fontSize: "12px", // Smaller legend font size
-                      paddingTop: "10px", // Add some spacing
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+          return (
+            <Col
+              key={station.stationId}
+              xs={12}
+              sm={6}
+              md={4}
+              lg={3}
+              className="mb-4"
+            >
+              <Card className={darkMode ? "bg-dark text-white" : ""}>
+                <Card.Body className="text-center">
+                  <h6>{station.stationName}</h6>
 
-              {/* Display exact numbers below the chart */}
-              <div className="mt-2">
-                <p>
-                  <strong>Assigned CVs:</strong> {station.assignedCVs}
-                </p>
-                <p>
-                  <strong>Available Seats:</strong> {station.availableSeats}
-                </p>
-              </div>
-            </div>
-          </Col>
-        ))}
+                  {/* Utilization Pie Chart */}
+                  <div style={{ height: "250px" }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                          label={({ name, percent }) =>
+                            `${name}: ${(percent * 100).toFixed(0)}%`
+                          }
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          formatter={(value, name) => [value, name]}
+                          contentStyle={
+                            darkMode
+                              ? { backgroundColor: "#333", borderColor: "#666" }
+                              : {}
+                          }
+                        />
+                        <Legend
+                          wrapperStyle={darkMode ? { color: "white" } : {}}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Utilization Summary */}
+                  <div className="mt-2">
+                    <small className="text-muted">
+                      Utilization: {station.utilizationPercentage}% (
+                      {station.assignedCVs}/{station.maxStudents})
+                    </small>
+                  </div>
+
+                  {/* Ending Soon Indicator */}
+                  {station.cvsEndingThisWeek.length > 0 && (
+                    <div className="mt-2">
+                      <small className="text-warning">
+                        {station.cvsEndingThisWeek.length} CV(s) ending this
+                        week
+                      </small>
+                    </div>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+          );
+        })}
       </Row>
     </div>
   );
 };
 
-// Define PropTypes for the component
 Dashboard.propTypes = {
   stationAnalytics: PropTypes.arrayOf(
     PropTypes.shape({
@@ -104,17 +119,16 @@ Dashboard.propTypes = {
       stationName: PropTypes.string.isRequired,
       assignedCVs: PropTypes.number.isRequired,
       availableSeats: PropTypes.number.isRequired,
-      cvsEndingThisWeek: PropTypes.arrayOf(
-        PropTypes.shape({
-          _id: PropTypes.string.isRequired,
-          refNo: PropTypes.string,
-          fullName: PropTypes.string,
-          endDate: PropTypes.string.isRequired,
-        })
-      ).isRequired,
+      maxStudents: PropTypes.number.isRequired,
+      utilizationPercentage: PropTypes.number.isRequired,
+      cvsEndingThisWeek: PropTypes.array.isRequired,
     })
-  ).isRequired,
+  ),
   darkMode: PropTypes.bool.isRequired,
+};
+
+Dashboard.defaultProps = {
+  stationAnalytics: [],
 };
 
 export default Dashboard;

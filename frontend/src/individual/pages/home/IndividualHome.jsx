@@ -176,11 +176,9 @@ const IndividualHome = ({ darkMode }) => {
           message: error.message
         });
         
-        // Handle 404 "No CVs found" separately - this is not an error condition
         if (error.response?.status === 404) {
-          setCvData([]);  // Ensure cvData is an empty array
+          setCvData([]);  
         } else {
-          // Show notification for actual errors
           setNotification({ 
             show: true, 
             message: error.response?.data?.message || "Failed to fetch CVs", 
@@ -199,12 +197,167 @@ const IndividualHome = ({ darkMode }) => {
   };
 
   const handleEmailSubmit = async () => {
+    // Check for empty email first
+    if (!email.trim()) {
+      setNotification({ 
+        show: true, 
+        message: "Email address cannot be empty", 
+        variant: "danger" 
+      });
+      return;
+    }
+    
+    // Split email into local part and domain part
+    const parts = email.split('@');
+    if (parts.length !== 2) {
+      setNotification({ 
+        show: true, 
+        message: "Email must contain exactly one @ symbol", 
+        variant: "danger" 
+      });
+      return;
+    }
+    
+    const [localPart, domainPart] = parts;
+    
+    // Check local part (before @)
+    if (!localPart || localPart.length === 0) {
+      setNotification({ 
+        show: true, 
+        message: "Email username cannot be empty", 
+        variant: "danger" 
+      });
+      return;
+    }
+    
+    // Check domain part (after @)
+    if (!domainPart || domainPart.length === 0) {
+      setNotification({ 
+        show: true, 
+        message: "Email domain cannot be empty", 
+        variant: "danger" 
+      });
+      return;
+    }
+    
+    // Domain must have at least one dot
+    if (!domainPart.includes('.')) {
+      setNotification({ 
+        show: true, 
+        message: "Email domain must include a dot (e.g., .com, .org)", 
+        variant: "danger" 
+      });
+      return;
+    }
+    
+    // Domain cannot start or end with hyphen or dot
+    if (domainPart.startsWith('.') || domainPart.endsWith('.') || 
+        domainPart.startsWith('-') || domainPart.endsWith('-')) {
+      setNotification({ 
+        show: true, 
+        message: "Email domain cannot start or end with a dot or hyphen", 
+        variant: "danger" 
+      });
+      return;
+    }
+    
+    // Check domain characters (only allow letters, numbers, dots, and hyphens)
+    const invalidDomainChars = domainPart.replace(/[a-zA-Z0-9.-]/g, '');
+    if (invalidDomainChars.length > 0) {
+      setNotification({ 
+        show: true, 
+        message: `Email domain contains invalid characters: ${invalidDomainChars}`, 
+        variant: "danger" 
+      });
+      return;
+    }
+    
+    // Check TLD (last part after the last dot)
+    const tld = domainPart.split('.').pop();
+    const allowedTlds = ['com', 'org', 'lk'];
+    if (!allowedTlds.includes(tld)) {
+      setNotification({ 
+        show: true, 
+        message: "Only .com, .org, and .lk domains are accepted", 
+        variant: "danger" 
+      });
+      return;
+    }
+    
+    // List of allowed email domains
+    const allowedDomains = [
+      'gmail.com',
+      'yahoo.com',
+      'outlook.com',
+      'hotmail.com',
+      'aol.com',
+      'protonmail.com',
+      'mail.com',
+      'icloud.com',
+      'zoho.com',
+      'yandex.com'
+    ];
+    
+    // Check if the domain is in the allowed list
+    if (!allowedDomains.includes(domainPart)) {
+      setNotification({ 
+        show: true, 
+        message: "Only emails from supported providers are accepted", 
+        variant: "danger" 
+      });
+      return;
+    }
+    
     try {
       const response = await axios.post("http://localhost:5000/api/emails/register", { email });
-      setNotification({ show: true, message: response.data.message, variant: "success" });
+      setNotification({ 
+        show: true, 
+        message: response.data.message, 
+        variant: "success" 
+      });
+      setEmail("");
     } catch (error) {
       console.error("Error submitting email:", error);
-      setNotification({ show: true, message: "Email has already been sent for this address.", variant: "danger" });
+      
+      if (error.response) {
+        if (error.response.status === 409) {
+          setNotification({ 
+            show: true, 
+            message: "You're already subscribed with this email address.", 
+            variant: "info"
+          });
+        } else if (error.response.data && error.response.data.alreadyRegistered) {
+          setNotification({ 
+            show: true, 
+            message: "You're already subscribed with this email address.", 
+            variant: "info"
+          });
+        } else if (error.response.data && error.response.data.message) {
+          setNotification({ 
+            show: true, 
+            message: error.response.data.message, 
+            variant: "danger" 
+          });
+        } else {
+          setNotification({ 
+            show: true, 
+            message: `Server error (${error.response.status}). Please try again later.`, 
+            variant: "danger" 
+          });
+        }
+      } else if (error.request) {
+        setNotification({ 
+          show: true, 
+          message: "Network error. Please check your connection and try again.", 
+          variant: "danger" 
+        });
+      } else {
+        setNotification({ 
+          show: true, 
+          message: "Failed to send your request. Please try again later.", 
+          variant: "danger" 
+        });
+      }
     }
   };
 
@@ -289,19 +442,6 @@ const IndividualHome = ({ darkMode }) => {
           </Col>
           <Col md={4}>
             <Card
-              onClick={() => navigate("/report-placement")}
-              onMouseEnter={() => setHoveredCard("report-placement")}
-              onMouseLeave={() => setHoveredCard(null)}
-              style={cardStyle(darkMode, hoveredCard === "report-placement")}
-            >
-              <Card.Body className="d-flex flex-column align-items-center justify-content-between">
-                <Card.Title className="text-center">Report</Card.Title>
-                <FiUserCheck size={40} />
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4}>
-            <Card
               onClick={() => navigate("/request-certificate")}
               onMouseEnter={() => setHoveredCard("request-certificate")}
               onMouseLeave={() => setHoveredCard(null)}
@@ -310,6 +450,19 @@ const IndividualHome = ({ darkMode }) => {
               <Card.Body className="d-flex flex-column align-items-center justify-content-between">
                 <Card.Title className="text-center">Request Certificate</Card.Title>
                 <FiAward size={40} />
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={4}>
+            <Card
+              onClick={() => navigate("/download-certificate")}
+              onMouseEnter={() => setHoveredCard("download-certificate")}
+              onMouseLeave={() => setHoveredCard(null)}
+              style={cardStyle(darkMode, hoveredCard === "download-certificate")}
+            >
+              <Card.Body className="d-flex flex-column align-items-center justify-content-between">
+                <Card.Title className="text-center">Download certificate</Card.Title>
+                <FiUserCheck size={40} />
               </Card.Body>
             </Card>
           </Col>

@@ -67,51 +67,63 @@ const AssignInductionModal = ({
     fetchInductions();
   }, [show]);
 
-  const handleConfirm = async () => {
-    if (!selectedInduction) {
-      setLocalError("Please select an induction");
-      return;
+const handleConfirm = async () => {
+  if (!selectedInduction) {
+    setLocalError("Please select an induction");
+    return;
+  }
+
+  setLoading(true);
+  setLocalError("");
+  if (typeof onClearMessages === "function") onClearMessages();
+
+  try {
+    const induction = inductions.find((i) => i._id === selectedInduction);
+    if (!induction) throw new Error("Selected induction not found");
+
+    // Build email list safely - FIXED
+    let recipientEmail;
+    
+    if (isBatch && Array.isArray(cvData)) {
+      // For batch operations, we'll need to handle this differently
+      // The backend will need to handle each CV individually anyway
+      recipientEmail = null; // Let backend use populated user emails
+    } else if (cvData) {
+      // For single CV assignment
+      recipientEmail = cvData.email || 
+                      (cvData.userId && cvData.userId.email) || 
+                      null;
     }
 
-    setLoading(true);
-    setLocalError("");
-    if (typeof onClearMessages === "function") onClearMessages();
+    console.log("Email data being sent:", {
+      hasCvData: !!cvData,
+      recipientEmail: recipientEmail,
+      isBatch: isBatch
+    });
 
-    try {
-      const induction = inductions.find((i) => i._id === selectedInduction);
-      if (!induction) throw new Error("Selected induction not found");
-
-      // Build email list safely
-      let recipientEmails = [];
-      if (isBatch && Array.isArray(cvData)) {
-        recipientEmails = cvData
-          .map((cv) => cv.email || cv.userId?.email)
-          .filter(Boolean);
-      } else if (cvData?.email || cvData?.userId?.email) {
-        recipientEmails = [cvData.email || cvData.userId.email];
-      }
-
-      const payload = {
-        inductionId: selectedInduction,
-        status: "induction-assigned",
-        emailData: {
-          recipientEmail: recipientEmails,
+    const payload = {
+      inductionId: selectedInduction,
+      status: "induction-assigned",
+      emailData: {
+        recipientEmail: recipientEmail,
+        inductionDetails: {
           inductionName: induction.induction,
           startDate: induction.startDate,
           endDate: induction.endDate,
           location: induction.location,
-        },
-      };
+        }
+      },
+    };
 
-      await onConfirm(payload);
-    } catch (err) {
-      setLocalError(
-        err.response?.data?.message || err.message || "Assignment failed"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    await onConfirm(payload);
+  } catch (err) {
+    setLocalError(
+      err.response?.data?.message || err.message || "Assignment failed"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleClose = () => {
     setLocalError("");

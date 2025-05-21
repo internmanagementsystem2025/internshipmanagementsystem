@@ -252,7 +252,7 @@ const LoginPage = ({ darkMode }) => {
                               <option value="institute">Institute</option>
                               <option value="admin">Admin</option>
                               <option value="staff">Staff</option>
-                              <option value="senior_staff">Senior Staff</option>
+                              <option value="senior_staff">Executive</option>
                             </Form.Select>
                           </Form.Group>
 

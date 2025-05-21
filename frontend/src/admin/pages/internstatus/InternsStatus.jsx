@@ -1,101 +1,240 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table, Button, Container, Spinner, Form } from "react-bootstrap";
-import { FaChevronLeft, FaChevronRight, FaCalendarCheck } from "react-icons/fa";
+import axios from "axios";
+import { Table, Button, Container, Spinner, Form, Alert, Row, Col } from "react-bootstrap";
+import { FaChevronLeft, FaChevronRight, FaCalendarCheck, FaFileDownload } from "react-icons/fa";
 import logo from "../../../assets/logo.png";
+import * as XLSX from 'xlsx';
 
-const dummyStatusData = [
-  {
-    _id: "1",
-    nic: "987654321V",
-    name: "John Doe",
-    mobileno: "0771234567",
-    university: "University of Colombo",
-    internshipStartDate: "2023-01-15",
-    internshipEndDate: "2023-06-15",
-    internshipPeriod: "5 months",
-    status: "Active"
-  },
-  {
-    _id: "2",
-    nic: "123456789V",
-    name: "Jane Smith",
-    mobileno: "0769876543",
-    university: "University of Moratuwa",
-    internshipStartDate: "2023-02-01",
-    internshipEndDate: "2023-07-01",
-    internshipPeriod: "5 months",
-    status: "Completed"
-  },
-  {
-    _id: "3",
-    nic: "456789123V",
-    name: "Robert Johnson",
-    mobileno: "0751234567",
-    university: "SLIIT",
-    internshipStartDate: "2023-03-10",
-    internshipEndDate: "2023-08-10",
-    internshipPeriod: "5 months",
-    status: "Active"
-  },
-  {
-    _id: "4",
-    nic: "789123456V",
-    name: "Emily Davis",
-    mobileno: "0712345678",
-    university: "NSBM",
-    internshipStartDate: "2023-01-05",
-    internshipEndDate: "2023-06-05",
-    internshipPeriod: "5 months",
-    status: "Terminated"
-  },
-  {
-    _id: "5",
-    nic: "321654987V",
-    name: "Michael Wilson",
-    mobileno: "0723456789",
-    university: "IIT",
-    internshipStartDate: "2023-04-20",
-    internshipEndDate: "2023-09-20",
-    internshipPeriod: "5 months",
-    status: "Active"
-  },
-];
+const API_BASE_URL = import.meta.env.VITE_BASE_URL;
 
 const InternsStatus = ({ darkMode }) => {
   const navigate = useNavigate();
   const [status, setStatus] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState(""); // For text search
-  const [statusFilter, setStatusFilter] = useState("All"); // For dropdown filter
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [downloadLoading, setDownloadLoading] = useState(false);
   const itemsPerPage = 20;
 
-  // Load dummy data directly
-  useEffect(() => {
-    setStatus(dummyStatusData);
-    setLoading(false);
-  }, []);
+  // Status options based on the provided list
+  const statusOptions = [
+    { value: "all", label: "All Statuses" },
+    { value: "draft", label: "Draft" },
+    { value: "cv-submitted", label: "CV Submitted" },
+    { value: "cv-approved", label: "CV Approved" },
+    { value: "cv-rejected", label: "CV Rejected" },
+    { value: "interview-scheduled", label: "Interview Scheduled" },
+    { value: "interview-re-scheduled", label: "Interview Re-scheduled" },
+    { value: "interview-passed", label: "Interview Passed" },
+    { value: "interview-failed", label: "Interview Failed" },
+    { value: "induction-scheduled", label: "Induction Scheduled" },
+    { value: "induction-passed", label: "Induction Passed" },
+    { value: "induction-failed", label: "Induction Failed" },
+    { value: "schema-assigned", label: "Schema Assigned" },
+    { value: "schema-completed", label: "Schema Completed" },
+    { value: "terminated", label: "Terminated" }
+  ];
 
-  // Filter interns based on search input and status filter
-  const filteredStatus = status.filter((item) => {
-    const matchesSearch = 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.nic.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.university.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = 
-      statusFilter === "All" || 
-      item.status.toLowerCase() === statusFilter.toLowerCase();
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Fetch interns status data from the backend
+  useEffect(() => {
+    const fetchInternsStatus = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
+        // Reset to first page when filters change
+        setCurrentPage(1);
+
+        const response = await axios.get(
+          `${API_BASE_URL}/cvs/get-all-with-filtering`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            params: {
+              status: statusFilter === "all" ? undefined : statusFilter
+            }
+          }
+        );
+
+        if (response.status === 200 && Array.isArray(response.data)) {
+          setStatus(response.data);
+        } else {
+          setError("Unexpected response format from the server.");
+        }
+      } catch (error) {
+        console.error("Error fetching intern status:", error);
+        setError(error.response?.data?.message || "Failed to fetch intern status data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInternsStatus();
+  }, [navigate, statusFilter]);
+
+  // No search filtering, only using status filter from API
+  const filteredStatus = status;
 
   // Pagination logic
   const totalPages = Math.ceil(filteredStatus.length / itemsPerPage);
   const indexOfLastStatus = currentPage * itemsPerPage;
   const indexOfFirstStatus = indexOfLastStatus - itemsPerPage;
   const currentStatus = filteredStatus.slice(indexOfFirstStatus, indexOfLastStatus);
+
+  // Helper function to display status badge with appropriate color
+  const getStatusBadgeClass = (status) => {
+    if (!status) return "bg-secondary";
+    
+    if (status.includes("cv-approved") || status.includes("passed") || status.includes("completed")) {
+      return "bg-success";
+    } 
+    else if (status.includes("rejected") || status.includes("failed") || status === "terminated") {
+      return "bg-danger";
+    } 
+    else if (status.includes("scheduled") || status.includes("assigned")) {
+      return "bg-info";
+    } 
+    else {
+      return "bg-warning";
+    }
+  };
+  
+  // Handle view function
+  const handleView = (id) => {
+    navigate(`/view-cv/${id}`);
+  };
+
+  // Handle status filter change
+  const handleStatusChange = (e) => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  // Generate and download status count report
+  const handleDownloadReport = async () => {
+    setDownloadLoading(true);
+    try {
+      // Calculate status counts
+      const statusCounts = {};
+      statusOptions.forEach(option => {
+        if (option.value !== "all") {
+          statusCounts[option.label] = 0;
+        }
+      });
+
+      // Count each status
+      status.forEach(intern => {
+        const currentStatus = intern.currentStatus || "Draft";
+        const formattedStatus = statusOptions.find(option => 
+          option.value === currentStatus
+        )?.label || "Unknown";
+        
+        statusCounts[formattedStatus] = (statusCounts[formattedStatus] || 0) + 1;
+      });
+
+      // Create institute-wise breakdown
+      const instituteBreakdown = {};
+      status.forEach(intern => {
+        const institute = intern.institute || "Unknown";
+        if (!instituteBreakdown[institute]) {
+          instituteBreakdown[institute] = {
+            total: 0
+          };
+          statusOptions.forEach(option => {
+            if (option.value !== "all") {
+              instituteBreakdown[institute][option.value] = 0;
+            }
+          });
+        }
+        
+        instituteBreakdown[institute].total += 1;
+        const currentStatus = intern.currentStatus || "draft";
+        instituteBreakdown[institute][currentStatus] = (instituteBreakdown[institute][currentStatus] || 0) + 1;
+      });
+
+      // Create overview sheet data
+      const totalInternsCount = status.length;
+      
+      const summaryData = [
+        ["INTERN STATUS REPORT - EXECUTIVE SUMMARY"],
+        ["Generated on", new Date().toLocaleString()],
+        [""],
+        ["STATUS", "COUNT", "PERCENTAGE"],
+        ...Object.entries(statusCounts).map(([statusLabel, count]) => [
+          statusLabel, 
+          count, 
+          totalInternsCount > 0 ? `${((count / totalInternsCount) * 100).toFixed(2)}%` : "0.00%"
+        ]),
+        [""],
+        ["Total Interns", totalInternsCount]
+      ];
+
+      // Create institute breakdown sheet data
+      const instituteData = [
+        ["INSTITUTE-WISE BREAKDOWN"],
+        [""],
+        ["INSTITUTE", "TOTAL INTERNS", ...statusOptions.filter(o => o.value !== "all").map(o => o.label)]
+      ];
+
+      Object.entries(instituteBreakdown).forEach(([institute, data]) => {
+        instituteData.push([
+          institute, 
+          data.total,
+          ...statusOptions.filter(o => o.value !== "all").map(o => data[o.value] || 0)
+        ]);
+      });
+
+      // Create a workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Add the summary sheet
+      const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summaryWs, "Status Summary");
+      
+      // Add the institute breakdown sheet
+      const instituteWs = XLSX.utils.aoa_to_sheet(instituteData);
+      XLSX.utils.book_append_sheet(wb, instituteWs, "Institute Breakdown");
+      
+      // Add detailed data sheet
+      const detailedData = [
+        ["DETAILED INTERN DATA"],
+        [""],
+        ["#", "NIC", "NAME", "MOBILE", "INSTITUTE", "START DATE", "END DATE", "PERIOD", "STATUS"]
+      ];
+      
+      status.forEach((intern, index) => {
+        detailedData.push([
+          index + 1,
+          intern.nic || "N/A",
+          intern.fullName || "N/A",
+          intern.mobileNumber || "N/A",
+          intern.institute || "N/A",
+          intern.internshipStartDate ? new Date(intern.internshipStartDate).toLocaleDateString() : "N/A",
+          intern.internshipEndDate ? new Date(intern.internshipEndDate).toLocaleDateString() : "N/A",
+          intern.internshipPeriod || "N/A",
+          intern.currentStatus ? intern.currentStatus.toUpperCase().replace(/-/g, " ") : "PENDING"
+        ]);
+      });
+      
+      const detailedWs = XLSX.utils.aoa_to_sheet(detailedData);
+      XLSX.utils.book_append_sheet(wb, detailedWs, "Detailed Data");
+
+      // Save the file
+      XLSX.writeFile(wb, `Intern_Status_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (error) {
+      console.error("Error generating report:", error);
+      alert("Failed to generate report. Please try again.");
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
 
   return (
     <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
@@ -118,40 +257,80 @@ const InternsStatus = ({ darkMode }) => {
         </h5>
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
-        {/* Search Filters */}
-        <div className="d-flex flex-wrap justify-content-between mb-3">
-          {/* Text Search Filter */}
-          <Form.Group className="mb-0 me-2" style={{ maxWidth: "300px" }}>
-            <Form.Control
-              type="text"
-              placeholder="Search by name, NIC, or university"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </Form.Group>
-
-          {/* Status Dropdown Filter */}
-          <Form.Group className="mb-0" style={{ maxWidth: "200px" }}>
-            <Form.Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+        {/* Status Filter and Download Button */}
+       <Row className="mb-3">
+  <Col xs={12} md={6} className="mb-2 mb-md-0">
+    {/* Download Report Button */}
+    <Button
+      variant={darkMode ? "outline-light" : "outline-dark"}
+      className="d-flex align-items-center"
+      onClick={handleDownloadReport}
+      disabled={downloadLoading || loading || status.length === 0}
+    >
+      {downloadLoading ? (
+        <>
+          <Spinner
+            as="span"
+            animation="border"
+            size="sm"
+            role="status"
+            aria-hidden="true"
+            className="me-2"
+          />
+          Generating...
+        </>
+      ) : (
+        <>
+          <FaFileDownload className="me-2" />
+          Download Status Report
+        </>
+      )}
+    </Button>
+  </Col>
+  <Col xs={12} md={6}>
+    <div className="d-flex justify-content-md-end">
+      {/* Scrollable Status Dropdown Filter */}
+      <Form.Group className="mb-0" style={{ maxWidth: "200px" }}>
+        <Form.Select
+          value={statusFilter}
+          onChange={handleStatusChange}
+          size="sm"
+          style={{
+            height: "auto",
+            maxHeight: "200px",
+            overflowY: "auto",
+            backgroundColor: darkMode ? "#343a40" : "white",
+            color: darkMode ? "white" : "black",
+          }}
+        >
+          {statusOptions.map((option) => (
+            <option 
+              key={option.value} 
+              value={option.value}
+              style={{
+                backgroundColor: darkMode ? "#343a40" : "white",
+                color: darkMode ? "white" : "black",
+                padding: "4px 8px",
+              }}
             >
-              <option value="All">All Statuses</option>
-              <option value="Active">CV Received</option>
-              <option value="Completed">CV Approved</option>
-              <option value="Terminated">Scheduled for Interview</option>
-              <option value="Terminated">Re-scheduled for Interview</option>
-              <option value="Terminated">Intern Selected and waiting for assigning</option>
-              <option value="Terminated">Intern Rejected</option>
-            </Form.Select>
-          </Form.Group>
-        </div>
+              {option.label}
+            </option>
+          ))}
+        </Form.Select>
+      </Form.Group>
+    </div>
+  </Col>
+</Row>
 
         {loading ? (
           <div className="text-center">
             <Spinner animation="border" role="status" />
             <p>Loading status...</p>
           </div>
+        ) : error ? (
+          <Alert variant="danger" className="text-center">
+            {error}
+          </Alert>
         ) : (
           <Table striped bordered hover variant={darkMode ? "dark" : "light"} responsive>
             <thead>
@@ -160,7 +339,7 @@ const InternsStatus = ({ darkMode }) => {
                 <th>NIC</th>
                 <th>Name</th>
                 <th>Mobile No</th>
-                <th>University</th>
+                <th>Institute</th>
                 <th>Internship Start Date</th>
                 <th>Internship End Date</th>
                 <th>Internship Period</th>
@@ -170,30 +349,27 @@ const InternsStatus = ({ darkMode }) => {
             </thead>
             <tbody>
               {currentStatus.length > 0 ? (
-                currentStatus.map((status, index) => (
-                  <tr key={status._id}>
+                currentStatus.map((cv, index) => (
+                  <tr key={cv._id}>
                     <td>{indexOfFirstStatus + index + 1}</td>
-                    <td>{status.nic}</td>
-                    <td>{status.name}</td>
-                    <td>{status.mobileno}</td>
-                    <td>{status.university}</td>
-                    <td>{status.internshipStartDate}</td>
-                    <td>{status.internshipEndDate}</td>
-                    <td>{status.internshipPeriod}</td>
+                    <td>{cv.nic || "N/A"}</td>
+                    <td>{cv.fullName || "N/A"}</td>
+                    <td>{cv.mobileNumber || "N/A"}</td>
+                    <td>{cv.institute || "N/A"}</td>
+                    <td>{cv.internshipStartDate ? new Date(cv.internshipStartDate).toLocaleDateString() : "N/A"}</td>
+                    <td>{cv.internshipEndDate ? new Date(cv.internshipEndDate).toLocaleDateString() : "N/A"}</td>
+                    <td>{cv.internshipPeriod || "N/A"}</td>
                     <td>
-                      <span className={`badge ${
-                        status.status === "Active" ? "bg-success" :
-                        status.status === "Completed" ? "bg-primary" :
-                        status.status === "Terminated" ? "bg-danger" : "bg-secondary"
-                      }`}>
-                        {status.status}
+                      <span className={`badge ${getStatusBadgeClass(cv.currentStatus)}`}>
+                        {cv.currentStatus ? cv.currentStatus.toUpperCase().replace(/-/g, " ") : "PENDING"}
                       </span>
                     </td>
                     <td>
-                      <Button 
-                        size="sm" 
-                        variant="outline-primary" 
-                        onClick={() => navigate(`/status/${status._id}`)}
+                      <Button
+                        size="sm"
+                        variant="outline-primary"
+                        onClick={() => handleView(cv._id)}
+                        className="fw-semibold"
                       >
                         View
                       </Button>
@@ -212,7 +388,7 @@ const InternsStatus = ({ darkMode }) => {
               <tr>
                 <td colSpan={10} style={{ padding: "5px", fontSize: "14px" }}>
                   <div className="d-flex justify-content-between align-items-center">
-                  <div className="flex-grow-1 text-center">
+                    <div className="flex-grow-1 text-center">
                       Showing {currentStatus.length} of {filteredStatus.length} interns
                     </div>
                     <div className="d-flex align-items-center">
@@ -221,18 +397,28 @@ const InternsStatus = ({ darkMode }) => {
                         size="sm" 
                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} 
                         disabled={currentPage === 1}
+                        style={{
+                          color: darkMode ? "white" : "black",
+                          padding: 0,
+                          margin: 0,
+                        }}
                       >
                         <FaChevronLeft />
                         <FaChevronLeft />
                       </Button>
                       <span className="mx-2">
-                        Page {currentPage} of {totalPages}
+                        Page {currentPage} of {totalPages || 1}
                       </span>
                       <Button 
                         variant="link" 
                         size="sm" 
                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} 
-                        disabled={currentPage === totalPages}
+                        disabled={currentPage === totalPages || totalPages === 0}
+                        style={{
+                          color: darkMode ? "white" : "black",
+                          padding: 0,
+                          margin: 0,
+                        }}
                       >
                         <FaChevronRight />
                         <FaChevronRight />

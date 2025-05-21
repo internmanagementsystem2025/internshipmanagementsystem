@@ -44,7 +44,6 @@ const ApproveCVs = ({ darkMode }) => {
   });
 
   // Fetch CVs that are pending approval
-
   const fetchCVs = async () => {
     setLoading(true);
     setError("");
@@ -142,17 +141,23 @@ const ApproveCVs = ({ darkMode }) => {
   };
 
   // Decline CV(s)
-  const handleDecline = async () => {
+  const handleDecline = async (declineReason) => {
     setError({ variant: "", message: "" });
     setIsProcessing(true);
     try {
-      const notes = "Declined by admin"; // Default decline reason
-
+      // Use the provided decline reason, or default if empty
+      const notes = declineReason ? declineReason : "Declined by admin";
+  
       if (batchDecline && selectedRows.length > 0) {
         // Batch decline
-        await Promise.all(
-          selectedRows.map((id) => api.post(`/${id}/decline`, { notes }))
-        );
+        const declinePromises = selectedRows.map((id) => {
+          if (!isValidMongoId(id)) {
+            throw new Error(`Invalid CV ID: ${id}`);
+          }
+          return api.post(`/${id}/decline`, { notes });
+        });
+  
+        await Promise.all(declinePromises);
         setError({
           variant: "success",
           message: `${selectedRows.length} CV(s) declined successfully!`,
@@ -160,17 +165,21 @@ const ApproveCVs = ({ darkMode }) => {
       } else if (cvToDecline) {
         // Single decline
         await api.post(`/${cvToDecline._id}/decline`, { notes });
+        setError({
+          variant: "success",
+          message: "CV declined successfully!",
+        });
       }
-
+  
       // Wait a moment to show success message
       await new Promise((resolve) => setTimeout(resolve, 1500));
-
+  
       // Reset states
       setShowDeclineModal(false);
       setBatchDecline(false);
       setCvToDecline(null);
       setSelectedRows([]);
-
+  
       // Refresh the list
       await fetchCVs();
     } catch (error) {
@@ -274,15 +283,17 @@ const ApproveCVs = ({ darkMode }) => {
               style={{ maxWidth: "250px", width: "100%" }}
             />
           </div>
-          <div className="d-flex justify-content-start flex-wrap">
+          <div className="d-flex justify-content-start">
             <Button
               variant="success"
               size="sm"
+              className="me-2"
               onClick={() => {
                 setBatchApproval(true);
                 setShowApproveModal(true);
               }}
               disabled={selectedRows.length === 0 || isProcessing}
+              style={{ width: "120px" }}
             >
               {isProcessing ? "Processing..." : "Batch Approve"}
             </Button>
@@ -295,7 +306,7 @@ const ApproveCVs = ({ darkMode }) => {
                 setShowDeclineModal(true);
               }}
               disabled={selectedRows.length === 0}
-              style={{ marginLeft: "10px", marginTop: "5px" }}
+              style={{ width: "120px" }}
             >
               Batch Decline
             </Button>

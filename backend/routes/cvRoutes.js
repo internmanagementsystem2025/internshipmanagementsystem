@@ -24,6 +24,11 @@ const {
   getAllNotApprovedCVs,
   getApprovedAndNotScheduledCVs,
   getInterviewPassedCVs,
+  getCVsForSchemeAssignment,
+  assignSchemeToCV,
+  batchAssignScheme,
+  rescheduleInterview,
+  rescheduleInduction,
 } = require("../controllers/cvController");
 const router = express.Router();
 const { verifyToken } = require("../middleware/verifyToken");
@@ -53,6 +58,8 @@ router.patch("/:id/schedule-interview", verifyToken, scheduleInterview);
 router.post("/:id/pass-interview", verifyToken, passInterview);
 router.post("/:id/fail-interview", verifyToken, failInterview);
 router.get("/scheduled-interviews", verifyToken, getCVsAssignedToInterviews);
+router.patch("/:id/reschedule-interview", verifyToken, rescheduleInterview);
+
 
 // Induction Routes
 router.patch("/:id/assign-induction", verifyToken, assignInduction);
@@ -60,6 +67,12 @@ router.get("/assign-cvs-for-induction", getInterviewPassedCVs);
 router.get("/assigned-to-induction", getCVsAssignedToInduction);
 router.patch("/:id/pass-induction", verifyToken, passInduction);
 router.patch("/:id/fail-induction", verifyToken, failInduction);
+router.patch("/:id/reschedule-induction", verifyToken, rescheduleInduction); 
+
+// CV routes for scheme assignment
+router.get("/get-cvs-for-scheme-assignment", getCVsForSchemeAssignment);
+router.post("/:id/assign-scheme", assignSchemeToCV);
+router.post("/batch-assign-scheme", batchAssignScheme);
 
 // Single CV Operations
 router.get("/:id", getCVById);

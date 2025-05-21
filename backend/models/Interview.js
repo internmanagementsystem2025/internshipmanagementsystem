@@ -3,7 +3,6 @@ const mongoose = require("mongoose");
 const interviewSchema = new mongoose.Schema(
   {
     interviewName: {
-      // changed from interviewLabel to interviewName
       type: String,
       required: [true, "Interview name is required"],
       trim: true,

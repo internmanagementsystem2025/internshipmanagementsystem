@@ -32,6 +32,10 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
         setSchemes(schemesResponse.data);
       } catch (error) {
         console.error("Error fetching data:", error);
+        setMessage({
+          text: `Failed to fetch schemes: ${error.message}`,
+          variant: "danger",
+        });
       } finally {
         setLoading(false);
       }
@@ -44,11 +48,12 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
         schemeId: "",
         managerId: "",
         internshipPeriod: 6,
-        startDate: "",
+        startDate: getTodayFormatted(),
         forRequest: "no",
       });
       setSelectedScheme(null);
       setSchemeManagers([]);
+      setMessage({ text: "", variant: "" });
     }
   }, [show, token]);
 
@@ -57,7 +62,10 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
     if (selectedScheme) {
       const managers = [];
 
-      if (selectedScheme.generalManager?.name) {
+      if (
+        selectedScheme.generalManager?.name &&
+        selectedScheme.generalManager?.availableAllocation > 0
+      ) {
         managers.push({
           id: "generalManager",
           name: selectedScheme.generalManager.name,
@@ -67,7 +75,10 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
         });
       }
 
-      if (selectedScheme.deputyManager?.name) {
+      if (
+        selectedScheme.deputyManager?.name &&
+        selectedScheme.deputyManager?.availableAllocation > 0
+      ) {
         managers.push({
           id: "deputyManager",
           name: selectedScheme.deputyManager.name,
@@ -77,13 +88,16 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
         });
       }
 
-      if (selectedScheme.supervisor?.name) {
+      if (
+        selectedScheme.supervisor?.name &&
+        selectedScheme.supervisor?.availableAllocation > 0
+      ) {
         managers.push({
           id: "supervisor",
           name: selectedScheme.supervisor.name,
           role: "Supervisor",
           availableAllocation:
-            selectedScheme.supervisor.availableAllocation || 0, // Add available allocation
+            selectedScheme.supervisor.availableAllocation || 0,
         });
       }
 
@@ -97,6 +111,15 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
       setSchemeManagers([]);
     }
   }, [selectedScheme]);
+
+  // Helper function to get today's date in yyyy-MM-dd format for the date picker
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -115,15 +138,21 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!formData.schemeId || !formData.managerId || !formData.startDate) {
+      setMessage({
+        text: "Please fill all required fields",
+        variant: "danger",
+      });
+      return;
+    }
+    
     try {
       setLoading(true); // Show loading state during submission
       setMessage({ text: "", variant: "" }); // Clear any previous messages
 
       // Call the onConfirm prop (which calls handleAssignScheme from parent)
-      const result = await onConfirm({
-        ...formData,
-        schemeName: selectedScheme?.schemeName,
-      });
+      const result = await onConfirm(formData);
 
       // Only show success and close if the operation was successful
       setMessage({
@@ -137,7 +166,7 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
       }, 2000);
     } catch (error) {
       setMessage({
-        text: `Failed to assign scheme: ${error.message}`,
+        text: `Failed to assign scheme: ${error.message || "Unknown error"}`,
         variant: "danger",
       });
     } finally {
@@ -172,22 +201,25 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
   return (
     <Modal
       show={show}
-      onHide={onClose}
+      onHide={handleClose}
       backdrop="static"
       keyboard={false}
       centered
       contentClassName={darkMode ? "bg-dark text-white" : ""}
     >
-      <Modal.Header closeButton className={darkMode ? "border-secondary" : ""}>
+      <Modal.Header 
+        closeButton 
+        className={darkMode ? "border-secondary" : ""}
+      >
         <Modal.Title>Assign Scheme</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        {loading ? (
+        {loading && (
           <div className="text-center p-4">
             <Spinner animation="border" />
             <p className="mt-3">Loading data...</p>
           </div>
-        ) : null}
+        )}
 
         {message.text && (
           <Alert variant={message.variant} className="mt-3">
@@ -269,8 +301,8 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
               </Form.Select>
               {selectedScheme && schemeManagers.length === 0 && (
                 <Form.Text className="text-danger">
-                  No managers assigned to this scheme. Please choose a different
-                  scheme or assign managers first.
+                  No managers with available allocation for this scheme. Please choose a different
+                  scheme or update manager allocations.
                 </Form.Text>
               )}
             </Form.Group>
@@ -323,7 +355,7 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
             </Form.Group>
 
             <div className="d-flex justify-content-end">
-              <Button variant="secondary" onClick={onClose} className="me-2">
+              <Button variant="secondary" onClick={handleClose} className="me-2">
                 Cancel
               </Button>
               <Button

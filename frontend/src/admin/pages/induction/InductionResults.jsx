@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Table, Button, Container, Spinner, Alert, Form, InputGroup, Row, Col} from "react-bootstrap";
-import { FaEye, FaChevronLeft, FaChevronRight, FaFileExcel, FaFilePdf, FaSearch} from "react-icons/fa";
+import { FaEye, FaChevronLeft, FaChevronRight, FaFileExcel, FaFilePdf, FaSearch, FaCalendarAlt } from "react-icons/fa";
 import logo from "../../../assets/logo.png";
 import PassModal from "../../../components/notifications/PassModal";
 import FailModal from "../../../components/notifications/FailModal";
+import RescheduleInductionModal from "../../../components/notifications/RescheduleInductionModal";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -25,8 +26,11 @@ const InductionResults = ({ darkMode }) => {
 
   const [showPassModal, setShowPassModal] = useState(false);
   const [showFailModal, setShowFailModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedCvId, setSelectedCvId] = useState(null);
   const [selectedCvRef, setSelectedCvRef] = useState("");
+  const [selectedInductionId, setSelectedInductionId] = useState("");
+  const [selectedInductionName, setSelectedInductionName] = useState("");
   const [isBulkAction, setIsBulkAction] = useState(false);
 
   const token = localStorage.getItem("token");
@@ -91,9 +95,15 @@ const InductionResults = ({ darkMode }) => {
 
       const response = await api.get("/assigned-to-induction");
       const inductionData = response.data || []; 
+      
+      // Filter out re-scheduled inductions
+      const filteredData = inductionData.filter(cv => 
+        cv.induction?.status !== "induction-re-scheduled" && 
+        cv.currentStatus !== "induction-re-scheduled"
+      );
 
-      setCvData(inductionData);
-      setFilteredCvData(inductionData);
+      setCvData(filteredData);
+      setFilteredCvData(filteredData);
     } catch (error) {
       setError(
         error.response?.data?.message || "Failed to fetch induction data."
@@ -111,13 +121,20 @@ const InductionResults = ({ darkMode }) => {
   useEffect(() => {
     let filtered = cvData;
 
-    // Filter by currentStatus instead of assignment type
+    // Fix the filter logic for direct and interview-passed
     if (filterType === "direct") {
-      filtered = filtered.filter(
-        (cv) => cv.currentStatus === "interview-skipped" || cv.interview?.status === "interview-skipped"
+      filtered = filtered.filter(cv => 
+        cv.interview?.status === "interview-skipped" || 
+        cv.currentStatus === "interview-skipped"
       );
     } else if (filterType === "interview-passed") {
-      filtered = filtered.filter((cv) => cv.currentStatus === "interview-passed");
+      filtered = filtered.filter(cv => 
+        cv.interview?.status === "interview-completed" || 
+        cv.currentStatus === "interview-passed" ||
+        cv.interview?.interviews?.some(interview => 
+          interview.result?.status === "interview-passed"
+        )
+      );
     }
 
     if (inductionSearchTerm.trim() !== "") {
@@ -165,6 +182,14 @@ const InductionResults = ({ darkMode }) => {
       setSelectedCvRef(refNo);
     }
     setShowFailModal(true);
+  };
+
+  const openRescheduleModal = (id, refNo, inductionId, inductionName) => {
+    setSelectedCvId(id);
+    setSelectedCvRef(refNo);
+    setSelectedInductionId(inductionId);
+    setSelectedInductionName(inductionName);
+    setShowRescheduleModal(true);
   };
 
   const handlePassInduction = async () => {
@@ -235,6 +260,47 @@ const InductionResults = ({ darkMode }) => {
         }`
       );
     }
+  };
+
+  const handleRescheduleInduction = async (newInductionId, currentInductionId, reason) => {
+    setError("");
+    try {
+      await api.patch(`/${selectedCvId}/reschedule-induction`, {
+        newInductionId: newInductionId,
+        currentInductionId: currentInductionId,
+        reason: reason
+      });
+      
+      setSuccessMessage(`Induction for ${selectedCvRef} rescheduled successfully!`);
+      setTimeout(() => {
+        setShowRescheduleModal(false);
+        fetchCVs();
+      }, 1500);
+    } catch (error) {
+      console.error("Error rescheduling induction:", error);
+      setError(
+        error.response?.data?.message || "Failed to reschedule induction"
+      );
+    }
+  };
+
+  const clearMessages = () => {
+    setError("");
+    setSuccessMessage("");
+  };
+
+  // Fixed getAssignmentType function to correctly identify direct assignments
+  const getAssignmentType = (cv) => {
+    if (cv.interview?.status === "interview-skipped" || cv.currentStatus === "interview-skipped") {
+      return "Direct";
+    } else if (
+      cv.currentStatus === "interview-passed" || 
+      cv.interview?.status === "interview-completed" ||
+      cv.interview?.interviews?.some(interview => interview.result?.status === "interview-passed")
+    ) {
+      return "Interview Passed";
+    }
+    return "Unknown";
   };
 
   // Export to Excel - Modified
@@ -369,18 +435,6 @@ const InductionResults = ({ darkMode }) => {
     }
   };
 
-  const getAssignmentType = (cv) => {
-    if (cv.interview?.status === "interview-skipped" || cv.currentStatus === "interview-skipped") {
-      return "Direct";
-    } else if (
-      cv.currentStatus === "interview-passed" || 
-      cv.interview?.interviews?.some((i) => i.result?.status === "passed")
-    ) {
-      return "Interview Passed";
-    }
-    return "Unknown";
-  };
-
   const handleSelectRow = (id) => {
     setSelectedRows((prevSelected) =>
       prevSelected.includes(id)
@@ -416,6 +470,7 @@ const InductionResults = ({ darkMode }) => {
     "View",
     "Pass",
     "Fail",
+    "Reschedule" 
   ];
 
   return (
@@ -510,8 +565,8 @@ const InductionResults = ({ darkMode }) => {
           </Col>
         </Row>
 
-               {/* Export Buttons - Moved to top */}
-               <div className="d-flex justify-content-end mb-3">
+        {/* Export Buttons - Moved to top */}
+        <div className="d-flex justify-content-end mb-3">
           <Button
             variant="success"
             size="sm"
@@ -631,13 +686,13 @@ const InductionResults = ({ darkMode }) => {
                       <td>{getAssignmentType(cv)}</td>
                       <td>{cv.induction?.inductionName || "N/A"}</td>
                       <td>
-                        {cv.induction?.startDate
-                          ? new Date(cv.induction.startDate).toLocaleDateString()
+                        {cv.induction?.inductionStartDate
+                          ? new Date(cv.induction.inductionStartDate).toLocaleDateString()
                           : "N/A"}
                       </td>
                       <td>
-                        {cv.induction?.endDate
-                          ? new Date(cv.induction.endDate).toLocaleDateString()
+                        {cv.induction?.inductionEndDate
+                          ? new Date(cv.induction.inductionEndDate).toLocaleDateString()
                           : "N/A"}
                       </td>
                       <td>
@@ -674,6 +729,24 @@ const InductionResults = ({ darkMode }) => {
                           }
                         >
                           Fail
+                        </Button>
+                      </td>
+                      <td>
+                        <Button
+                          size="sm"
+                          variant="outline-info"
+                          onClick={() => openRescheduleModal(
+                            cv._id, 
+                            cv.refNo, 
+                            cv.induction?._id,
+                            cv.induction?.inductionName
+                          )}
+                          className="fw-semibold"
+                          disabled={
+                            cv.induction?.result?.status === "induction-passed"
+                          }
+                        >
+                           Reschedule
                         </Button>
                       </td>
                     </tr>
@@ -768,6 +841,20 @@ const InductionResults = ({ darkMode }) => {
         refNo={selectedCvRef}
         isBulk={isBulkAction}
         darkMode={darkMode}
+      />
+
+      {/* Reschedule Modal */}
+      <RescheduleInductionModal
+        show={showRescheduleModal}
+        onClose={() => setShowRescheduleModal(false)}
+        onConfirm={handleRescheduleInduction}
+        refNo={selectedCvRef}
+        darkMode={darkMode}
+        successMessage={successMessage}
+        errorMessage={error}
+        onClearMessages={clearMessages}
+        currentInductionId={selectedInductionId}
+        currentInductionName={selectedInductionName}
       />
     </div>
   );

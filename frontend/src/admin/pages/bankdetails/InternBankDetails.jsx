@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table, Button, Container, Spinner, Alert, Form } from "react-bootstrap";
-import { FaChevronLeft, FaChevronRight, FaMoneyBillWave } from "react-icons/fa";
+import { Table, Button, Container, Spinner, Alert, Form, InputGroup } from "react-bootstrap";
+import { FaChevronLeft, FaChevronRight, FaMoneyBillWave, FaSearch } from "react-icons/fa";
 import axios from "axios";
 import logo from "../../../assets/logo.png";
 import ConfirmDeleteModal from "../../../components/notifications/ConfirmDeleteModal";
@@ -76,9 +76,18 @@ const InternBankDetails = ({ darkMode }) => {
     return cleaned.replace(/(\d{4})(?=\d)/g, '$1 ');
   };
 
-  const filteredBankDetails = bankDetails.filter((bankDetail) =>
-    bankDetail.accountHolderName?.toLowerCase().includes(filter.toLowerCase())
-  );
+  const filteredBankDetails = bankDetails.filter((bankDetail) => {
+    if (!filter) return true;
+    
+    const searchTerm = filter.toLowerCase();
+    
+    // Search across all three fields
+    return (
+      bankDetail.accountHolderName?.toLowerCase().includes(searchTerm) ||
+      bankDetail.internId?.toLowerCase().includes(searchTerm) ||
+      bankDetail.nic?.toLowerCase().includes(searchTerm)
+    );
+  });
 
   const totalPages = Math.ceil(filteredBankDetails.length / itemsPerPage);
   const indexOfLastBankDetail = currentPage * itemsPerPage;
@@ -121,17 +130,20 @@ const InternBankDetails = ({ darkMode }) => {
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
         <div className="d-flex flex-wrap justify-content-between mb-3">
-          <Form.Group className="mb-0" style={{ maxWidth: "300px", flex: "1 1 100%" }}>
-            <Form.Control
-              type="text"
-              placeholder="Filter by Account Holder Name"
-              value={filter}
-              onChange={(e) => {
-                setFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className={darkMode ? "text-white" : ""}
-            />
+          <Form.Group style={{ maxWidth: "400px", flex: "1 1 100%" }}>
+            <InputGroup>
+              <Form.Control
+                type="text"
+                placeholder="Search by Name, Intern ID or NIC..."
+                value={filter}
+                onChange={(e) => {
+                  setFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className={darkMode ? "bg-dark text-white border-secondary" : ""}
+                style={darkMode ? { color: "white" } : {}}
+              />
+            </InputGroup>
           </Form.Group>
 
           <div className="d-flex flex-wrap justify-content-end align-items-center mt-2 mt-sm-0">
