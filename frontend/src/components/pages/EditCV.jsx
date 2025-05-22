@@ -27,12 +27,32 @@ const EditCV = ({ darkMode }) => {
     postalAddress: "",
     district: "",
     institute: "",
+    emergencyContactName1: "",
+    emergencyContactNumber1: "",
+    emergencyContactName2: "",
+    emergencyContactNumber2: "",
+    previousTraining: "",
     // Initialize roleData with proper structure
     roleData: {
       dataEntry: {
-        proficiency: { msWord: 0, msExcel: 0, msPowerPoint: 0 },
-        olResults: {},
-        alResults: {},
+        language: "",
+        mathematics: "",
+        science: "",
+        english: "",
+        history: "",
+        religion: "",
+        optional1Name: "",
+        optional1Result: "",
+        optional2Name: "",
+        optional2Result: "",
+        optional3Name: "",
+        optional3Result: "",
+        aLevelSubject1Name: "",
+        aLevelSubject1Result: "",
+        aLevelSubject2Name: "",
+        aLevelSubject2Result: "",
+        aLevelSubject3Name: "",
+        aLevelSubject3Result: "",
         preferredLocation: "",
         otherQualifications: ""
       },
@@ -81,6 +101,40 @@ const EditCV = ({ darkMode }) => {
         
         // Set CV data with proper structure
         const fetchedCV = cvRes.data || {};
+        
+        // Ensure roleData structure exists
+        if (!fetchedCV.roleData) {
+          fetchedCV.roleData = {
+            dataEntry: {
+              language: "",
+              mathematics: "",
+              science: "",
+              english: "",
+              history: "",
+              religion: "",
+              optional1Name: "",
+              optional1Result: "",
+              optional2Name: "",
+              optional2Result: "",
+              optional3Name: "",
+              optional3Result: "",
+              aLevelSubject1Name: "",
+              aLevelSubject1Result: "",
+              aLevelSubject2Name: "",
+              aLevelSubject2Result: "",
+              aLevelSubject3Name: "",
+              aLevelSubject3Result: "",
+              preferredLocation: "",
+              otherQualifications: ""
+            },
+            internship: {
+              categoryOfApply: "",
+              higherEducation: "",
+              otherQualifications: ""
+            }
+          };
+        }
+
         setCvData(fetchedCV);
         setSelectedRole(fetchedCV.selectedRole || "");
       } catch (err) {
@@ -99,101 +153,107 @@ const EditCV = ({ darkMode }) => {
     const { name, value } = e.target;
   
     setCvData((prevData) => {
-      // Handle proficiency within roleData.dataEntry
-      if (name.startsWith("proficiency.")) {
-        const proficiencyKey = name.split(".")[1]; 
-        return {
-          ...prevData,
-          roleData: {
-            ...prevData.roleData,
-            dataEntry: {
-              ...prevData.roleData.dataEntry,
-              proficiency: {
-                ...prevData.roleData.dataEntry.proficiency,
-                [proficiencyKey]: parseInt(value, 10) || 0,
+      // Handle nested roleData fields (e.g., roleData.dataEntry.language)
+      if (name.includes('roleData.')) {
+        const parts = name.split('.');
+        
+        if (parts.length === 3) {
+          // Handle roleData.dataEntry.field or roleData.internship.field
+          const [, roleType, fieldName] = parts;
+          
+          return {
+            ...prevData,
+            roleData: {
+              ...prevData.roleData,
+              [roleType]: {
+                ...prevData.roleData[roleType],
+                [fieldName]: value
               }
             }
-          }
-        };
+          };
+        }
       }
   
-      // Handling olResults within roleData.dataEntry
-      if (name.startsWith("olResults.")) {
-        const olKey = name.split(".")[1];
-        return {
-          ...prevData,
-          roleData: {
-            ...prevData.roleData,
-            dataEntry: {
-              ...prevData.roleData.dataEntry,
-              olResults: {
-                ...prevData.roleData.dataEntry.olResults,
-                [olKey]: value,
-              }
-            }
-          }
-        };
-      }
-  
-      // Handling alResults within roleData.dataEntry
-      if (name.startsWith("alResults.")) {
-        const alKey = name.split(".")[1];
-        return {
-          ...prevData,
-          roleData: {
-            ...prevData.roleData,
-            dataEntry: {
-              ...prevData.roleData.dataEntry,
-              alResults: {
-                ...prevData.roleData.dataEntry.alResults,
-                [alKey]: value,
-              }
-            }
-          }
-        };
-      }
-      
-      // Handle internship fields
-      if (name === "categoryOfApply" || name === "higherEducation" || (name === "otherQualifications" && selectedRole === "internship")) {
-        return {
-          ...prevData,
-          roleData: {
-            ...prevData.roleData,
-            internship: {
-              ...prevData.roleData.internship,
-              [name]: value
-            }
-          }
-        };
-      }
-      
-      // Handle dataEntry specific fields
-      if (name === "preferredLocation" || (name === "otherQualifications" && selectedRole === "dataEntry")) {
-        return {
-          ...prevData,
-          roleData: {
-            ...prevData.roleData,
-            dataEntry: {
-              ...prevData.roleData.dataEntry,
-              [name]: value
-            }
-          }
-        };
-      }
-  
-      // Regular top-level fields
+      // Handle top-level fields
       return { ...prevData, [name]: value };
     });
+
+    // Clear any existing errors for this field
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   // Handle Role Change
   const handleRoleChange = (e) => {
     setSelectedRole(e.target.value);
+    setCvData(prev => ({
+      ...prev,
+      selectedRole: e.target.value
+    }));
+
+    // Clear role-related errors
+    const roleErrorKeys = Object.keys(formErrors).filter(key => key.includes('selectedRole'));
+    if (roleErrorKeys.length > 0) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        roleErrorKeys.forEach(key => delete newErrors[key]);
+        return newErrors;
+      });
+    }
   };
 
   // Handle File Uploads
   const handleFileChange = (e) => {
     setFiles({ ...files, [e.target.name]: e.target.files[0] });
+  };
+
+  // Validate form data
+  const validateForm = () => {
+    const errors = {};
+
+    // Validate role selection
+    if (!selectedRole) {
+      errors['selectedRole'] = 'Please select a role';
+    }
+
+    // Validate based on selected role
+    if (selectedRole === 'dataEntry') {
+      // Required O/L subjects
+      const requiredOLSubjects = ['language', 'mathematics', 'science', 'english'];
+      requiredOLSubjects.forEach(subject => {
+        if (!cvData.roleData?.dataEntry?.[subject]?.trim()) {
+          errors[`roleData.dataEntry.${subject}`] = `${subject.charAt(0).toUpperCase() + subject.slice(1)} result is required`;
+        }
+      });
+
+      // Required preferred location
+      if (!cvData.roleData?.dataEntry?.preferredLocation) {
+        errors['roleData.dataEntry.preferredLocation'] = 'Preferred location is required';
+      }
+    }
+
+    if (selectedRole === 'internship') {
+      // Required category
+      if (!cvData.roleData?.internship?.categoryOfApply) {
+        errors['roleData.internship.categoryOfApply'] = 'Category of apply is required';
+      }
+    }
+
+    // Validate user info (basic validation)
+    if (!cvData.fullName?.trim()) {
+      errors['fullName'] = 'Full name is required';
+    }
+    if (!cvData.emailAddress?.trim()) {
+      errors['emailAddress'] = 'Email address is required';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   // Submit Updated CV Data
@@ -202,8 +262,8 @@ const EditCV = ({ darkMode }) => {
     setSuccessMessage("");
     setError(null);
 
-    // Check if there are any form errors
-    if (Object.keys(formErrors).length > 0) {
+    // Validate form
+    if (!validateForm()) {
       setError("Please fix all the validation errors before submitting.");
       return;
     }
@@ -212,8 +272,7 @@ const EditCV = ({ darkMode }) => {
       const token = localStorage.getItem("token");
       const formData = new FormData();
 
-      // Manually structure the roleData for the form
-      // Set selectedRole separately
+      // Set selectedRole
       formData.append('selectedRole', selectedRole);
       
       // Add non-nested properties first
@@ -230,34 +289,21 @@ const EditCV = ({ darkMode }) => {
         }
       });
       
-      // Handle nested roleData structure correctly
-      // For dataEntry role
-      if (cvData.roleData?.dataEntry) {
-        // Proficiency
-        Object.entries(cvData.roleData.dataEntry.proficiency || {}).forEach(([key, value]) => {
-          formData.append(`roleData[dataEntry][proficiency][${key}]`, value);
-        });
+      // Handle roleData structure
+      if (cvData.roleData) {
+        // For dataEntry role
+        if (cvData.roleData.dataEntry) {
+          Object.entries(cvData.roleData.dataEntry).forEach(([key, value]) => {
+            formData.append(`roleData[dataEntry][${key}]`, value || '');
+          });
+        }
         
-        // OL Results
-        Object.entries(cvData.roleData.dataEntry.olResults || {}).forEach(([key, value]) => {
-          formData.append(`roleData[dataEntry][olResults][${key}]`, value || '');
-        });
-        
-        // AL Results
-        Object.entries(cvData.roleData.dataEntry.alResults || {}).forEach(([key, value]) => {
-          formData.append(`roleData[dataEntry][alResults][${key}]`, value || '');
-        });
-        
-        // Other dataEntry fields
-        formData.append('roleData[dataEntry][preferredLocation]', cvData.roleData.dataEntry.preferredLocation || '');
-        formData.append('roleData[dataEntry][otherQualifications]', cvData.roleData.dataEntry.otherQualifications || '');
-      }
-      
-      // For internship role
-      if (cvData.roleData?.internship) {
-        formData.append('roleData[internship][categoryOfApply]', cvData.roleData.internship.categoryOfApply || '');
-        formData.append('roleData[internship][higherEducation]', cvData.roleData.internship.higherEducation || '');
-        formData.append('roleData[internship][otherQualifications]', cvData.roleData.internship.otherQualifications || '');
+        // For internship role
+        if (cvData.roleData.internship) {
+          Object.entries(cvData.roleData.internship).forEach(([key, value]) => {
+            formData.append(`roleData[internship][${key}]`, value || '');
+          });
+        }
       }
 
       // Append uploaded files if any
@@ -304,8 +350,13 @@ const EditCV = ({ darkMode }) => {
           <hr />
 
           {/* Error Message */}
-          {error === "Please fix all the validation errors before submitting." && (
+          {error && (
             <div className="alert alert-danger mb-3">{error}</div>
+          )}
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="alert alert-success mb-3">{successMessage}</div>
           )}
 
           {/* Form */}
@@ -325,26 +376,40 @@ const EditCV = ({ darkMode }) => {
               cvData={cvData}
               handleInputChange={handleInputChange}
               darkMode={darkMode}
+              errors={formErrors}
+              setFormErrors={setFormErrors}
             />
-            <EmergencySection cvData={cvData} handleInputChange={handleInputChange} darkMode={darkMode} />
-            <PreviousTrainingSection cvData={cvData} handleInputChange={handleInputChange} darkMode={darkMode} />
+            <EmergencySection 
+              cvData={cvData} 
+              handleInputChange={handleInputChange} 
+              darkMode={darkMode} 
+            />
+            <PreviousTrainingSection 
+              cvData={cvData} 
+              handleInputChange={handleInputChange} 
+              darkMode={darkMode} 
+            />
             <UploadDocumentSection
-              cvData={cvData} // Pass existing file data
+              cvData={cvData}
               handleFileChange={handleFileChange}
               darkMode={darkMode}
             />
 
             {/* Submit Button */}
-            <button type="submit" className={`btn ${darkMode ? "btn-light text-dark" : "btn-primary"} w-100 mt-3`}>
-              Update CV
+            <button 
+              type="submit" 
+              className={`btn ${darkMode ? "btn-light text-dark" : "btn-primary"} w-100 mt-3`}
+              disabled={loading}
+            >
+              {loading ? "Updating..." : "Update CV"}
             </button>
           </form>
 
-          {/* Success Message */}
-          {successMessage && <div className="alert alert-success mt-3">{successMessage}</div>}
-
           {/* Back Button */}
-          <button className={`btn ${darkMode ? "btn-light text-dark" : "btn-secondary"} w-100 mt-3`} onClick={() => navigate(-1)}>
+          <button 
+            className={`btn ${darkMode ? "btn-light text-dark" : "btn-secondary"} w-100 mt-3`} 
+            onClick={() => navigate(-1)}
+          >
             Back to Previous Page
           </button>
         </div>

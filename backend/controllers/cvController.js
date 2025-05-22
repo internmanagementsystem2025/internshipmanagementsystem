@@ -73,7 +73,6 @@ const createCV = async (req, res) => {
 
     // Create user account first if created by admin
     if (createdByAdmin) {
-      // Check if user already exists with this email or NIC
       const existingUser = await User.findOne({
         $or: [{ email: req.body.emailAddress }, { nic: req.body.nic }],
       });
@@ -91,7 +90,7 @@ const createCV = async (req, res) => {
         username,
         email: req.body.emailAddress,
         password: hashedPassword,
-        userType: "individual", // This creates the user with type "individual"
+        userType: "individual", 
         nic: req.body.nic,
         fullName: req.body.fullName,
         contactNumber: req.body.mobileNumber,
@@ -100,52 +99,45 @@ const createCV = async (req, res) => {
       });
     }
 
-    // Correctly structure data according to schema
-    const selectedRole = req.body.selectedRole;
-
     // Create properly structured roleData based on selected role
-    const roleData = {
-      dataEntry:
-        selectedRole === "dataEntry"
-          ? {
-              proficiency: {
-                msWord: parseInt(req.body["proficiency[msWord]"] || 0),
-                msExcel: parseInt(req.body["proficiency[msExcel]"] || 0),
-                msPowerPoint: parseInt(
-                  req.body["proficiency[msPowerPoint]"] || 0
-                ),
-              },
-              olResults: {
-                language: req.body["olResults[language]"] || "",
-                mathematics: req.body["olResults[mathematics]"] || "",
-                science: req.body["olResults[science]"] || "",
-                english: req.body["olResults[english]"] || "",
-                history: req.body["olResults[history]"] || "",
-                religion: req.body["olResults[religion]"] || "",
-                optional1: req.body["olResults[optional1]"] || "",
-                optional2: req.body["olResults[optional2]"] || "",
-                optional3: req.body["olResults[optional3]"] || "",
-              },
-              alResults: {
-                aLevelSubject1: req.body["alResults[aLevelSubject1]"] || "",
-                aLevelSubject2: req.body["alResults[aLevelSubject2]"] || "",
-                aLevelSubject3: req.body["alResults[aLevelSubject3]"] || "",
-                git: req.body["alResults[git]"] || "",
-                gk: req.body["alResults[gk]"] || "",
-              },
-              preferredLocation: req.body.preferredLocation || "",
-              otherQualifications: req.body.otherQualifications || "",
-            }
-          : null,
-      internship:
-        selectedRole === "internship"
-          ? {
-              categoryOfApply: req.body.categoryOfApply || "",
-              higherEducation: req.body.higherEducation || "",
-              otherQualifications: req.body.otherQualifications || "",
-            }
-          : null,
-    };
+    const selectedRole = req.body.selectedRole;
+    const roleData = {};
+    
+    if (selectedRole === "dataEntry") {
+      roleData.dataEntry = {
+        // O/L Results - FIXED: Use correct field names from req.body
+        language: req.body.language || "",
+        mathematics: req.body.mathematics || "",
+        science: req.body.science || "",
+        english: req.body.english || "",
+        history: req.body.history || "",
+        religion: req.body.religion || "",
+        optional1Name: req.body.optional1Name || "",
+        optional1Result: req.body.optional1Result || "",
+        optional2Name: req.body.optional2Name || "",
+        optional2Result: req.body.optional2Result || "",
+        optional3Name: req.body.optional3Name || "",
+        optional3Result: req.body.optional3Result || "",
+        
+        // A/L Results - FIXED: Use correct field names from req.body
+        aLevelSubject1Name: req.body.aLevelSubject1Name || "",
+        aLevelSubject1Result: req.body.aLevelSubject1Result || "",
+        aLevelSubject2Name: req.body.aLevelSubject2Name || "",
+        aLevelSubject2Result: req.body.aLevelSubject2Result || "",
+        aLevelSubject3Name: req.body.aLevelSubject3Name || "",
+        aLevelSubject3Result: req.body.aLevelSubject3Result || "",
+        
+        // Other fields - FIXED: These were already correct
+        preferredLocation: req.body.preferredLocation || "",
+        otherQualifications: req.body.otherQualifications || ""
+      };
+    } else if (selectedRole === "internship") {
+      roleData.internship = {
+        categoryOfApply: req.body.categoryOfApply || "",
+        higherEducation: req.body.higherEducation || "",
+        otherQualifications: req.body.otherQualifications || ""
+      };
+    }
 
     // Prepare CV data with proper approval status
     const cvData = {
@@ -164,7 +156,7 @@ const createCV = async (req, res) => {
       emailAddress: req.body.emailAddress,
       institute: req.body.institute,
       selectedRole: selectedRole,
-      roleData: roleData,
+      roleData: roleData, // This will now contain the correct data structure
       emergencyContactName1: req.body.emergencyContactName1,
       emergencyContactNumber1: req.body.emergencyContactNumber1,
       emergencyContactName2: req.body.emergencyContactName2 || "", 
