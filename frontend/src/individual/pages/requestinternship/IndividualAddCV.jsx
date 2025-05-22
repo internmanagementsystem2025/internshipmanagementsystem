@@ -23,32 +23,30 @@ const IndividualAddCVs = ({ darkMode }) => {
     emailAddress: "",
     institute: "",
     selectedRole: "",
-    // Use roleData structure that matches backend
     roleData: {
       dataEntry: {
-        proficiency: {
-          msWord: 0,
-          msExcel: 0,
-          msPowerPoint: 0,
-        },
-        olResults: {
-          language: "",
-          mathematics: "",
-          science: "",
-          english: "",
-          history: "",
-          religion: "",
-          optional1: "",
-          optional2: "",
-          optional3: "",
-        },
-        alResults: {
-          aLevelSubject1: "",
-          aLevelSubject2: "",
-          aLevelSubject3: "",
-          git: "",
-          gk: "",
-        },
+        // O/L Results (Required subjects)
+        language: "",
+        mathematics: "",
+        science: "",
+        english: "",
+        history: "",
+        religion: "",
+        // Optional subjects
+        optional1Name: "",
+        optional1Result: "",
+        optional2Name: "",
+        optional2Result: "",
+        optional3Name: "",
+        optional3Result: "",
+        // A/L Results
+        aLevelSubject1Name: "",
+        aLevelSubject1Result: "",
+        aLevelSubject2Name: "",
+        aLevelSubject2Result: "",
+        aLevelSubject3Name: "",
+        aLevelSubject3Result: "",
+        // Other fields
         preferredLocation: "",
         otherQualifications: "",
       },
@@ -194,6 +192,15 @@ const IndividualAddCVs = ({ darkMode }) => {
         
         return newState;
       });
+      
+      // Clear error for nested field if it exists
+      if (formErrors[name]) {
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     } else {
       // Handle simple fields
       setCvData(prevState => ({
@@ -260,8 +267,12 @@ const IndividualAddCVs = ({ darkMode }) => {
     
     // Emergency contact validation
     if (!cvData.emergencyContactName1 || !cvData.emergencyContactNumber1) {
-      errors.emergencyContactName1 = !cvData.emergencyContactName1 ? "Primary emergency contact name is required" : undefined;
-      errors.emergencyContactNumber1 = !cvData.emergencyContactNumber1 ? "Primary emergency contact number is required" : undefined;
+      if (!cvData.emergencyContactName1) {
+        errors.emergencyContactName1 = "Primary emergency contact name is required";
+      }
+      if (!cvData.emergencyContactNumber1) {
+        errors.emergencyContactNumber1 = "Primary emergency contact number is required";
+      }
     }
     
     // Check if a role is selected
@@ -276,11 +287,11 @@ const IndividualAddCVs = ({ darkMode }) => {
         errors["roleData.dataEntry.preferredLocation"] = "Please select a preferred location";
       }
       
-      // Check required O/L results
+      // Check required O/L results - FIXED: Access direct fields, not nested olResults
       const requiredSubjects = ["language", "mathematics", "science", "english"];
       requiredSubjects.forEach(subject => {
-        if (!cvData.roleData?.dataEntry?.olResults?.[subject]) {
-          errors[`roleData.dataEntry.olResults.${subject}`] = "This field is required";
+        if (!cvData.roleData?.dataEntry?.[subject]) {
+          errors[`roleData.dataEntry.${subject}`] = "This field is required";
         }
       });
     }
@@ -317,7 +328,6 @@ const IndividualAddCVs = ({ darkMode }) => {
         variant: "danger",
       });
       
-      // Scroll to first error
       const firstErrorElement = document.querySelector('.is-invalid');
       if (firstErrorElement) {
         firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -352,34 +362,38 @@ const IndividualAddCVs = ({ darkMode }) => {
       }
     });
 
-    // Handle role-specific data with proper field names for backend
+    // Handle role-specific data with correct field names for backend
     if (cvData.selectedRole === 'dataEntry') {
       const dataEntryData = cvData.roleData?.dataEntry || {};
       
-      // Add proficiency scores exactly as backend expects
-      if (dataEntryData.proficiency) {
-        Object.entries(dataEntryData.proficiency).forEach(([key, value]) => {
-          formData.append(`proficiency[${key}]`, value !== undefined ? value : 0);
-        });
+      // O/L Results - Send as flat fields (what backend expects)
+      const olSubjects = ['language', 'mathematics', 'science', 'english', 'history', 'religion'];
+      olSubjects.forEach(subject => {
+        formData.append(subject, dataEntryData[subject] || '');
+      });
+      
+      // Optional subjects
+      for (let i = 1; i <= 3; i++) {
+        formData.append(`optional${i}Name`, dataEntryData[`optional${i}Name`] || '');
+        formData.append(`optional${i}Result`, dataEntryData[`optional${i}Result`] || '');
       }
       
-      // Add O/L Results exactly as backend expects
-      if (dataEntryData.olResults) {
-        Object.entries(dataEntryData.olResults).forEach(([key, value]) => {
-          formData.append(`olResults[${key}]`, value || '');
-        });
+      // A/L Results - Send as flat fields (what backend expects)
+      for (let i = 1; i <= 3; i++) {
+        formData.append(`aLevelSubject${i}Name`, dataEntryData[`aLevelSubject${i}Name`] || '');
+        formData.append(`aLevelSubject${i}Result`, dataEntryData[`aLevelSubject${i}Result`] || '');
       }
       
-      // Add A/L Results exactly as backend expects
-      if (dataEntryData.alResults) {
-        Object.entries(dataEntryData.alResults).forEach(([key, value]) => {
-          formData.append(`alResults[${key}]`, value || '');
-        });
-      }
-      
-      // Add preferred location and other qualifications
+      // Other fields
       formData.append('preferredLocation', dataEntryData.preferredLocation || '');
       formData.append('otherQualifications', dataEntryData.otherQualifications || '');
+      
+      // Add proficiency data if it exists
+      if (dataEntryData.proficiency) {
+        formData.append('msWordProficiency', dataEntryData.proficiency.msWord || '0');
+        formData.append('msExcelProficiency', dataEntryData.proficiency.msExcel || '0');
+        formData.append('msPowerPointProficiency', dataEntryData.proficiency.msPowerPoint || '0');
+      }
     } 
     else if (cvData.selectedRole === 'internship') {
       // Internship specific fields
@@ -405,11 +419,6 @@ const IndividualAddCVs = ({ darkMode }) => {
         variant: "info",
         isLoading: true,
       });
-      
-      // Ensure form is properly validated
-      if (Object.keys(formErrors).length > 0) {
-        throw new Error("Please fix all form errors before submitting");
-      }
 
       const response = await fetch("http://localhost:5000/api/cvs/addcv", {
         method: "POST",
@@ -422,26 +431,22 @@ const IndividualAddCVs = ({ darkMode }) => {
       const result = await response.json();
 
       if (response.ok) {
-        setFormModified(false); // Reset form modified state
+        setFormModified(false);
         setNotification({
           show: true,
           message: "CV successfully added!",
           variant: "success",
           isLoading: false,
-          // Define onClose callback to navigate after notification is closed
           onClose: () => {
-            // Use replace instead of push to prevent back button from returning to the form
             navigate("/individual-home", { replace: true });
           }
         });
         
-        // Set a short timeout then navigate
         setTimeout(() => {
           navigate("/individual-home", { replace: true });
         }, 1500);
       } else {
         console.error("Failed to submit CV:", result);
-        // Better error handling
         let errorMessage = "Failed to submit CV: ";
         
         if (typeof result === 'object') {
@@ -534,7 +539,7 @@ const IndividualAddCVs = ({ darkMode }) => {
               setFormErrors={setFormErrors}
             />
 
-            {/* Form Navigation Buttons - Repositioned */}
+            {/* Form Navigation Buttons */}
             <div className="d-flex justify-content-between mt-4">
               <button 
                 type="button" 

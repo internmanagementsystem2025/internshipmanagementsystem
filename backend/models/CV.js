@@ -30,32 +30,27 @@ const cvSchema = new mongoose.Schema(
     roleData: {
       // Data Entry Operator specific fields
       dataEntry: {
-        proficiency: {
-          msWord: { type: Number, min: 0, max: 100, default: 0 },
-          msExcel: { type: Number, min: 0, max: 100, default: 0 },
-          msPowerPoint: { type: Number, min: 0, max: 100, default: 0 },
-        },
-        olResults: {
-          language: { type: String },
-          mathematics: { type: String },
-          science: { type: String },
-          english: { type: String },
-          history: { type: String },
-          religion: { type: String },
-          optional1: { type: String },
-          optional2: { type: String },
-          optional3: { type: String },
-        },
-        alResults: {
-          aLevelSubject1: { type: String },
-          aLevelSubject2: { type: String },
-          aLevelSubject3: { type: String },
-          git: { type: String },
-          gk: { type: String },
-        },
-        preferredLocation: { type: String },
-        otherQualifications: { type: String },
-      },
+      language: { type: String },
+      mathematics: { type: String },
+      science: { type: String },
+      english: { type: String },
+      history: { type: String },
+      religion: { type: String },
+      optional1Name: { type: String },
+      optional1Result: { type: String },
+      optional2Name: { type: String },
+      optional2Result: { type: String },
+      optional3Name: { type: String },
+      optional3Result: { type: String },
+      aLevelSubject1Name: { type: String },
+      aLevelSubject1Result: { type: String },
+      aLevelSubject2Name: { type: String },
+      aLevelSubject2Result: { type: String },
+      aLevelSubject3Name: { type: String },
+      aLevelSubject3Result: { type: String },
+      preferredLocation: { type: String },
+      otherQualifications: { type: String },
+    },
 
       // Internship specific fields
       internship: {
