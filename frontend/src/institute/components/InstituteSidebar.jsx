@@ -1,106 +1,155 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Offcanvas, Button, Nav } from "react-bootstrap";
-import { List } from "react-bootstrap-icons";
-import { FiCreditCard, FiHelpCircle, FiHome, FiFilePlus, FiList } from "react-icons/fi";
+import { Nav } from "react-bootstrap";
+import { FiHelpCircle, FiMenu, FiX, FiHome, FiUserCheck, FiFileText, FiList } from "react-icons/fi";
 import logo from "../../assets/logo.png";
 
 const InstituteSidebar = ({ darkMode }) => {
   const [show, setShow] = useState(false);
   const [hovered, setHovered] = useState(null);
   const [certDropdown, setCertDropdown] = useState(false);
+  const [cv, setCV] = useState(false);
+
+  const sidebarRef = useRef(null);
+  const hoverTimeoutRef = useRef(null);
+
+  const closeAllDropdowns = () => {
+    setCertDropdown(false);
+    setCV(false);
+  };
+
+  const handleMouseEnter = () => {
+    clearTimeout(hoverTimeoutRef.current);
+    setShow(true);
+  };
+
+  const handleMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      if (!sidebarRef.current?.matches(':hover')) {
+        setShow(false);
+        closeAllDropdowns();
+      }
+    }, 300);
+  };
+
+  const toggleSidebar = () => {
+    if (show) {
+      setShow(false);
+      closeAllDropdowns();
+    } else {
+      setShow(true);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTimeout(hoverTimeoutRef.current);
+    };
+  }, []);
 
   return (
     <>
       {/* Sidebar Toggle Button */}
-      {!show && (
-        <Button
-          variant={darkMode ? "light" : "dark"}
-          onClick={() => setShow(true)}
-          className="position-fixed top-0 start-0 m-2"
-          style={{
-            fontSize: "25px",
-            background: "transparent",
-            border: "none",
-            zIndex: 2000,
-          }}
-        >
-          <List size={25} color={darkMode ? "#fff" : "#000"} />
-        </Button>
-      )}
-
-      {/* Sidebar Offcanvas */}
-      <Offcanvas
-        show={show}
-        onHide={() => setShow(false)}
-        backdrop="static"
+      <div 
+        className="position-fixed"
         style={{
+          left: show ? '250px' : '0',
+          top: '5px',
+          zIndex: 2000,
+          transition: 'left 0.3s ease',
+          backgroundColor: darkMode ? '#2c3e50' : '#f8f9fa',
+          borderRadius: '0 5px 5px 0',
+          padding: '10px 5px',
+          boxShadow: '2px 2px 5px rgba(0,0,0,0.2)',
+          cursor: 'pointer'
+        }}
+        onClick={toggleSidebar}
+        onMouseEnter={() => !show && setShow(true)}
+      >
+        {show ? (
+          <FiX size={24} color={darkMode ? "#fff" : "#000"} />
+        ) : (
+          <FiMenu size={24} color={darkMode ? "#fff" : "#000"} />
+        )}
+      </div>
+
+      {/* Sidebar */}
+      <div
+        ref={sidebarRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          position: 'fixed',
+          left: show ? 0 : '-250px',
+          top: 0,
+          width: '250px',
+          height: '100vh',
           backgroundColor: darkMode ? "#343a40" : "#f8f9fa",
-          width: "250px",
+          color: darkMode ? "#fff" : "#000",
+          transition: 'left 0.3s ease',
+          zIndex: 1000,
+          overflowY: 'auto',
+          boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
         }}
       >
         {/* Sidebar Header */}
-        <Offcanvas.Header
+        <div
           style={{
             backgroundColor: darkMode ? "#343a40" : "#f8f9fa",
-            marginBottom: "0",
-            paddingBottom: "0",
+            padding: "16px",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: `1px solid ${darkMode ? "#666" : "#ddd"}`
           }}
         >
-          <img
-            src={logo}
-            alt="Logo"
-            style={{
-              width: "80px",
-              height: "30px",
-              marginRight: "10px",
-            }}
-          />
-          <div>
-            <span
-              className="block text-sm font-semibold"
-              style={{
-                fontSize: "0.75rem",
-                color: darkMode ? "#fff" : "#000",
-                display: "block",
-              }}
-            >
-              Sri Lanka Telecom
-            </span>
-            <span
-              className="block text-sm"
-              style={{
-                fontSize: "0.875rem",
-                color: darkMode ? "#b0b0b0" : "#6c757d",
-                display: "block",
-              }}
-            >
-              Mobitel
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <img
+              src={logo}
+              alt="Logo"
+              style={{ width: "80px", height: "30px", marginRight: "10px" }}
+            />
+            <div>
+              <span
+                className="block text-sm font-semibold"
+                style={{
+                  fontSize: "0.75rem",
+                  color: darkMode ? "#fff" : "#000",
+                  display: "block",
+                }}
+              >
+                Sri Lanka Telecom
+              </span>
+              <span
+                className="block text-sm"
+                style={{
+                  fontSize: "0.875rem",
+                  color: darkMode ? "#b0b0b0" : "#6c757d",
+                  display: "block",
+                }}
+              >
+                Mobitel
+              </span>
+            </div>
           </div>
-        </Offcanvas.Header>
+        </div>
 
         {/* Sidebar Body */}
-        <Offcanvas.Body
+        <div
           className="d-flex flex-column justify-content-between"
           style={{
             backgroundColor: darkMode ? "#343a40" : "#f8f9fa",
             color: darkMode ? "#fff" : "#000",
-            height: "100vh",
+            height: "calc(100vh - 80px)",
             paddingBottom: "10px",
+            overflowY: "auto",
           }}
         >
+          <style>{`::-webkit-scrollbar { display: none; }`}</style>
+
           {/* Navigation Links */}
           <div>
-            <hr
-              style={{
-                borderColor: darkMode ? "#666" : "#ddd",
-                borderTop: "1px solid",
-                margin: "0",
-              }}
-            />
             <Nav className="flex-column">
-              {/* Institute Home */}
               <Nav.Link
                 as={Link}
                 to="/institute-home"
@@ -113,126 +162,97 @@ const InstituteSidebar = ({ darkMode }) => {
                   borderRadius: "5px",
                   padding: "10px",
                   transition: "all 0.3s ease",
+                  margin: "5px 10px",
                 }}
               >
                 <FiHome size={20} className="me-2" />
                 Institute Home
               </Nav.Link>
 
-              {/* Certificate Request (Dropdown) */}
+              {/* Request Internship*/}
               <Nav.Link
-                onClick={() => setCertDropdown(!certDropdown)}
-                onMouseEnter={() => setHovered("services")}
+                as={Link}
+                to="/institute-add-cv"
+                onClick={() => setShow(false)}
+                onMouseEnter={() => setHovered("institute-add-cv")}
                 onMouseLeave={() => setHovered(null)}
                 style={{
-                  color: hovered === "services" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "services" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
+                  color: hovered === "institute-add-cv" ? "#fff" : darkMode ? "#fff" : "#000",
+                  backgroundColor: hovered === "institute-add-cv" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
                   borderRadius: "5px",
                   padding: "10px",
                   transition: "all 0.3s ease",
-                  cursor: "pointer",
+                  margin: "5px 10px",
                 }}
               >
-                <FiCreditCard size={20} className="me-2" />
-                Certificate Request
+                <FiFileText size={20} className="me-2" />
+                Request Internship
               </Nav.Link>
 
-              {/* Sub-menu */}
-              {certDropdown && (
-                <div style={{ marginLeft: "20px" }}>
-                  <Nav.Link
-                    as={Link}
-                    to="/institute-certificate-request"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("create-request")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "create-request" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "create-request" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      transition: "all 0.3s ease",
-                    }}
-                  >
-                    <FiFilePlus size={18} className="me-2" />
-                    Create Request
-                  </Nav.Link>
-                  <Nav.Link
-                    as={Link}
-                    to="/institute-all-certificate-requests"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("view-requests")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "view-requests" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "view-requests" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      transition: "all 0.3s ease",
-                    }}
-                  >
-                    <FiList size={18} className="me-2" />
-                    View My Requests
-                  </Nav.Link>
-                </div>
-              )}
-
-              {/* My CVs */}
+              {/* My CVs*/}
               <Nav.Link
                 as={Link}
                 to="/institute-all-aplications"
                 onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("cvs")}
+                onMouseEnter={() => setHovered("institute-all-aplications")}
                 onMouseLeave={() => setHovered(null)}
                 style={{
-                  color: hovered === "cvs" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "cvs" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
+                  color: hovered === "institute-all-aplications" ? "#fff" : darkMode ? "#fff" : "#000",
+                  backgroundColor: hovered === "institute-all-aplications" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
                   borderRadius: "5px",
                   padding: "10px",
                   transition: "all 0.3s ease",
+                  margin: "5px 10px",
                 }}
               >
-                <FiHelpCircle size={20} className="me-2" />
+                <FiUserCheck size={20} className="me-2" />
                 My CVs
               </Nav.Link>
 
-              {/* Help */}
+              {/* Help*/}
+              <Nav.Link
+                as={Link}
+                to="/bulk-cv-upload"
+                onClick={() => setShow(false)}
+                onMouseEnter={() => setHovered("bulk-cv-upload")}
+                onMouseLeave={() => setHovered(null)}
+                style={{
+                  color: hovered === "bulk-cv-upload" ? "#fff" : darkMode ? "#fff" : "#000",
+                  backgroundColor: hovered === "bulk-cv-upload" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
+                  borderRadius: "5px",
+                  padding: "10px",
+                  transition: "all 0.3s ease",
+                  margin: "5px 10px",
+                }}
+              >
+                <FiList size={20} className="me-2" />
+               Bulk CV
+              </Nav.Link>
+
+              {/* Help*/}
               <Nav.Link
                 as={Link}
                 to="/institute-help-support"
                 onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("help")}
+                onMouseEnter={() => setHovered("institute-help-support")}
                 onMouseLeave={() => setHovered(null)}
                 style={{
-                  color: hovered === "help" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "help" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
+                  color: hovered === "institute-help-support" ? "#fff" : darkMode ? "#fff" : "#000",
+                  backgroundColor: hovered === "institute-help-support" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
                   borderRadius: "5px",
                   padding: "10px",
                   transition: "all 0.3s ease",
+                  margin: "5px 10px",
                 }}
               >
                 <FiHelpCircle size={20} className="me-2" />
-                Help
+               Help
               </Nav.Link>
+
             </Nav>
           </div>
-
-          {/* Collapse Button */}
-          <div className="text-center mt-auto">
-            <Button
-              variant={darkMode ? "outline-light" : "outline-dark"}
-              onClick={() => setShow(false)}
-              style={{
-                width: "90%",
-                marginBottom: "10px",
-                borderRadius: "5px",
-              }}
-            >
-              Collapse
-            </Button>
-          </div>
-        </Offcanvas.Body>
-      </Offcanvas>
+        </div>
+      </div>
     </>
   );
 };
