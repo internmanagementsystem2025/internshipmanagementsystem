@@ -35,6 +35,7 @@ import InstituteCertificateRequest from "./institute/pages/certificaterequest/In
 import InstituteAllCertificateRequest from "./institute/pages/certificaterequest/InstituteAllCertificateRequest";
 import AdminHome from "./admin/pages/home/AdminHome";
 import ViewAllCVs from "./admin/pages/managecv/ViewAllCVs";
+import DeletedCVsPage  from "./admin/pages/managecv/DeletedCVsPage";
 import AdminAddCVs from "./admin/pages/managecv/AdminAddCVs";
 import ApproveCVs from "./admin/pages/managecv/ApproveCVs";
 import ViewAllInterviews from "./admin/pages/interview/ViewAllInterviews";
@@ -106,6 +107,7 @@ import InternCertificateRequest  from "./admin/pages/certificaterequest/InternCe
 import ViewCertificateRequest  from "./components/pages/ViewCertificateRequest";
 import DownloadCertificate  from "./individual/pages/certificaterequest/DownloadCertificate";
 
+
 function App() {
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("theme") === "dark"
@@ -168,10 +170,13 @@ function App() {
     "/institute-help-support",
     "/institute-certificate-request",
     "/institute-all-certificate-requests",
+    "/bulk-cv-upload"
   ];
+
   const adminRoutes = [
     "/admin-home",
     "/view-all-cvs",
+    "/delete-cv",
     "/admin-add-cv",
     "/admin-approve-cvs",
     "/view-all-interviews",
@@ -333,6 +338,7 @@ function App() {
     {/* Admin */}
     <Route path="/admin-home" element={<AdminHome darkMode={darkMode} />} />
     <Route path="/view-all-cvs" element={<ViewAllCVs darkMode={darkMode} />} />
+    <Route path="/delete-cv" element={<DeletedCVsPage darkMode={darkMode} />} />
     <Route path="/admin-add-cv" element={<AdminAddCVs darkMode={darkMode} />} />
     <Route path="/admin-approve-cvs" element={<ApproveCVs darkMode={darkMode} />} />
     <Route path="/view-all-interviews" element={<ViewAllInterviews darkMode={darkMode} />} />
