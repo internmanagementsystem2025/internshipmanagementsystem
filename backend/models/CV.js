@@ -76,6 +76,18 @@ const cvSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    
+    // Soft Delete Implementation
+    isDeleted: { type: Boolean, default: false },
+    deletionInfo: {
+      deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      deletedDate: { type: Date },
+      adminName: { type: String },
+      employeeId: { type: String },
+      deletionReason: { type: String },
+      deletionComments: { type: String },
+    },
+    
     // CV Approval Status
     cvApproval: {
       cvApproved: { type: Boolean, default: false },
@@ -376,6 +388,67 @@ cvSchema.methods.updateCurrentStatus = function () {
     this.currentStatus = "draft";
   };
 
+// Method to perform soft delete
+cvSchema.methods.softDelete = function(adminInfo) {
+  if (this.isDeleted) {
+    throw new Error('CV is already deleted');
+  }
+  
+  this.isDeleted = true;
+  this.deletionInfo = {
+    deletedBy: adminInfo.deletedBy,
+    deletedDate: new Date(),
+    adminName: adminInfo.adminName,
+    employeeId: adminInfo.employeeId,
+    deletionReason: adminInfo.deletionReason,
+    deletionComments: adminInfo.deletionComments,
+  };
+  return this.save();
+};
+
+// Method to restore soft deleted CV
+cvSchema.methods.restore = function() {
+  if (!this.isDeleted) {
+    throw new Error('CV is not deleted, cannot restore');
+  }
+  
+  this.isDeleted = false;
+  this.deletionInfo = undefined;
+  return this.save();
+};
+
+// Query middleware to exclude soft deleted documents by default
+cvSchema.pre(/^find/, function() {
+  const options = this.getOptions();
+  
+  // Only exclude deleted documents if not explicitly including them
+  if (!options.includeDeleted) {
+    const currentQuery = this.getQuery();
+    
+    // Only add the exclusion if isDeleted is not already specified in query
+    if (!currentQuery.hasOwnProperty('isDeleted')) {
+      this.where({ isDeleted: { $ne: true } });
+    }
+  }
+});
+
+// Static method to find deleted CVs
+cvSchema.statics.findDeleted = function(options = {}) {
+  return this.find({ isDeleted: true }).setOptions({ includeDeleted: true });
+};
+
+cvSchema.statics.findActive = function() {
+  return this.find({ isDeleted: { $ne: true } });
+};
+
+cvSchema.statics.countDeleted = function() {
+  return this.countDocuments({ isDeleted: true }).setOptions({ includeDeleted: true });
+};
+
+cvSchema.statics.countActive = function() {
+  return this.countDocuments({ isDeleted: { $ne: true } });
+};
+
 // Add indexes
 // Role-Specific Indexes
 cvSchema.index({ "roleData.internship.categoryOfApply": 1 }); 
@@ -387,7 +460,11 @@ cvSchema.index({ selectedRole: 1, "cvApproval.status": 1 });
 // Text Index for Search (Name/NIC)
 cvSchema.index({ fullName: "text", nic: "text" });
 
-// Unique NIC Index (Prevent duplicates)
-cvSchema.index({ nic: 1 }, { unique: true });
+// Unique NIC Index (Prevent duplicates) - only for non-deleted documents
+cvSchema.index({ nic: 1, isDeleted: 1 }, { unique: true });
+
+// Soft delete indexes
+cvSchema.index({ isDeleted: 1 });
+cvSchema.index({ "deletionInfo.deletedDate": 1 });
 
 module.exports = mongoose.model("CV", cvSchema);

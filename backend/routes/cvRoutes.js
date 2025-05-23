@@ -9,7 +9,11 @@ const {
   getAllCVsWithFiltering,
   getApprovedCVs,
   updateCV,
-  deleteCV,
+  softDeleteCV,
+  restoreCV,
+  getDeletedCVs,
+  permanentlyDeleteCV,
+  getUserDeletedCVs,
   getCVByNIC,
   scheduleInterview,
   getCVsAssignedToInterviews,
@@ -37,8 +41,8 @@ const { cvFileUpload, bulkUpload } = require("../config/CVmulterConfig");
 // CV Creation with File Uploads
 router.post("/addcv", verifyToken, cvFileUpload, createCV);
 
-// Get CVs
 
+// Get CVs
 router.get("/mycvs", verifyToken, getUserCVs);
 router.get("/get-all-with-filtering", getAllCVsWithFiltering);
 router.get("/current/approved", getApprovedCVs);
@@ -60,14 +64,13 @@ router.post("/:id/fail-interview", verifyToken, failInterview);
 router.get("/scheduled-interviews", verifyToken, getCVsAssignedToInterviews);
 router.patch("/:id/reschedule-interview", verifyToken, rescheduleInterview);
 
-
 // Induction Routes
 router.patch("/:id/assign-induction", verifyToken, assignInduction);
 router.get("/assign-cvs-for-induction", getInterviewPassedCVs);
 router.get("/assigned-to-induction", getCVsAssignedToInduction);
 router.patch("/:id/pass-induction", verifyToken, passInduction);
 router.patch("/:id/fail-induction", verifyToken, failInduction);
-router.patch("/:id/reschedule-induction", verifyToken, rescheduleInduction); 
+router.patch("/:id/reschedule-induction", verifyToken, rescheduleInduction);
 
 // CV routes for scheme assignment
 router.get("/get-cvs-for-scheme-assignment", getCVsForSchemeAssignment);
@@ -77,7 +80,13 @@ router.post("/batch-assign-scheme", batchAssignScheme);
 // Single CV Operations
 router.get("/:id", getCVById);
 router.put("/:id", verifyToken, cvFileUpload, updateCV);
-router.delete("/:id", verifyToken, validateObjectId, deleteCV);
+router.delete("/:id", verifyToken, validateObjectId, softDeleteCV);
+
+// Deleted CV Operations - FIXED ROUTES
+router.get("/deleted/mycvs", verifyToken, getUserDeletedCVs);
+router.get("/deleted/all", verifyToken, getDeletedCVs);
+router.post("/deleted/:id/restore", verifyToken, restoreCV);
+router.delete("/deleted/:id/permanent", verifyToken, permanentlyDeleteCV);
 
 // NIC-based Lookup
 router.get("/nic/:nic", getCVByNIC);
@@ -155,4 +164,5 @@ router.use((err, req, res, next) => {
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 });
+
 module.exports = router;

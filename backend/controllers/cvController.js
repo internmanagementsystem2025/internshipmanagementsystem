@@ -514,7 +514,7 @@ const getAllCVsWithFiltering = async (req, res) => {
     const cvs = await CV.find(query)
       .sort({ applicationDate: -1 })
       .select(
-        "fullName nic refNo mobileNumber userType selectedRole applicationDate district institute referredBy cvApproval currentStatus roleData.internship.categoryOfApply roleData.dataEntry.preferredLocation internshipStartDate internshipEndDate internshipPeriod"
+        "fullName nic refNo mobileNumber gender userType selectedRole applicationDate district institute referredBy cvApproval currentStatus roleData.internship.categoryOfApply roleData.dataEntry.preferredLocation internshipStartDate internshipEndDate internshipPeriod"
       )
       .lean();
     
@@ -668,8 +668,66 @@ const updateCV = async (req, res) => {
   }
 };
 
-// Delete CV by ID
-const deleteCV = async (req, res) => {
+const softDeleteCV = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminName, employeeId, deletionReason, deletionComments } = req.body;
+
+    // Validate CV ID format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid CV ID format" });
+    }
+
+    // Validate required fields
+    if (!adminName || !employeeId || !deletionReason) {
+      return res.status(400).json({ 
+        message: "Admin name, employee ID, and deletion reason are required" 
+      });
+    }
+
+    // Find the CV (exclude already deleted ones)
+    const cv = await CV.findById(id);
+    if (!cv) {
+      return res.status(404).json({ message: "CV not found" });
+    }
+
+    // Check if CV is already deleted
+    if (cv.isDeleted) {
+      return res.status(400).json({ message: "CV is already deleted" });
+    }
+
+    // Perform soft delete
+    const adminInfo = {
+      deletedBy: req.user?.id,
+      adminName: adminName.trim(),
+      employeeId: employeeId.trim(),
+      deletionReason: deletionReason.trim(),
+      deletionComments: deletionComments?.trim() || "",
+      deletedDate: new Date()
+    };
+
+    await cv.softDelete(adminInfo);
+
+    res.status(200).json({ 
+      message: "CV deleted successfully",
+      deletionInfo: {
+        refNo: cv.refNo,
+        deletedBy: adminInfo.adminName,
+        deletedDate: adminInfo.deletedDate,
+        reason: adminInfo.deletionReason
+      }
+    });
+  } catch (error) {
+    console.error("Error soft deleting CV:", error);
+    res.status(500).json({ 
+      message: "Failed to delete CV", 
+      error: error.message 
+    });
+  }
+};
+
+// Restore soft deleted CV
+const restoreCV = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -677,20 +735,141 @@ const deleteCV = async (req, res) => {
       return res.status(400).json({ message: "Invalid CV ID format" });
     }
 
-    const cv = await CV.findByIdAndDelete(id);
+    // Find the CV including deleted ones
+    const cv = await CV.findOne({ _id: id }).setOptions({ includeDeleted: true });
     if (!cv) {
       return res.status(404).json({ message: "CV not found" });
     }
 
-    res.status(200).json({ message: "CV deleted successfully" });
+    if (!cv.isDeleted) {
+      return res.status(400).json({ message: "CV is not deleted" });
+    }
+
+    await cv.restore();
+
+    res.status(200).json({ 
+      message: "CV restored successfully",
+      restoredCV: {
+        refNo: cv.refNo,
+        fullName: cv.fullName
+      }
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete CV", error: error.message });
+    console.error("Error restoring CV:", error);
+    res.status(500).json({ 
+      message: "Failed to restore CV", 
+      error: error.message 
+    });
   }
 };
 
-// Get CVs for logged-in user
+// Get all deleted CVs (for admin review)
+const getDeletedCVs = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const deletedCVs = await CV.find({ isDeleted: true })
+      .select('refNo fullName nic deletionInfo applicationDate')
+      .populate('deletionInfo.deletedBy', 'name email')
+      .sort({ 'deletionInfo.deletedDate': -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await CV.countDocuments({ isDeleted: true });
+
+    res.status(200).json({
+      deletedCVs,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching deleted CVs:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch deleted CVs", 
+      error: error.message 
+    });
+  }
+};
+
+// Get user's deleted CVs (for notification) - FIXED ROUTE
+const getUserDeletedCVs = async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    if (!userEmail) {
+      return res.status(400).json({ message: "User email not found in request" });
+    }
+
+    const deletedCVs = await CV.find({ 
+      emailAddress: userEmail, 
+      isDeleted: true 
+    })
+    .select('refNo fullName nic deletionInfo applicationDate selectedRole')
+    .populate('deletionInfo.deletedBy', 'name email')
+    .sort({ 'deletionInfo.deletedDate': -1 })
+    .setOptions({ includeDeleted: true });
+
+    res.status(200).json({
+      deletedCVs,
+      count: deletedCVs.length
+    });
+  } catch (error) {
+    console.error("Error fetching user deleted CVs:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch deleted CVs", 
+      error: error.message 
+    });
+  }
+};
+
+// Permanently delete CV (hard delete - use with extreme caution)
+const permanentlyDeleteCV = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { confirmDelete } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid CV ID format" });
+    }
+
+    if (confirmDelete !== "PERMANENTLY_DELETE") {
+      return res.status(400).json({ 
+        message: "Confirmation text 'PERMANENTLY_DELETE' is required" 
+      });
+    }
+
+    // Find and permanently delete
+    const cv = await CV.findOneAndDelete({ _id: id, isDeleted: true });
+    if (!cv) {
+      return res.status(404).json({ 
+        message: "CV not found or not in deleted state" 
+      });
+    }
+
+    res.status(200).json({ 
+      message: "CV permanently deleted",
+      deletedCV: {
+        refNo: cv.refNo,
+        fullName: cv.fullName
+      }
+    });
+  } catch (error) {
+    console.error("Error permanently deleting CV:", error);
+    res.status(500).json({ 
+      message: "Failed to permanently delete CV", 
+      error: error.message 
+    });
+  }
+};
+
+
+
+// Get CVs for logged-in user (active only)
 const getUserCVs = async (req, res) => {
   try {
     const userEmail = req.user.email;
@@ -701,7 +880,11 @@ const getUserCVs = async (req, res) => {
         .json({ message: "User email not found in request" });
     }
 
-    const cvs = await CV.find({ emailAddress: userEmail });
+    // Only get active CVs (not deleted)
+    const cvs = await CV.find({ 
+      emailAddress: userEmail,
+      isDeleted: { $ne: true }
+    });
 
     if (!cvs.length) {
       return res.status(404).json({ message: "No CVs found." });
@@ -2132,7 +2315,11 @@ module.exports = {
   approveCV,
   declineCV,
   updateCV,
-  deleteCV,
+  softDeleteCV,
+  restoreCV,
+  getDeletedCVs,
+  permanentlyDeleteCV,
+  getUserDeletedCVs,
   getCVByNIC,
   scheduleInterview,
   assignInduction,

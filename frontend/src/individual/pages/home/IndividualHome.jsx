@@ -7,17 +7,16 @@ import logo from "../../../assets/logo.png";
 import axios from "axios";
 import RecommendationPopup from "../../../components/notifications/RecommendationPopup";
 import Notification from "../../../components/notifications/Notification";
-import DeleteModal from "../../../components/notifications/DeleteModal"; 
+import DeletedCVNotification from "../../../components/notifications/DeletedCVNotification";
 
 const IndividualHome = ({ darkMode }) => {
   const [email, setEmail] = useState("");
   const [cvData, setCvData] = useState([]);
+  const [deletedCVs, setDeletedCVs] = useState([]);
   const [hoveredCard, setHoveredCard] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const navigate = useNavigate();
   const [notification, setNotification] = useState({ show: false, message: "", variant: "success" });
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [cvToDelete, setCvToDelete] = useState(null);
 
   const handleView = (cvId) => {
     navigate(`/view-cv/${cvId}`);
@@ -27,50 +26,22 @@ const IndividualHome = ({ darkMode }) => {
     navigate(`/edit-cv/${cvId}`);
   };
 
-  const handleDeleteConfirmation = (cv) => {
-    setCvToDelete(cv);
-    setShowDeleteModal(true);
+  // Handle permanent delete from DeletedCVNotification component
+  const handlePermanentDeleteFromNotification = (deletedCV) => {
+    // Remove the CV from deletedCVs state
+    setDeletedCVs(prevData => prevData.filter(cv => cv._id !== deletedCV._id));
+    
+    // Refresh active CVs in case status changed
+    fetchUserCVs();
   };
 
-  const handleDelete = async () => {
-    if (!cvToDelete) return;
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setNotification({ show: true, message: "Please log in.", variant: "danger" });
-      setShowDeleteModal(false);
-      return;
-    }
-
-    try {
-      await axios.delete(`http://localhost:5000/api/cvs/${cvToDelete._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      setCvData(prevData => prevData.filter(cv => cv._id !== cvToDelete._id));
-      
-      setNotification({ 
-        show: true, 
-        message: "CV successfully deleted", 
-        variant: "success" 
-      });
-      
-      setShowDeleteModal(false);
-      setCvToDelete(null);
-    } catch (error) {
-      console.error("Error deleting CV:", error);
-      setNotification({ 
-        show: true, 
-        message: error.response?.data?.message || "Failed to delete CV", 
-        variant: "danger" 
-      });
-      setShowDeleteModal(false);
-    }
+  const handleDismissDeletedNotification = () => {
+    setDeletedCVs([]);
   };
 
   // Map CV approval status to display status
   const getStatusDisplay = (cv) => {
-    if (!cv.cvApproval) return "pending";
+    if (!cv.cvApproval) return "Pending";
     
     switch (cv.cvApproval.status) {
       case "cv-submitted":
@@ -93,14 +64,6 @@ const IndividualHome = ({ darkMode }) => {
     return !cv.cvApproval || 
            cv.cvApproval.status === "cv-submitted" || 
            cv.cvApproval.status === "cv-pending";
-  };
-
-  // Check if user can delete this CV
-  const canDelete = (cv) => {
-    return !cv.cvApproval || 
-           cv.cvApproval.status === "cv-submitted" || 
-           cv.cvApproval.status === "cv-pending" || 
-           cv.cvApproval.status === "completed";
   };
 
   const columns = [
@@ -135,17 +98,6 @@ const IndividualHome = ({ darkMode }) => {
               Edit
             </Button>
           )}
-
-          {canDelete(cv) && (
-            <Button 
-              size="sm" 
-              variant="outline-danger" 
-              onClick={() => handleDeleteConfirmation(cv)} 
-              className="fw-semibold"
-            >
-              Delete
-            </Button>
-          )}
         </div>
       )
     }
@@ -163,41 +115,59 @@ const IndividualHome = ({ darkMode }) => {
         return;
       }
   
-      try {
-        const response = await axios.get("http://localhost:5000/api/cvs/mycvs", {
-          headers: { Authorization: `Bearer ${token}` },
+      const response = await axios.get("http://localhost:5000/api/cvs/mycvs", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setCvData(response.data);
+    } catch (error) {
+      console.error("Error fetching CVs:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      
+      if (error.response?.status === 404) {
+        setCvData([]);  
+      } else {
+        setNotification({ 
+          show: true, 
+          message: error.response?.data?.message || "Failed to fetch CVs", 
+          variant: "danger" 
         });
-  
-        setCvData(response.data);
-      } catch (error) {
-        console.error("Error fetching CVs:", {
-          status: error.response?.status,
-          data: error.response?.data,
-          message: error.message
-        });
-        
-        if (error.response?.status === 404) {
-          setCvData([]);  
-        } else {
-          setNotification({ 
-            show: true, 
-            message: error.response?.data?.message || "Failed to fetch CVs", 
-            variant: "danger" 
-          });
-        }
+      }
+    }
+  };
+
+  const fetchDeletedCVs = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      console.log('Fetching deleted CVs...'); // Debug log
+
+      const response = await axios.get("http://localhost:5000/api/cvs/deleted/mycvs", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      console.log('Deleted CVs response:', response.data); // Debug log
+
+      if (response.data.deletedCVs && response.data.deletedCVs.length > 0) {
+        setDeletedCVs(response.data.deletedCVs);
       }
     } catch (error) {
-      console.error("Unexpected error:", error);
-      setNotification({ 
-        show: true, 
-        message: "An unexpected error occurred", 
-        variant: "danger" 
-      });
+      console.error("Error fetching deleted CVs:", error);
+      console.error("Error response:", error.response?.data); // Debug log
+      
+      // Only show error if it's not a 404 (no deleted CVs found)
+      if (error.response?.status !== 404) {
+        console.error("Failed to fetch deleted CVs:", error.response?.data?.message);
+      }
     }
   };
 
   const handleEmailSubmit = async () => {
-    // Check for empty email first
+    // Email validation logic
     if (!email.trim()) {
       setNotification({ 
         show: true, 
@@ -207,7 +177,6 @@ const IndividualHome = ({ darkMode }) => {
       return;
     }
     
-    // Split email into local part and domain part
     const parts = email.split('@');
     if (parts.length !== 2) {
       setNotification({ 
@@ -220,7 +189,6 @@ const IndividualHome = ({ darkMode }) => {
     
     const [localPart, domainPart] = parts;
     
-    // Check local part (before @)
     if (!localPart || localPart.length === 0) {
       setNotification({ 
         show: true, 
@@ -230,7 +198,6 @@ const IndividualHome = ({ darkMode }) => {
       return;
     }
     
-    // Check domain part (after @)
     if (!domainPart || domainPart.length === 0) {
       setNotification({ 
         show: true, 
@@ -240,7 +207,6 @@ const IndividualHome = ({ darkMode }) => {
       return;
     }
     
-    // Domain must have at least one dot
     if (!domainPart.includes('.')) {
       setNotification({ 
         show: true, 
@@ -250,7 +216,6 @@ const IndividualHome = ({ darkMode }) => {
       return;
     }
     
-    // Domain cannot start or end with hyphen or dot
     if (domainPart.startsWith('.') || domainPart.endsWith('.') || 
         domainPart.startsWith('-') || domainPart.endsWith('-')) {
       setNotification({ 
@@ -261,7 +226,6 @@ const IndividualHome = ({ darkMode }) => {
       return;
     }
     
-    // Check domain characters (only allow letters, numbers, dots, and hyphens)
     const invalidDomainChars = domainPart.replace(/[a-zA-Z0-9.-]/g, '');
     if (invalidDomainChars.length > 0) {
       setNotification({ 
@@ -272,8 +236,7 @@ const IndividualHome = ({ darkMode }) => {
       return;
     }
     
-    // Check TLD (last part after the last dot)
-    const tld = domainPart.split('.').pop();
+    const tld = domainPart.split('.').pop().toLowerCase();
     const allowedTlds = ['com', 'org', 'lk'];
     if (!allowedTlds.includes(tld)) {
       setNotification({ 
@@ -284,7 +247,6 @@ const IndividualHome = ({ darkMode }) => {
       return;
     }
     
-    // List of allowed email domains
     const allowedDomains = [
       'gmail.com',
       'yahoo.com',
@@ -298,8 +260,7 @@ const IndividualHome = ({ darkMode }) => {
       'yandex.com'
     ];
     
-    // Check if the domain is in the allowed list
-    if (!allowedDomains.includes(domainPart)) {
+    if (!allowedDomains.includes(domainPart.toLowerCase())) {
       setNotification({ 
         show: true, 
         message: "Only emails from supported providers are accepted", 
@@ -399,6 +360,7 @@ const IndividualHome = ({ darkMode }) => {
 
   useEffect(() => {
     fetchUserCVs();
+    fetchDeletedCVs();
 
     const lastPopupTime = localStorage.getItem("lastPopupTime");
     const currentTime = new Date().getTime();
@@ -526,6 +488,16 @@ const IndividualHome = ({ darkMode }) => {
         <h2 className="text-center mb-4" style={{ marginTop: "80px" }}>
           INTERNSHIP STATUS
         </h2>
+
+        {/* Deleted CV Notification - Pass the correct callback */}
+        <DeletedCVNotification
+          deletedCVs={deletedCVs}
+          onPermanentDelete={handlePermanentDeleteFromNotification}
+          onDismiss={handleDismissDeletedNotification}
+          darkMode={darkMode}
+          setNotification={setNotification}
+        />
+
         {/* Only show TableComponent when there are CVs */}
         {cvData.length > 0 ? (
           <TableComponent
@@ -544,20 +516,19 @@ const IndividualHome = ({ darkMode }) => {
         )}
       </Container>
 
-      <DeleteModal 
-        show={showDeleteModal} 
-        onClose={() => {
-          setShowDeleteModal(false);
-          setCvToDelete(null);
-        }}
-        onDelete={handleDelete}
-        itemName={cvToDelete ? `CV for ${cvToDelete.fullName}` : ''} 
+      <RecommendationPopup 
+        show={showPopup} 
+        onClose={() => setShowPopup(false)} 
         darkMode={darkMode} 
+        onSaveRating={saveUserRating} 
       />
 
-      <RecommendationPopup show={showPopup} onClose={() => setShowPopup(false)} darkMode={darkMode} onSaveRating={saveUserRating} />
-
-      <Notification show={notification.show} onClose={() => setNotification({ ...notification, show: false })} message={notification.message} variant={notification.variant} />
+      <Notification 
+        show={notification.show} 
+        onClose={() => setNotification({ ...notification, show: false })} 
+        message={notification.message} 
+        variant={notification.variant} 
+      />
     </div>
   );
 };
