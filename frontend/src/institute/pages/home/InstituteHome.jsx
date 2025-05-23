@@ -143,21 +143,7 @@ const InstituteHome = ({ darkMode }) => {
               </Card.Body>
             </Card>
           </Col>
-          <Col md={4}>
-            <Card
-              onClick={() => navigate("/institute-certificate-request")}
-              onMouseEnter={() => setHoveredCard("request-certificate")}
-              onMouseLeave={() => setHoveredCard(null)}
-              style={cardStyle(darkMode, hoveredCard === "request-certificate")}
-            >
-              <Card.Body className="d-flex flex-column align-items-center justify-content-between">
-                <Card.Title className="text-center">
-                  Request Certificate
-                </Card.Title>
-                <FiAward size={40} />
-              </Card.Body>
-            </Card>
-          </Col>
+          
           <Col md={4}>
             <Card
               onClick={() => navigate("/bulk-cv-upload")}
