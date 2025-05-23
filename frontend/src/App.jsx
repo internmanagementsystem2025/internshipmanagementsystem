@@ -31,8 +31,7 @@ import InstituteAddCV from "./institute/pages/requestinternship/InstituteAddCV";
 import ViewCV from "./components/pages/ViewCV";
 import EditCV from "./components/pages/EditCV";
 import InstituteHelp from "./institute/pages/help/InstituteHelp";
-import InstituteCertificateRequest from "./institute/pages/certificaterequest/InstituteCertificateRequest";
-import InstituteAllCertificateRequest from "./institute/pages/certificaterequest/InstituteAllCertificateRequest";
+
 import AdminHome from "./admin/pages/home/AdminHome";
 import ViewAllCVs from "./admin/pages/managecv/ViewAllCVs";
 import AdminAddCVs from "./admin/pages/managecv/AdminAddCVs";
@@ -166,8 +165,7 @@ function App() {
     "/view-cv/:cvId",
     "/edit-cv/:cvId",
     "/institute-help-support",
-    "/institute-certificate-request",
-    "/institute-all-certificate-requests",
+
   ];
   const adminRoutes = [
     "/admin-home",
@@ -326,8 +324,7 @@ function App() {
     <Route path="/view-cv/:cvId" element={<ViewCV darkMode={darkMode} />} />
     <Route path="/edit-cv/:cvId" element={<EditCV darkMode={darkMode} />} />
     <Route path="/institute-help-support" element={<InstituteHelp darkMode={darkMode} />} />
-    <Route path="/institute-certificate-request" element={<InstituteCertificateRequest darkMode={darkMode} />} />
-    <Route path="/institute-all-certificate-requests" element={<InstituteAllCertificateRequest darkMode={darkMode} />} />
+    
     <Route path="/bulk-cv-upload" element={<BulkCVUploadForm darkMode={darkMode} />} />
 
     {/* Admin */}
