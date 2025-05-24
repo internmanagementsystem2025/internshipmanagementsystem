@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, Row, Col, Container, Form, Button } from "react-bootstrap";
-import { FiFileText, FiUserCheck, FiAward } from "react-icons/fi";
+import { FiFileText, FiUserCheck, FiAward, FiUpload } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import RecommendationPopup from "../../../components/notifications/RecommendationPopup";
@@ -128,31 +128,32 @@ const InstituteHome = ({ darkMode }) => {
               </Card.Body>
             </Card>
           </Col>
+          
           <Col md={4}>
             <Card
-              onClick={() => navigate("/institute-all-aplications")}
-              onMouseEnter={() => setHoveredCard("report-placement")}
+              onClick={() => navigate("/bulk-cv-upload")}
+              onMouseEnter={() => setHoveredCard("bulk-cv-upload")}
               onMouseLeave={() => setHoveredCard(null)}
-              style={cardStyle(darkMode, hoveredCard === "report-placement")}
+              style={cardStyle(darkMode, hoveredCard === "bulk-cv-upload")}
             >
               <Card.Body className="d-flex flex-column align-items-center justify-content-between">
-                <Card.Title className="text-center">
-                  All Applications
-                </Card.Title>
-                <FiUserCheck size={40} />
+                <Card.Title className="text-center">Add Bulk CVs</Card.Title>
+                <FiUpload size={40} />
               </Card.Body>
             </Card>
           </Col>
           
           <Col md={4}>
             <Card
-              onClick={() => navigate("/bulk-cv-upload")}
-              onMouseEnter={() => setHoveredCard("report-placement")}
+              onClick={() => navigate("/institute-all-aplications")}
+              onMouseEnter={() => setHoveredCard("all-applications")}
               onMouseLeave={() => setHoveredCard(null)}
-              style={cardStyle(darkMode, hoveredCard === "report-placement")}
+              style={cardStyle(darkMode, hoveredCard === "all-applications")}
             >
               <Card.Body className="d-flex flex-column align-items-center justify-content-between">
-                <Card.Title className="text-center">Add bulk CVs</Card.Title>
+                <Card.Title className="text-center">
+                  All Applications
+                </Card.Title>
                 <FiUserCheck size={40} />
               </Card.Body>
             </Card>

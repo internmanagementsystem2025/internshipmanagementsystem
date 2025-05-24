@@ -166,7 +166,8 @@ function App() {
     "/institute-add-cv",
     "/view-cv/:cvId",
     "/edit-cv/:cvId",
-    "/institute-help-support"
+    "/institute-help-support",
+    "/bulk-cv-upload"
   ];
 
   const adminRoutes = [
@@ -301,12 +302,12 @@ function App() {
       <Row className="flex-grow-1 no-gutters" style={{ margin: 0 }}>
         <Col className="p-0">
         <Routes>
-  <Route path="/" element={<LandingPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/login" element={<LoginPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/register" element={<RegisterPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/forgot-password/email-confirm" element={<EmailConfirmPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/forgot-password/verify-otp" element={<VerifyOTPPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/email-verification" element={<EmailVerification darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/" element={<LandingPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/login" element={<LoginPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/register" element={<RegisterPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/forgot-password/email-confirm" element={<EmailConfirmPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/forgot-password/verify-otp" element={<VerifyOTPPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/email-verification" element={<EmailVerification darkMode={darkMode} toggleTheme={toggleTheme} />} />
 
   {/* Protected Routes */}
   <Route element={<ProtectedRoute />}>

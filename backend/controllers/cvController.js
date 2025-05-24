@@ -921,6 +921,63 @@ const getCVByNIC = async (req, res) => {
   }
 };
 
+// Get CV by User ID
+const getCVByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    // Find CV by userId and exclude deleted CVs
+    const cv = await CV.findOne({ 
+      userId: userId,
+      isDeleted: { $ne: true }
+    }).populate('userId', 'fullName email'); // Optional: populate user details
+
+    if (!cv) {
+      return res.status(404).json({ message: "CV not found for this User ID" });
+    }
+
+    res.status(200).json(cv);
+  } catch (error) {
+    console.error("Error fetching CV by User ID:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch CV", error: error.message });
+  }
+};
+
+// Alternative version: Get all CVs for a specific user ID
+const getAllCVsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    // Find all CVs by userId and exclude deleted CVs
+    const cvs = await CV.find({ 
+      userId: userId,
+      isDeleted: { $ne: true }
+    }).populate('userId', 'fullName email')
+      .sort({ applicationDate: -1 }); // Sort by most recent first
+
+    if (!cvs.length) {
+      return res.status(404).json({ message: "No CVs found for this User ID" });
+    }
+
+    res.status(200).json(cvs);
+  } catch (error) {
+    console.error("Error fetching CVs by User ID:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch CVs", error: error.message });
+  }
+};
+
 // ---------------------------------------Controllers for Admin Interview Section ----------------------------------------------------------
 
 // Controller for fetching approved but not scheduled CVs
@@ -2318,6 +2375,8 @@ module.exports = {
   softDeleteCV,
   restoreCV,
   getDeletedCVs,
+  getCVByUserId,
+  getAllCVsByUserId,
   permanentlyDeleteCV,
   getUserDeletedCVs,
   getCVByNIC,

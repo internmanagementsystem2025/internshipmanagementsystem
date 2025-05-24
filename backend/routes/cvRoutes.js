@@ -12,6 +12,8 @@ const {
   softDeleteCV,
   restoreCV,
   getDeletedCVs,
+  getCVByUserId,
+  getAllCVsByUserId,
   permanentlyDeleteCV,
   getUserDeletedCVs,
   getCVByNIC,
@@ -47,6 +49,8 @@ router.get("/mycvs", verifyToken, getUserCVs);
 router.get("/get-all-with-filtering", getAllCVsWithFiltering);
 router.get("/current/approved", getApprovedCVs);
 router.get("/not-approved-cvs", verifyToken, getAllNotApprovedCVs);
+router.get("/user/:userId", getCVByUserId);
+router.get("/user/:userId/all", getAllCVsByUserId);
 router.get(
   "/approved-not-scheduled-cvs",
   verifyToken,
