@@ -22,7 +22,6 @@ const InductionResults = ({ darkMode }) => {
   const [itemsPerPage] = useState(10);
   const [inductionSearchTerm, setInductionSearchTerm] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [filterType, setFilterType] = useState("all"); 
 
   const [showPassModal, setShowPassModal] = useState(false);
   const [showFailModal, setShowFailModal] = useState(false);
@@ -96,10 +95,12 @@ const InductionResults = ({ darkMode }) => {
       const response = await api.get("/assigned-to-induction");
       const inductionData = response.data || []; 
       
-      // Filter out re-scheduled inductions
+      // Include all CVs with induction-assigned and induction-re-scheduled status
       const filteredData = inductionData.filter(cv => 
-        cv.induction?.status !== "induction-re-scheduled" && 
-        cv.currentStatus !== "induction-re-scheduled"
+        cv.induction?.status === "induction-assigned" || 
+        cv.induction?.status === "induction-re-scheduled" ||
+        cv.currentStatus === "induction-assigned" ||
+        cv.currentStatus === "induction-re-scheduled"
       );
 
       setCvData(filteredData);
@@ -121,22 +122,6 @@ const InductionResults = ({ darkMode }) => {
   useEffect(() => {
     let filtered = cvData;
 
-    // Fix the filter logic for direct and interview-passed
-    if (filterType === "direct") {
-      filtered = filtered.filter(cv => 
-        cv.interview?.status === "interview-skipped" || 
-        cv.currentStatus === "interview-skipped"
-      );
-    } else if (filterType === "interview-passed") {
-      filtered = filtered.filter(cv => 
-        cv.interview?.status === "interview-completed" || 
-        cv.currentStatus === "interview-passed" ||
-        cv.interview?.interviews?.some(interview => 
-          interview.result?.status === "interview-passed"
-        )
-      );
-    }
-
     if (inductionSearchTerm.trim() !== "") {
       const term = inductionSearchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -152,7 +137,7 @@ const InductionResults = ({ darkMode }) => {
     setFilteredCvData(filtered);
     setCurrentPage(1);
     setSelectedRows([]);
-  }, [cvData, inductionSearchTerm, filterType]);
+  }, [cvData, inductionSearchTerm]);
 
   const openPassModal = (id, refNo, bulk = false) => {
     setIsBulkAction(bulk);
@@ -289,21 +274,17 @@ const InductionResults = ({ darkMode }) => {
     setSuccessMessage("");
   };
 
-  // Fixed getAssignmentType function to correctly identify direct assignments
-  const getAssignmentType = (cv) => {
-    if (cv.interview?.status === "interview-skipped" || cv.currentStatus === "interview-skipped") {
-      return "Direct";
-    } else if (
-      cv.currentStatus === "interview-passed" || 
-      cv.interview?.status === "interview-completed" ||
-      cv.interview?.interviews?.some(interview => interview.result?.status === "interview-passed")
-    ) {
-      return "Interview Passed";
+  // Get induction status display text
+  const getInductionStatus = (cv) => {
+    if (cv.induction?.status === "induction-re-scheduled" || cv.currentStatus === "induction-re-scheduled") {
+      return "Re-scheduled";
+    } else if (cv.induction?.status === "induction-assigned" || cv.currentStatus === "induction-assigned") {
+      return "Scheduled";
     }
-    return "Unknown";
+    return cv.currentStatus || "Pending";
   };
 
-  // Export to Excel - Modified
+  // Export to Excel - Updated to remove Assignment Type
   const exportToExcel = () => {
     try {
       let dataToExport =
@@ -317,13 +298,14 @@ const InductionResults = ({ darkMode }) => {
         "Full Name": cv.fullName || "N/A",
         Category: cv.selectedRole || "N/A",
         "Mobile No": cv.mobileNumber || "N/A",
-        "Assignment Type": getAssignmentType(cv),
-        "Interview Name": cv.interview?.interviews?.[0]?.interviewName || "N/A",
-        "Interview Date": cv.interview?.interviews?.[0]?.result?.evaluatedDate
-          ? new Date(cv.interview.interviews[0].result.evaluatedDate).toLocaleDateString()
-          : "N/A",
         "Induction Name": cv.induction?.inductionName || "N/A",
-        Status: cv.currentStatus || "Pending",
+        "Start Date": cv.induction?.inductionStartDate
+          ? new Date(cv.induction.inductionStartDate).toLocaleDateString()
+          : "N/A",
+        "End Date": cv.induction?.inductionEndDate
+          ? new Date(cv.induction.inductionEndDate).toLocaleDateString()
+          : "N/A",
+        Status: getInductionStatus(cv),
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
@@ -336,10 +318,9 @@ const InductionResults = ({ darkMode }) => {
         { wch: 25 },
         { wch: 20 },
         { wch: 15 },
-        { wch: 20 },
         { wch: 25 },
         { wch: 15 },
-        { wch: 25 },
+        { wch: 15 },
         { wch: 15 },
       ];
       worksheet["!cols"] = columnWidths;
@@ -356,7 +337,7 @@ const InductionResults = ({ darkMode }) => {
     }
   };
 
-  // Export to PDF - Modified
+  // Export to PDF - Updated to remove Assignment Type
   const exportToPDF = () => {
     try {
       let dataToExport =
@@ -379,10 +360,10 @@ const InductionResults = ({ darkMode }) => {
         "Ref. No.",
         "Name",
         "Category",
-        "Interview",
-        "Interview Date",
-        "Type",
+        "Mobile",
         "Induction",
+        "Start Date",
+        "End Date",
         "Status",
       ];
 
@@ -393,13 +374,15 @@ const InductionResults = ({ darkMode }) => {
           cv.refNo || "N/A",
           cv.fullName || "N/A",
           cv.selectedRole || "N/A",
-          cv.interview?.interviews?.[0]?.interviewName || "N/A",
-          cv.interview?.interviews?.[0]?.result?.evaluatedDate
-            ? new Date(cv.interview.interviews[0].result.evaluatedDate).toLocaleDateString()
-            : "N/A",
-          getAssignmentType(cv),
+          cv.mobileNumber || "N/A",
           cv.induction?.inductionName || "N/A",
-          cv.currentStatus || "Pending",
+          cv.induction?.inductionStartDate
+            ? new Date(cv.induction.inductionStartDate).toLocaleDateString()
+            : "N/A",
+          cv.induction?.inductionEndDate
+            ? new Date(cv.induction.inductionEndDate).toLocaleDateString()
+            : "N/A",
+          getInductionStatus(cv),
         ];
         tableRows.push(cvData);
       });
@@ -412,14 +395,14 @@ const InductionResults = ({ darkMode }) => {
         headStyles: { fillColor: [41, 128, 185], textColor: 255 },
         styles: { fontSize: 8 },
         columnStyles: {
-          0: { cellWidth: 15 },
-          1: { cellWidth: 25 },
-          2: { cellWidth: 20 },
-          3: { cellWidth: 25 },
-          4: { cellWidth: 15 },
-          5: { cellWidth: 15 },
-          6: { cellWidth: 25 },
-          7: { cellWidth: 15 },
+          0: { cellWidth: 20 },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 20 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 20 },
+          6: { cellWidth: 20 },
+          7: { cellWidth: 20 },
         },
       });
 
@@ -463,10 +446,10 @@ const InductionResults = ({ darkMode }) => {
     "Full Name",
     "Category",
     "Mobile No",
-    "Assignment Type",
     "Induction Name",
     "Start Date",
     "End Date",
+    "Status",
     "View",
     "Pass",
     "Fail",
@@ -508,7 +491,7 @@ const InductionResults = ({ darkMode }) => {
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
         <Row className="mb-3 align-items-end">
-          <Col md={5} lg={4}>
+          <Col md={6} lg={5}>
             <Form.Group controlId="inductionSearch">
               <Form.Label>Search Candidates</Form.Label>
               <InputGroup>
@@ -532,40 +515,9 @@ const InductionResults = ({ darkMode }) => {
               </InputGroup>
             </Form.Group>
           </Col>
-          <Col md={7} lg={8} className="mt-3 mt-md-0">
-            <Form.Group controlId="filterType">
-              <Form.Label>Filter by Assignment Type</Form.Label>
-              <div className="d-flex gap-3">
-                <Form.Check
-                  type="radio"
-                  label="All"
-                  name="filterType"
-                  id="filter-all"
-                  checked={filterType === "all"}
-                  onChange={() => setFilterType("all")}
-                />
-                <Form.Check
-                  type="radio"
-                  label="Direct Assignment"
-                  name="filterType"
-                  id="filter-direct"
-                  checked={filterType === "direct"}
-                  onChange={() => setFilterType("direct")}
-                />
-                <Form.Check
-                  type="radio"
-                  label="Interview Passed"
-                  name="filterType"
-                  id="filter-interview"
-                  checked={filterType === "interview-passed"}
-                  onChange={() => setFilterType("interview-passed")}
-                />
-              </div>
-            </Form.Group>
-          </Col>
         </Row>
 
-        {/* Export Buttons - Moved to top */}
+        {/* Export Buttons */}
         <div className="d-flex justify-content-end mb-3">
           <Button
             variant="success"
@@ -586,7 +538,7 @@ const InductionResults = ({ darkMode }) => {
           </Button>
         </div>
 
-        {/* Bulk Actions - Now right-aligned */}
+        {/* Bulk Actions */}
         <div className="d-flex justify-content-end mb-3">
           <Button
             variant="success"
@@ -683,7 +635,6 @@ const InductionResults = ({ darkMode }) => {
                       <td>{cv.fullName || "N/A"}</td>
                       <td>{cv.selectedRole || "N/A"}</td>
                       <td>{cv.mobileNumber || "N/A"}</td>
-                      <td>{getAssignmentType(cv)}</td>
                       <td>{cv.induction?.inductionName || "N/A"}</td>
                       <td>
                         {cv.induction?.inductionStartDate
@@ -694,6 +645,15 @@ const InductionResults = ({ darkMode }) => {
                         {cv.induction?.inductionEndDate
                           ? new Date(cv.induction.inductionEndDate).toLocaleDateString()
                           : "N/A"}
+                      </td>
+                      <td>
+                        <span className={`badge ${
+                          getInductionStatus(cv) === "Re-scheduled" 
+                            ? "bg-warning" 
+                            : "bg-info"
+                        }`}>
+                          {getInductionStatus(cv)}
+                        </span>
                       </td>
                       <td>
                         <Button

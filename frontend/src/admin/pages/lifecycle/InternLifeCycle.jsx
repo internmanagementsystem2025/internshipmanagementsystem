@@ -4,10 +4,11 @@ import {
   Container, Row, Col, Card, Form, Button, Spinner, Alert,
   Badge, Accordion, Tab, Tabs, ListGroup
 } from "react-bootstrap";
+import { BookOpen, School, MapPin, Award, Layers } from "lucide-react";
 import logo from "../../../assets/logo.png";
 import { format } from 'date-fns';
 
-const StatusReport = ({ darkMode }) => {
+const InternLifeCycle = ({ darkMode }) => {
   const [nic, setNic] = useState("");
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -151,48 +152,215 @@ const StatusReport = ({ darkMode }) => {
         </Row>
 
         {/* Role-specific details */}
-        <Accordion className="mt-4">
-          <Accordion.Item eventKey="0" className={darkMode ? "bg-dark text-white" : ""}>
-            <Accordion.Header className={darkMode ? "bg-dark text-white" : ""}>
-              {userData.selectedRole === "dataEntry" ? "Data Entry Operator Details" : "Internship Details"}
-            </Accordion.Header>
-            <Accordion.Body>
-              {userData.selectedRole === "dataEntry" ? (
-                <>
-                  <h6>Computer Proficiency</h6>
-                  <Row className="mb-3">
+<Accordion className="mt-4">
+      <Accordion.Item
+        eventKey="0"
+        className={darkMode ? "bg-dark text-white border-secondary" : ""}
+      >
+        <Accordion.Header>
+          {userData.selectedRole === "dataEntry"
+            ? "Data Entry Operator Details"
+            : "Internship Details"}
+        </Accordion.Header>
+
+        <Accordion.Body>
+          {userData.selectedRole === "dataEntry" ? (
+            <>
+              {/* O/L Results (Main + Optional in one card) */}
+              <Card className="mb-3 shadow-sm">
+                <Card.Header>
+                  <BookOpen size={16} className="me-2" />
+                  O/L Results
+                </Card.Header>
+                <Card.Body>
+                  <Row className="mb-2">
                     <Col md={4}>
-                      <strong>MS Word:</strong> {userData.roleData.dataEntry.proficiency.msWord}%
+                      <strong>Language:</strong>{" "}
+                      {userData.roleData?.dataEntry?.language || "N/A"}
                     </Col>
                     <Col md={4}>
-                      <strong>MS Excel:</strong> {userData.roleData.dataEntry.proficiency.msExcel}%
+                      <strong>Mathematics:</strong>{" "}
+                      {userData.roleData?.dataEntry?.mathematics || "N/A"}
                     </Col>
                     <Col md={4}>
-                      <strong>MS PowerPoint:</strong> {userData.roleData.dataEntry.proficiency.msPowerPoint}%
+                      <strong>Science:</strong>{" "}
+                      {userData.roleData?.dataEntry?.science || "N/A"}
                     </Col>
                   </Row>
-                  
-                  <h6 className="mt-3">Preferred Location</h6>
-                  <p>{userData.roleData.dataEntry.preferredLocation || "Not specified"}</p>
-                  
-                  <h6 className="mt-3">Other Qualifications</h6>
-                  <p>{userData.roleData.dataEntry.otherQualifications || "None"}</p>
-                </>
-              ) : (
-                <>
-                  <h6>Category of Application</h6>
-                  <p>{userData.roleData.internship.categoryOfApply || "Not specified"}</p>
-                  
-                  <h6 className="mt-3">Higher Education</h6>
-                  <p>{userData.roleData.internship.higherEducation || "None"}</p>
-                  
-                  <h6 className="mt-3">Other Qualifications</h6>
-                  <p>{userData.roleData.internship.otherQualifications || "None"}</p>
-                </>
+                  <Row className="mb-3">
+                    <Col md={4}>
+                      <strong>English:</strong>{" "}
+                      {userData.roleData?.dataEntry?.english || "N/A"}
+                    </Col>
+                    <Col md={4}>
+                      <strong>History:</strong>{" "}
+                      {userData.roleData?.dataEntry?.history || "N/A"}
+                    </Col>
+                    <Col md={4}>
+                      <strong>Religion:</strong>{" "}
+                      {userData.roleData?.dataEntry?.religion || "N/A"}
+                    </Col>
+                  </Row>
+
+                  {/* Optional Subjects */}
+                  {(userData.roleData?.dataEntry?.optional1Name ||
+                    userData.roleData?.dataEntry?.optional2Name ||
+                    userData.roleData?.dataEntry?.optional3Name) && (
+                    <>
+                      <h6 className="mt-3">Optional Subjects</h6>
+                      <Row>
+                        {userData.roleData.dataEntry.optional1Name && (
+                          <Col md={4}>
+                            <strong>
+                              {userData.roleData.dataEntry.optional1Name}:
+                            </strong>{" "}
+                            {userData.roleData.dataEntry.optional1Result ||
+                              "N/A"}
+                          </Col>
+                        )}
+                        {userData.roleData.dataEntry.optional2Name && (
+                          <Col md={4}>
+                            <strong>
+                              {userData.roleData.dataEntry.optional2Name}:
+                            </strong>{" "}
+                            {userData.roleData.dataEntry.optional2Result ||
+                              "N/A"}
+                          </Col>
+                        )}
+                        {userData.roleData.dataEntry.optional3Name && (
+                          <Col md={4}>
+                            <strong>
+                              {userData.roleData.dataEntry.optional3Name}:
+                            </strong>{" "}
+                            {userData.roleData.dataEntry.optional3Result ||
+                              "N/A"}
+                          </Col>
+                        )}
+                      </Row>
+                    </>
+                  )}
+                </Card.Body>
+              </Card>
+
+              {/* A/L Results */}
+              {(userData.roleData?.dataEntry?.aLevelSubject1Name ||
+                userData.roleData?.dataEntry?.aLevelSubject2Name ||
+                userData.roleData?.dataEntry?.aLevelSubject3Name) && (
+                <Card className="mb-3 shadow-sm">
+                  <Card.Header>
+                    <Award size={16} className="me-2" />
+                    A/L Results
+                  </Card.Header>
+                  <Card.Body>
+                    <Row>
+                      {userData.roleData.dataEntry.aLevelSubject1Name && (
+                        <Col md={4}>
+                          <strong>
+                            {userData.roleData.dataEntry.aLevelSubject1Name}:
+                          </strong>{" "}
+                          {userData.roleData.dataEntry.aLevelSubject1Result ||
+                            "N/A"}
+                        </Col>
+                      )}
+                      {userData.roleData.dataEntry.aLevelSubject2Name && (
+                        <Col md={4}>
+                          <strong>
+                            {userData.roleData.dataEntry.aLevelSubject2Name}:
+                          </strong>{" "}
+                          {userData.roleData.dataEntry.aLevelSubject2Result ||
+                            "N/A"}
+                        </Col>
+                      )}
+                      {userData.roleData.dataEntry.aLevelSubject3Name && (
+                        <Col md={4}>
+                          <strong>
+                            {userData.roleData.dataEntry.aLevelSubject3Name}:
+                          </strong>{" "}
+                          {userData.roleData.dataEntry.aLevelSubject3Result ||
+                            "N/A"}
+                        </Col>
+                      )}
+                    </Row>
+                  </Card.Body>
+                </Card>
               )}
-            </Accordion.Body>
-          </Accordion.Item>
-        </Accordion>
+
+              {/* Preferred Location */}
+              <Card className="mb-3 shadow-sm">
+                <Card.Header>
+                  <MapPin size={16} className="me-2" />
+                  Preferred Location
+                </Card.Header>
+                <Card.Body>
+                  <p>
+                    {userData.roleData?.dataEntry?.preferredLocation ||
+                      "Not specified"}
+                  </p>
+                </Card.Body>
+              </Card>
+
+              {/* Other Qualifications */}
+              <Card className="mb-3 shadow-sm">
+                <Card.Header>
+                  <School size={16} className="me-2" />
+                  Other Qualifications
+                </Card.Header>
+                <Card.Body>
+                  <p>
+                    {userData.roleData?.dataEntry?.otherQualifications ||
+                      "None"}
+                  </p>
+                </Card.Body>
+              </Card>
+            </>
+          ) : (
+            <>
+              {/* Internship Category */}
+              <Card className="mb-3 shadow-sm">
+                <Card.Header>
+                  <BookOpen size={16} className="me-2" />
+                  Category of Application
+                </Card.Header>
+                <Card.Body>
+                  <p>
+                    {userData.roleData?.internship?.categoryOfApply ||
+                      "Not specified"}
+                  </p>
+                </Card.Body>
+              </Card>
+
+              {/* Higher Education */}
+              <Card className="mb-3 shadow-sm">
+                <Card.Header>
+                  <School size={16} className="me-2" />
+                  Higher Education
+                </Card.Header>
+                <Card.Body>
+                  <p>
+                    {userData.roleData?.internship?.higherEducation || "None"}
+                  </p>
+                </Card.Body>
+              </Card>
+
+              {/* Other Qualifications */}
+              <Card className="mb-3 shadow-sm">
+                <Card.Header>
+                  <Award size={16} className="me-2" />
+                  Other Qualifications
+                </Card.Header>
+                <Card.Body>
+                  <p>
+                    {userData.roleData?.internship?.otherQualifications ||
+                      "None"}
+                  </p>
+                </Card.Body>
+              </Card>
+            </>
+          )}
+        </Accordion.Body>
+      </Accordion.Item>
+    </Accordion>
+
       </Card.Body>
     </Card>
   );
@@ -457,4 +625,4 @@ const renderInductionDetails = () => (
   );
 };
 
-export default StatusReport;
+export default InternLifeCycle;
