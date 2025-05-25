@@ -158,17 +158,19 @@ interview: {
 },
 
   // Induction Details
-  induction: {
+ // Updated Induction Details Schema
+induction: {
   inductionAssigned: { type: Boolean, default: false },
   status: {
     type: String,
     enum: [
       "induction-not-scheduled",
-      "induction-scheduled",
-      "induction-completed",
-      "induction-failed",
+      "induction-scheduled", 
       "induction-assigned",
-      "induction-re-scheduled" // New status for rescheduled inductions
+      "induction-re-scheduled",
+      "induction-completed",
+      "induction-passed",
+      "induction-failed"
     ],
     default: "induction-not-scheduled",
   },
@@ -177,15 +179,27 @@ interview: {
   inductionStartDate: { type: String },
   inductionEndDate: { type: String },
   inductionLocation: { type: String },
-  rescheduleCount: { type: Number, default: 0 }, 
+  rescheduleCount: { type: Number, default: 0 },
   rescheduleHistory: [
     {
+      // Previous induction details
+      previousInductionId: { type: mongoose.Schema.Types.ObjectId, ref: "Induction" },
+      previousInductionName: { type: String },
       previousStartDate: { type: String },
       previousEndDate: { type: String },
       previousLocation: { type: String },
+      
+      // New induction details
+      newInductionId: { type: mongoose.Schema.Types.ObjectId, ref: "Induction" },
+      newInductionName: { type: String },
+      newStartDate: { type: String },
+      newEndDate: { type: String },
+      newLocation: { type: String },
+      
+      // Reschedule metadata
       rescheduledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      rescheduledDate: { type: Date },
-      notes: { type: String }
+      rescheduledDate: { type: Date, default: Date.now },
+      reason: { type: String, required: true }
     }
   ],
   result: {
@@ -199,7 +213,6 @@ interview: {
     feedback: { type: String },
   },
 },
-
 
     // Schema Assignment
     schemaAssignment: {

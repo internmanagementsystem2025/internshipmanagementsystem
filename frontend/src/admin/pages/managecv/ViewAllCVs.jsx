@@ -1,4 +1,3 @@
-// Fixed ViewAllCVs.jsx - Updated delete modal usage
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -28,7 +27,7 @@ const ViewAllCVs = ({ darkMode = false }) => {
   const [filterCategory, setFilterCategory] = useState("fullName");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
-  const itemsPerPage = 20;
+  const itemsPerPage = 5;
   const navigate = useNavigate();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [cvToDelete, setCvToDelete] = useState(null);
@@ -84,7 +83,6 @@ const ViewAllCVs = ({ darkMode = false }) => {
 
         if (response.status === 200) {
           const data = Array.isArray(response.data) ? response.data : [];
-          // Filter out any CVs with invalid IDs
           const validCVs = data.filter((cv) => cv && cv._id && isValidMongoId(cv._id));
           setCvData(validCVs);
           setError("");
@@ -173,27 +171,39 @@ const ViewAllCVs = ({ darkMode = false }) => {
   // Dynamic columns based on whether there are internship CVs
   const getColumns = () => {
     const baseColumns = [
-      "#",
-      "NIC",
-      "Ref No",
-      "Name",
-      "CV From",
-      "Intern Type",
-      "Application Date",
-      "District",
-      "Institute",
-      "Referred By",
+      { key: "#", label: "#", width: "60px" },
+      { key: "nic", label: "NIC", width: "140px" },
+      { key: "refNo", label: "Ref No", width: "120px" },
+      { key: "name", label: "Name", width: "180px" },
+      { key: "cvFrom", label: "CV From", width: "110px" },
+      { key: "internType", label: "Intern Type", width: "130px" },
+      { key: "applicationDate", label: "Application Date", width: "150px" },
+      { key: "district", label: "District", width: "120px" },
+      { key: "institute", label: "Institute", width: "200px" },
+      { key: "referredBy", label: "Referred By", width: "140px" },
     ];
 
     if (hasInternshipCVs()) {
-      baseColumns.push("Category of Apply");
+      baseColumns.push({ key: "categoryOfApply", label: "Category of Apply", width: "160px" });
     }
 
-    baseColumns.push("Status", "View", "Delete");
+    baseColumns.push(
+      { key: "status", label: "Status", width: "120px" },
+      { key: "view", label: "View", width: "80px" },
+      { key: "delete", label: "Delete", width: "80px" }
+    );
+
     return baseColumns;
   };
 
   const columns = getColumns();
+
+  // Calculate total table width
+  const getTotalTableWidth = () => {
+    return columns.reduce((total, col) => {
+      return total + parseInt(col.width.replace('px', ''));
+    }, 0);
+  };
 
   // Handle view CV
   const handleView = (cvId) => {
@@ -204,7 +214,7 @@ const ViewAllCVs = ({ darkMode = false }) => {
     navigate(`/view-cv/${cvId}`);
   };
 
-  // Handle delete CV with form data - FIXED
+  // Handle delete CV with form data
   const handleDelete = async (deletionData) => {
     if (!cvToDelete) return;
 
@@ -278,11 +288,11 @@ The CV has been moved to deleted items and can be restored by administrators if 
     }
   };
 
-  // Handle opening delete modal - FIXED
+  // Handle opening delete modal
   const handleDeleteClick = (cvId) => {
     const cvToDeleteData = cvData.find((cv) => cv._id === cvId);
     if (cvToDeleteData) {
-      setCvToDelete(cvToDeleteData); // Pass the full CV object instead of just ID
+      setCvToDelete(cvToDeleteData); 
       setShowDeleteModal(true);
     } else {
       alert("CV not found");
@@ -317,6 +327,124 @@ The CV has been moved to deleted items and can be restored by administrators if 
         return "bg-warning";
     }
   };
+
+  // Enhanced table styles for better horizontal scrolling
+  const tableContainerStyles = {
+    overflowX: 'auto',
+    overflowY: 'visible',
+    WebkitOverflowScrolling: 'touch', 
+    scrollbarWidth: 'auto',
+    scrollbarColor: darkMode ? '#6c757d #343a40' : '#6c757d #f8f9fa', 
+    border: darkMode ? '1px solid #454d55' : '1px solid #dee2e6',
+    borderRadius: '0.375rem',
+    boxShadow: darkMode 
+      ? '0 0.125rem 0.25rem rgba(255, 255, 255, 0.075)' 
+      : '0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)',
+    position: 'relative',
+    minHeight: '200px' 
+  };
+
+  const scrollbarStyles = `
+    .enhanced-table-container::-webkit-scrollbar {
+      height: 12px;
+      background-color: ${darkMode ? '#343a40' : '#f8f9fa'};
+      border-radius: 6px;
+    }
+    
+    .enhanced-table-container::-webkit-scrollbar-track {
+      background-color: ${darkMode ? '#343a40' : '#f8f9fa'};
+      border-radius: 6px;
+      border: 1px solid ${darkMode ? '#454d55' : '#dee2e6'};
+    }
+    
+    .enhanced-table-container::-webkit-scrollbar-thumb {
+      background-color: ${darkMode ? '#6c757d' : '#adb5bd'};
+      border-radius: 6px;
+      border: 2px solid ${darkMode ? '#343a40' : '#f8f9fa'};
+      transition: background-color 0.2s ease;
+    }
+    
+    .enhanced-table-container::-webkit-scrollbar-thumb:hover {
+      background-color: ${darkMode ? '#868e96' : '#868e96'};
+    }
+    
+    .enhanced-table-container::-webkit-scrollbar-thumb:active {
+      background-color: ${darkMode ? '#495057' : '#6c757d'};
+    }
+    
+    .enhanced-table-container {
+      scrollbar-width: auto;
+      scrollbar-color: ${darkMode ? '#6c757d #343a40' : '#6c757d #f8f9fa'};
+    }
+
+    /* Fixed table layout with precise column widths */
+    .enhanced-table-container table {
+      table-layout: fixed;
+      width: ${getTotalTableWidth()}px;
+      min-width: ${getTotalTableWidth()}px;
+    }
+
+    .enhanced-table-container th,
+    .enhanced-table-container td {
+      white-space: nowrap;
+      padding: 0.75rem 0.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: middle;
+    }
+
+    /* Specific column widths */
+    ${columns.map((col, index) => `
+    .enhanced-table-container th:nth-child(${index + 1}),
+    .enhanced-table-container td:nth-child(${index + 1}) { 
+      width: ${col.width}; 
+      min-width: ${col.width}; 
+      max-width: ${col.width}; 
+    }`).join('\n')}
+
+    /* Smooth scrolling behavior */
+    .enhanced-table-container {
+      scroll-behavior: smooth;
+    }
+
+    /* Focus styles for accessibility */
+    .enhanced-table-container:focus {
+      outline: 2px solid ${darkMode ? '#0d6efd' : '#0d6efd'};
+      outline-offset: 2px;
+    }
+
+    /* Sticky header */
+    .enhanced-table-container thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background-color: ${darkMode ? '#343a40' : '#f8f9fa'};
+      border-bottom: 2px solid ${darkMode ? '#454d55' : '#dee2e6'};
+    }
+
+    /* Better cell content handling */
+    .enhanced-table-container td {
+      position: relative;
+    }
+
+    .enhanced-table-container td:hover {
+      overflow: visible;
+      z-index: 5;
+    }
+
+    /* Button sizing in action columns */
+    .enhanced-table-container .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      white-space: nowrap;
+    }
+
+    /* Badge styling */
+    .enhanced-table-container .badge {
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+  `;
 
   // Render main content
   if (loading) {
@@ -360,7 +488,11 @@ The CV has been moved to deleted items and can be restored by administrators if 
       className={`d-flex flex-column min-vh-100 ${
         darkMode ? "bg-dark text-white" : "bg-light text-dark"
       }`}
+       style={{ paddingBottom: '3rem' }} 
     >
+      {/* Inject custom scrollbar styles */}
+      <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
+      
       <Container className="text-center mt-4 mb-3">
         <img
           src={logo}
@@ -441,11 +573,11 @@ The CV has been moved to deleted items and can be restored by administrators if 
 
             <Button
               variant="secondary"
-              onClick={() => navigate("/schedule-interview")}
+              onClick={() => navigate("/admin-approve-cvs")}
               className="mx-2"
               style={{ width: "auto" }}
             >
-              Schedule Interview
+              Approve CVs
             </Button>
           </Col>
         </Row>
@@ -511,18 +643,27 @@ The CV has been moved to deleted items and can be restored by administrators if 
           </Col>
         </Row>
 
-        {/* CV Table */}
-        <div className="table-responsive">
+        {/* Enhanced CV Table Container with Professional Horizontal Scrolling */}
+        <div 
+          className="enhanced-table-container" 
+          style={tableContainerStyles}
+          tabIndex="0" 
+          role="region"
+          aria-label="CV data table with horizontal scrolling"
+        >
           <Table
             striped
             bordered
             hover
             variant={darkMode ? "dark" : "light"}
+            className="mb-0"
           >
             <thead>
               <tr>
                 {columns.map((col, index) => (
-                  <th key={index}>{col}</th>
+                  <th key={index} className="text-center align-middle">
+                    {col.label}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -530,38 +671,39 @@ The CV has been moved to deleted items and can be restored by administrators if 
               {currentCVs.length > 0 ? (
                 currentCVs.map((cv, index) => (
                   <tr key={cv._id || index}>
-                    <td>{indexOfFirstCV + index + 1}</td>
-                    <td>{cv.nic || "N/A"}</td>
-                    <td>{cv.refNo || "N/A"}</td>
-                    <td>
+                    <td className="text-center">{indexOfFirstCV + index + 1}</td>
+                    <td title={cv.nic || "N/A"}>{cv.nic || "N/A"}</td>
+                    <td title={cv.refNo || "N/A"}>{cv.refNo || "N/A"}</td>
+                    <td title={renderNameWithPrefix(cv.fullName, cv.gender)}>
                       {renderNameWithPrefix(cv.fullName, cv.gender)}
                     </td>
-                    <td>{cv.userType || "N/A"}</td>
-                    <td>{cv.selectedRole || "N/A"}</td>
-                    <td>
+                    <td title={cv.userType || "N/A"}>{cv.userType || "N/A"}</td>
+                    <td title={cv.selectedRole || "N/A"}>{cv.selectedRole || "N/A"}</td>
+                    <td title={cv.applicationDate ? new Date(cv.applicationDate).toLocaleDateString() : "N/A"}>
                       {cv.applicationDate
                         ? new Date(cv.applicationDate).toLocaleDateString()
                         : "N/A"}
                     </td>
-                    <td>{cv.district || "N/A"}</td>
-                    <td>{cv.institute || "N/A"}</td>
-                    <td>{cv.referredBy || "N/A"}</td>
+                    <td title={cv.district || "N/A"}>{cv.district || "N/A"}</td>
+                    <td title={cv.institute || "N/A"}>{cv.institute || "N/A"}</td>
+                    <td title={cv.referredBy || "N/A"}>{cv.referredBy || "N/A"}</td>
                     {hasInternshipCVs() && (
-                      <td>
+                      <td title={cv.selectedRole === 'internship' ? cv.roleData?.internship?.categoryOfApply || "N/A" : "-"}>
                         {cv.selectedRole === 'internship' 
                           ? cv.roleData?.internship?.categoryOfApply || "N/A"
                           : "-"
                         }
                       </td>
                     )}
-                    <td>
+                    <td className="text-center">
                       <span
                         className={`badge ${getStatusBadgeClass(cv.currentStatus)}`}
+                        title={formatStatus(cv.currentStatus)}
                       >
                         {formatStatus(cv.currentStatus)}
                       </span>
                     </td>
-                    <td>
+                    <td className="text-center">
                       <Button
                         size="sm"
                         variant="outline-primary"
@@ -571,7 +713,7 @@ The CV has been moved to deleted items and can be restored by administrators if 
                         View
                       </Button>
                     </td>
-                    <td>
+                    <td className="text-center">
                       <Button
                         size="sm"
                         variant="outline-danger"
@@ -585,10 +727,14 @@ The CV has been moved to deleted items and can be restored by administrators if 
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length} className="text-center">
-                    {searchTerm || statusFilter !== "all" || dateFilter !== "all" 
-                      ? "No CVs found matching your criteria" 
-                      : "No CVs found"}
+                  <td colSpan={columns.length} className="text-center py-4">
+                    <div>
+                      <i className="fa fa-search mb-2" style={{ fontSize: '2rem' }}></i>
+                      <br />
+                      {searchTerm || statusFilter !== "all" || dateFilter !== "all" 
+                        ? "No CVs found matching your criteria" 
+                        : "No CVs found"}
+                    </div>
                   </td>
                 </tr>
               )}
@@ -653,14 +799,15 @@ The CV has been moved to deleted items and can be restored by administrators if 
             </tfoot>
           </Table>
         </div>
+
       </Container>
       
-      {/* Delete Confirmation Modal - FIXED PROPS */}
+      {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         show={showDeleteModal}
         onClose={handleCloseDeleteModal}
         onDelete={handleDelete}
-        cvData={cvToDelete} // Now passing the full CV object
+        cvData={cvToDelete}
         darkMode={darkMode}
         loading={deleteLoading}
       />

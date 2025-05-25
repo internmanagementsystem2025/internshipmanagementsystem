@@ -231,7 +231,7 @@ const ApproveCVs = ({ darkMode }) => {
     "NIC",
     "Full Name",
     "Intern Type",
-    "CV From",
+    "Category",
     "District",
     "Application Date",
     "View",
@@ -367,7 +367,12 @@ const ApproveCVs = ({ darkMode }) => {
                       <td>{cv.nic || "N/A"}</td>
                       <td>{cv.fullName || "N/A"}</td>
                       <td>{cv.selectedRole || "N/A"}</td>
-                      <td>{cv.userType || "N/A"}</td>
+                      <td>
+                        {cv.selectedRole === 'internship' 
+                          ? cv.roleData?.internship?.categoryOfApply || "N/A"
+                          : "-"
+                        }
+                      </td>
                       <td>{cv.district || "N/A"}</td>
                       <td>
                         {cv.applicationDate

@@ -25,6 +25,8 @@ const {
   getCVsAssignedToInduction,
   passInduction,
   failInduction,
+  bulkPassInduction,
+  bulkFailInduction,
   bulkUploadCV,
   validateObjectId,
   getAllNotApprovedCVs,
@@ -75,6 +77,7 @@ router.get("/assigned-to-induction", getCVsAssignedToInduction);
 router.patch("/:id/pass-induction", verifyToken, passInduction);
 router.patch("/:id/fail-induction", verifyToken, failInduction);
 router.patch("/:id/reschedule-induction", verifyToken, rescheduleInduction);
+
 
 // CV routes for scheme assignment
 router.get("/get-cvs-for-scheme-assignment", getCVsForSchemeAssignment);

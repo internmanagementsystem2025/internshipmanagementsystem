@@ -1434,7 +1434,7 @@ const assignInduction = async (req, res) => {
       id,
       {
         $set: {
-          "interview.status": "interview-skipped",
+          "interview.status": "interview-passed",
           "induction.status": "induction-assigned",
           "induction.inductionAssigned": true,
           "induction.inductionId": induction._id,
@@ -1561,8 +1561,14 @@ const getInterviewPassedCVs = async (req, res) => {
 // Get CVs assigned to inductions
 const getCVsAssignedToInduction = async (req, res) => {
   try {
+    // Include both induction-assigned and induction-re-scheduled statuses
     const cvs = await CV.find({
-      "induction.status": "induction-assigned",
+      $or: [
+        { "induction.status": "induction-assigned" },
+        { "induction.status": "induction-re-scheduled" },
+        { "currentStatus": "induction-assigned" },
+        { "currentStatus": "induction-re-scheduled" }
+      ]
     })
       .populate({
         path: "interview.interviews.interviewId",
@@ -1599,8 +1605,12 @@ const getCVsAssignedToInduction = async (req, res) => {
             induction?.inductionId?.induction ||
             induction?.inductionName ||
             "N/A",
-          startDate: induction?.inductionId?.startDate || "N/A",
-          endDate: induction?.inductionId?.endDate || "N/A",
+          startDate: induction?.inductionId?.startDate || 
+            induction?.inductionStartDate || "N/A",
+          endDate: induction?.inductionId?.endDate || 
+            induction?.inductionEndDate || "N/A",
+          location: induction?.inductionId?.location || 
+            induction?.inductionLocation || "N/A",
         },
       };
     });
@@ -1619,120 +1629,170 @@ const getCVsAssignedToInduction = async (req, res) => {
 const rescheduleInduction = async (req, res) => {
   try {
     const { id } = req.params;
-    const { newInductionId, startDate, endDate, location, notes } = req.body;
+    const { newInductionId, currentInductionId, reason } = req.body;
 
+    // Validate CV ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid CV ID format" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid CV ID format" 
+      });
+    }
+
+    // Validate new induction ID
+    if (!newInductionId || !mongoose.Types.ObjectId.isValid(newInductionId)) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Valid new induction ID is required" 
+      });
     }
 
     // Find the CV document
-    const cv = await CV.findById(id);
+    const cv = await CV.findById(id).populate("userId", "email fullName");
     if (!cv) {
-      return res.status(404).json({ message: "CV not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "CV not found" 
+      });
     }
 
     // Check if there's an induction to reschedule
     if (!cv.induction?.inductionId) {
-      return res.status(400).json({ message: "No induction found to reschedule" });
+      return res.status(400).json({ 
+        success: false,
+        message: "No induction found to reschedule" 
+      });
+    }
+
+    // Find the new induction
+    const newInduction = await Induction.findById(newInductionId);
+    if (!newInduction) {
+      return res.status(404).json({ 
+        success: false,
+        message: "New induction program not found" 
+      });
+    }
+
+    // Validate that the new induction has all required fields
+    const requiredFields = ["induction", "startDate", "endDate", "location"];
+    const missingFields = requiredFields.filter((field) => !newInduction[field]);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "New induction program is incomplete",
+        missingFields,
+        details: `Missing: ${missingFields.join(", ")}`,
+      });
     }
 
     // Store the current induction details for history
     const previousInduction = {
+      inductionId: cv.induction.inductionId,
+      inductionName: cv.induction.inductionName,
       inductionStartDate: cv.induction.inductionStartDate,
       inductionEndDate: cv.induction.inductionEndDate,
       inductionLocation: cv.induction.inductionLocation || "Not specified"
     };
 
-    // If a new induction ID is provided, fetch the new induction details
-    let newInductionDetails = {};
-    if (newInductionId && mongoose.Types.ObjectId.isValid(newInductionId)) {
-      const newInduction = await Induction.findById(newInductionId);
-      if (newInduction) {
-        newInductionDetails = {
-          inductionId: newInductionId,
-          inductionName: newInduction.induction,
-          inductionStartDate: newInduction.startDate,
-          inductionEndDate: newInduction.endDate,
-          inductionLocation: newInduction.location 
-        };
-      }
-    }
-
-    // Create a rescheduling history entry if it doesn't exist
-    if (!cv.induction.rescheduleHistory) {
-      cv.induction.rescheduleHistory = [];
-    }
-
-    // Create a reschedule history entry
+    // Create reschedule history entry
     const rescheduleEntry = {
+      previousInductionId: previousInduction.inductionId,
+      previousInductionName: previousInduction.inductionName,
       previousStartDate: previousInduction.inductionStartDate,
       previousEndDate: previousInduction.inductionEndDate,
       previousLocation: previousInduction.inductionLocation,
+      newInductionId: newInduction._id,
+      newInductionName: newInduction.induction,
+      newStartDate: newInduction.startDate,
+      newEndDate: newInduction.endDate,
+      newLocation: newInduction.location,
       rescheduledBy: req.user.id,
       rescheduledDate: new Date(),
-      notes: notes || "No additional notes provided"
+      reason: reason || "No reason provided"
     };
 
-    // Update induction details
-    cv.induction = {
-      ...cv.induction,
-      status: "induction-re-scheduled", 
-      inductionAssigned: true, 
-      inductionId: newInductionDetails.inductionId || cv.induction.inductionId,
-      inductionName: newInductionDetails.inductionName || cv.induction.inductionName,
-      inductionStartDate: newInductionDetails.inductionStartDate || startDate || cv.induction.inductionStartDate,
-      inductionEndDate: newInductionDetails.inductionEndDate || endDate || cv.induction.inductionEndDate,
-      inductionLocation: newInductionDetails.inductionLocation || location || cv.induction.inductionLocation,
-      rescheduleCount: (cv.induction.rescheduleCount || 0) + 1,
-      rescheduleHistory: [
-        ...(cv.induction.rescheduleHistory || []),
-        rescheduleEntry
-      ],
-      result: { 
-        ...cv.induction.result,
-        status: "induction-pending",
-      }
-    };
+    // Update the CV with new induction details
+    const updatedCV = await CV.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "induction.status": "induction-re-scheduled",
+          "induction.inductionAssigned": true,
+          "induction.inductionId": newInduction._id,
+          "induction.inductionName": newInduction.induction,
+          "induction.inductionStartDate": newInduction.startDate,
+          "induction.inductionEndDate": newInduction.endDate,
+          "induction.inductionLocation": newInduction.location,
+          "induction.rescheduleCount": (cv.induction.rescheduleCount || 0) + 1,
+          "induction.result.status": "induction-pending",
+          "currentStatus": "induction-re-scheduled"
+        },
+        $push: {
+          "induction.rescheduleHistory": rescheduleEntry
+        }
+      },
+      { new: true }
+    ).populate("userId", "email fullName");
 
-    cv.currentStatus = "induction-re-scheduled";
-    
-    cv._skipStatusUpdate = true;
-    
-    await cv.save();
+    if (!updatedCV) {
+      return res.status(404).json({
+        success: false,
+        message: "Failed to update CV record"
+      });
+    }
 
-    // Populate for response
-    await cv.populate("userId", "email fullName");
-
+    // Send email notification about rescheduled induction
     try {
-      // Send email notification about rescheduled induction
-      if (cv.userId && cv.userId.email) {
-        const fullName = cv.userId.fullName || cv.fullName || "Applicant";
-        
-        // FIXED: Use the updated induction location directly
+      const recipientEmail = updatedCV.userId?.email;
+      const recipientName = updatedCV.userId?.fullName || updatedCV.fullName || "Applicant";
+      
+      if (recipientEmail) {
         await sendInductionRescheduleEmail({
-          recipientName: fullName,
-          recipientEmail: cv.userId.email,
-          refNo: cv.refNo,
-          inductionName: cv.induction.inductionName,
-          startDate: cv.induction.inductionStartDate,
-          endDate: cv.induction.inductionEndDate,
-          location: cv.induction.inductionLocation, 
-          notes: notes || "No additional notes provided"
+          recipientName: recipientName,
+          recipientEmail: recipientEmail,
+          refNo: updatedCV.refNo || "N/A",
+          inductionName: newInduction.induction,
+          startDate: newInduction.startDate,
+          endDate: newInduction.endDate,
+          location: newInduction.location,
+          previousInductionName: previousInduction.inductionName,
+          previousStartDate: previousInduction.inductionStartDate,
+          previousEndDate: previousInduction.inductionEndDate,
+          reason: reason || "No reason provided"
         });
+        console.log(`Reschedule email successfully sent to ${recipientEmail}`);
+      } else {
+        console.warn("No recipient email found for induction reschedule notification");
       }
     } catch (emailError) {
       console.error("Failed to send induction reschedule email:", emailError);
+      // Don't fail the entire operation if email fails
     }
 
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
       message: "Induction rescheduled successfully",
-      cv: cv
+      cv: updatedCV,
+      rescheduleDetails: {
+        previousInduction: previousInduction,
+        newInduction: {
+          id: newInduction._id,
+          name: newInduction.induction,
+          startDate: newInduction.startDate,
+          endDate: newInduction.endDate,
+          location: newInduction.location
+        },
+        reason: reason
+      }
     });
+
   } catch (error) {
     console.error("Error rescheduling induction:", error);
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Failed to reschedule induction",
-      error: error.message,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -1745,115 +1805,248 @@ const passInduction = async (req, res) => {
     const { feedback } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid CV ID format" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid CV ID format" 
+      });
     }
 
     const cv = await CV.findById(id).populate("userId", "email fullName");
     if (!cv) {
-      return res.status(404).json({ message: "CV not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "CV not found" 
+      });
     }
 
-    // Update induction status
-    cv.induction.result = {
-      status: "induction-passed",
-      evaluatedDate: new Date(),
-      evaluatedBy: req.user.id || null,
-      feedback: feedback || null,
-    };
-    cv.induction.status = "induction-completed";
-    cv.currentStatus = "induction-passed";
+    // Check if CV has an induction assigned
+    if (!cv.induction || !cv.induction.inductionId) {
+      return res.status(400).json({
+        success: false,
+        message: "No induction found for this CV"
+      });
+    }
 
-    await cv.save();
+    // Check if induction is in a valid state to be passed
+    const validStatuses = [
+      "induction-assigned", 
+      "induction-re-scheduled", 
+      "induction-pending"
+    ];
+    
+    if (!validStatuses.includes(cv.induction.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot pass induction. Current status: ${cv.induction.status}`
+      });
+    }
+
+    // Update induction result and status
+    const updatedCV = await CV.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "induction.result.status": "induction-passed",
+          "induction.result.evaluatedDate": new Date(),
+          "induction.result.evaluatedBy": req.user.id || null,
+          "induction.result.feedback": feedback || null,
+          "induction.status": "induction-completed",
+          "currentStatus": "induction-passed"
+        }
+      },
+      { new: true }
+    ).populate("userId", "email fullName");
+
+    if (!updatedCV) {
+      return res.status(404).json({
+        success: false,
+        message: "Failed to update CV record"
+      });
+    }
 
     // Send email notification
     try {
-      if (cv.userId && cv.userId.email) {
-        const fullName = cv.userId.fullName || cv.fullName || "Applicant";
+      const recipientEmail = updatedCV.userId?.email;
+      const recipientName = updatedCV.userId?.fullName || updatedCV.fullName || "Applicant";
+      
+      if (recipientEmail) {
         const nextSteps = feedback || "HR will contact you shortly with details regarding your internship placement.";
         
         await sendInductionPassEmail({
-          recipientName: fullName,
-          recipientEmail: cv.userId.email,
-          refNo: cv.refNo,
-          inductionName: cv.induction.inductionName,
-          nextSteps: nextSteps
+          recipientName: recipientName,
+          recipientEmail: recipientEmail,
+          refNo: updatedCV.refNo || "N/A",
+          inductionName: updatedCV.induction.inductionName,
+          nextSteps: nextSteps,
+          // Include reschedule information if applicable
+          wasRescheduled: (updatedCV.induction.rescheduleCount || 0) > 0,
+          rescheduleCount: updatedCV.induction.rescheduleCount || 0
         });
+        console.log(`Induction pass email successfully sent to ${recipientEmail}`);
+      } else {
+        console.warn("No recipient email found for induction pass notification");
       }
     } catch (emailError) {
       console.error("Failed to send induction pass email:", emailError);
+      // Don't fail the entire operation if email fails
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Induction marked as passed successfully and notification sent",
-      cv: cv,
+      cv: updatedCV,
+      inductionDetails: {
+        status: "induction-passed",
+        inductionName: updatedCV.induction.inductionName,
+        wasRescheduled: (updatedCV.induction.rescheduleCount || 0) > 0,
+        rescheduleCount: updatedCV.induction.rescheduleCount || 0,
+        evaluatedDate: updatedCV.induction.result.evaluatedDate,
+        feedback: feedback
+      }
     });
+
   } catch (error) {
     console.error("Error passing induction:", error);
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Failed to update induction status",
-      error: error.message,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
 
-// Updated Fail induction with email notification
+// Updated Fail induction with email notification - handles rescheduled inductions
 const failInduction = async (req, res) => {
   try {
     const { id } = req.params;
-    const { feedback } = req.body;
+    const { feedback, allowReschedule = false } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid CV ID format" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid CV ID format" 
+      });
     }
 
     const cv = await CV.findById(id).populate("userId", "email fullName");
     if (!cv) {
-      return res.status(404).json({ message: "CV not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "CV not found" 
+      });
     }
 
-    // Update induction status
-    cv.induction.result = {
-      status: "induction-failed",
-      evaluatedDate: new Date(),
-      evaluatedBy: req.user.id || null,
-      feedback: feedback || null,
-    };
-    cv.induction.status = "induction-failed";
-    cv.currentStatus = "induction-failed";
+    // Check if CV has an induction assigned
+    if (!cv.induction || !cv.induction.inductionId) {
+      return res.status(400).json({
+        success: false,
+        message: "No induction found for this CV"
+      });
+    }
 
-    await cv.save();
+    // Check if induction is in a valid state to be failed
+    const validStatuses = [
+      "induction-assigned", 
+      "induction-re-scheduled", 
+      "induction-pending"
+    ];
+    
+    if (!validStatuses.includes(cv.induction.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot fail induction. Current status: ${cv.induction.status}`
+      });
+    }
+
+    // Determine the final status based on reschedule policy
+    const rescheduleCount = cv.induction.rescheduleCount || 0;
+    const maxReschedules = 2; // You can make this configurable
+    
+    let finalStatus = "induction-failed";
+    let nextAction = "terminated";
+    
+    // If reschedule is allowed and haven't exceeded max reschedules
+    if (allowReschedule && rescheduleCount < maxReschedules) {
+      finalStatus = "induction-failed-pending-reschedule";
+      nextAction = "reschedule-available";
+    }
+
+    // Update induction result and status
+    const updatedCV = await CV.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "induction.result.status": "induction-failed",
+          "induction.result.evaluatedDate": new Date(),
+          "induction.result.evaluatedBy": req.user.id || null,
+          "induction.result.feedback": feedback || null,
+          "induction.status": finalStatus,
+          "currentStatus": finalStatus,
+          "induction.nextAction": nextAction
+        }
+      },
+      { new: true }
+    ).populate("userId", "email fullName");
+
+    if (!updatedCV) {
+      return res.status(404).json({
+        success: false,
+        message: "Failed to update CV record"
+      });
+    }
 
     // Send email notification
     try {
-      if (cv.userId && cv.userId.email) {
-        const fullName = cv.userId.fullName || cv.fullName || "Applicant";
-        
+      const recipientEmail = updatedCV.userId?.email;
+      const recipientName = updatedCV.userId?.fullName || updatedCV.fullName || "Applicant";
+      
+      if (recipientEmail) {
         await sendInductionFailEmail({
-          recipientName: fullName,
-          recipientEmail: cv.userId.email,
-          refNo: cv.refNo,
-          inductionName: cv.induction.inductionName,
-          feedback: feedback || "Thank you for your participation in our induction program."
+          recipientName: recipientName,
+          recipientEmail: recipientEmail,
+          refNo: updatedCV.refNo || "N/A",
+          inductionName: updatedCV.induction.inductionName,
+          feedback: feedback || "Thank you for your participation in our induction program.",
+          // Include reschedule information
+          wasRescheduled: rescheduleCount > 0,
+          rescheduleCount: rescheduleCount,
+          canReschedule: nextAction === "reschedule-available",
+          maxReschedules: maxReschedules
         });
+        console.log(`Induction fail email successfully sent to ${recipientEmail}`);
+      } else {
+        console.warn("No recipient email found for induction fail notification");
       }
     } catch (emailError) {
       console.error("Failed to send induction fail email:", emailError);
+      // Don't fail the entire operation if email fails
     }
 
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
       message: "Induction marked as failed successfully and notification sent",
-      cv: cv,
+      cv: updatedCV,
+      inductionDetails: {
+        status: finalStatus,
+        inductionName: updatedCV.induction.inductionName,
+        wasRescheduled: rescheduleCount > 0,
+        rescheduleCount: rescheduleCount,
+        canReschedule: nextAction === "reschedule-available",
+        maxReschedules: maxReschedules,
+        evaluatedDate: updatedCV.induction.result.evaluatedDate,
+        feedback: feedback
+      }
     });
+
   } catch (error) {
     console.error("Error failing induction:", error);
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Failed to update induction status",
-      error: error.message,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
-
 
 // ------------------------------------------------------------ Controllers for Rotational Section --------------------------------------------------------------------
 
