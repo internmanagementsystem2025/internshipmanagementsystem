@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import axios from "axios";
 import { 
   Container, Row, Col, Card, Form, Button, Spinner, Alert,
@@ -50,14 +50,10 @@ const InternLifeCycle = ({ darkMode }) => {
     }
   };
 
-  const handleNicChange = (e) => {
-    const value = e.target.value;
-    setNic(value);
-    
-    if (error) {
-      setError("");
-    }
-  };
+  const handleNicChange = useCallback((e) => {
+    setNic(e.target.value);
+    if (error) setError("");
+  }, [error]);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -202,417 +198,418 @@ const InternLifeCycle = ({ darkMode }) => {
     </ModernCard>
   );
 
-const renderCVDetails = () => (
-  <ModernCard className="mb-4">
-    <SectionHeader title="Application Details" icon={FileText} section="application" />
-    {expandedSections.application && (
-      <div className="px-4 pb-4">
-        <Row className="g-3 mb-4">
-          <Col md={6}>
-            <InfoItem icon={FileText} label="Reference No" value={userData.refNo} />
-          </Col>
-          <Col md={6}>
-            <div className={`p-3 rounded-3 ${
-              darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
-            }`}>
-              <div className="d-flex align-items-start">
-                <div className={`p-2 rounded-2 me-3 ${
-                  darkMode ? "bg-dark" : "bg-white"
-                }`}>
-                  <Target size={16} className={darkMode ? "text-light" : "text-muted"} />
-                </div>
-                <div className="flex-grow-1">
-                  <small className={`d-block ${darkMode ? "text-light" : "text-muted"}`}>
-                    Applied Position
-                  </small>
-                  <Badge bg="primary" className="text-capitalize">
-                    {userData.selectedRole === "dataEntry" ? "Data Entry Operator" : "Internship"}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-          </Col>
-          <Col md={6}>
-            <InfoItem icon={School} label="Institute" value={userData.institute} />
-          </Col>
-          <Col md={6}>
-            <InfoItem icon={Calendar} label="Application Date" value={formatDate(userData.applicationDate)} />
-          </Col>
-          <Col md={6}>
-            <div className={`p-3 rounded-3 ${
-              darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
-            }`}>
-              <div className="d-flex align-items-start">
-                <div className={`p-2 rounded-2 me-3 ${
-                  darkMode ? "bg-dark" : "bg-white"
-                }`}>
-                  <CheckCircle size={16} className={darkMode ? "text-light" : "text-muted"} />
-                </div>
-                <div className="flex-grow-1">
-                  <small className={`d-block ${darkMode ? "text-light" : "text-muted"}`}>
-                    Current Status
-                  </small>
-                  <Badge 
-                    bg={getStatusColor(userData.currentStatus)}
-                    className="text-capitalize"
-                  >
-                    {userData.currentStatus?.replace(/-/g, ' ') || "Pending"}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-          </Col>
-          <Col md={6}>
-            <InfoItem icon={MapPin} label="Postal Address" value={userData.postalAddress} />
-          </Col>
-        </Row>
-
-        <div className={`border-0 rounded-3 ${
-          darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
-        }`}>
-          <div 
-            className={`p-3 border-0 rounded-3 ${
-              darkMode ? "bg-transparent text-white" : "bg-transparent text-dark"
-            }`}
-            style={{ cursor: 'pointer' }}
-            onClick={() => {
-              const accordion = document.querySelector('#roleAccordion');
-              if (accordion) {
-                accordion.style.display = accordion.style.display === 'none' ? 'block' : 'none';
-              }
-            }}
-          >
-            <h6 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
-              {userData.selectedRole === "dataEntry"
-                ? "Data Entry Operator Details"
-                : "Internship Details"}
-            </h6>
-          </div>
-
-          <div id="roleAccordion" className={`px-3 pb-3 ${
-            darkMode ? "bg-transparent text-white" : "bg-transparent text-dark"
-          }`}>
-            {userData.selectedRole === "dataEntry" ? (
-              <div className="space-y-4">
-                <Card className={`border-0 rounded-3 shadow-sm ${
-                  darkMode ? "bg-dark text-white border-secondary" : "bg-white text-dark"
-                }`}>
-                  <Card.Header className={`border-0 rounded-top-3 ${
-                    darkMode ? "bg-secondary text-white border-secondary" : "bg-light text-dark"
+  const renderCVDetails = () => (
+    <ModernCard className="mb-4">
+      <SectionHeader title="Application Details" icon={FileText} section="application" />
+      {expandedSections.application && (
+        <div className="px-4 pb-4">
+          <Row className="g-3 mb-4">
+            <Col md={6}>
+              <InfoItem icon={FileText} label="Reference No" value={userData.refNo} />
+            </Col>
+            <Col md={6}>
+              <div className={`p-3 rounded-3 ${
+                darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+              }`}>
+                <div className="d-flex align-items-start">
+                  <div className={`p-2 rounded-2 me-3 ${
+                    darkMode ? "bg-dark" : "bg-white"
                   }`}>
-                    <div className="d-flex align-items-center">
-                      <BookOpen size={16} className="me-2" />
-                      O/L Results
-                    </div>
-                  </Card.Header>
-                  <Card.Body className={darkMode ? "text-white" : "text-dark"}>
-                    <Row className="g-3">
-                      <Col md={4}>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span className={darkMode ? "text-light" : "text-muted"}>Language:</span>
-                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                            {userData.roleData?.dataEntry?.language || "N/A"}
-                          </span>
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span className={darkMode ? "text-light" : "text-muted"}>Mathematics:</span>
-                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                            {userData.roleData?.dataEntry?.mathematics || "N/A"}
-                          </span>
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span className={darkMode ? "text-light" : "text-muted"}>Science:</span>
-                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                            {userData.roleData?.dataEntry?.science || "N/A"}
-                          </span>
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span className={darkMode ? "text-light" : "text-muted"}>English:</span>
-                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                            {userData.roleData?.dataEntry?.english || "N/A"}
-                          </span>
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span className={darkMode ? "text-light" : "text-muted"}>History:</span>
-                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                            {userData.roleData?.dataEntry?.history || "N/A"}
-                          </span>
-                        </div>
-                      </Col>
-                      <Col md={4}>
-                        <div className="d-flex justify-content-between align-items-center">
-                          <span className={darkMode ? "text-light" : "text-muted"}>Religion:</span>
-                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                            {userData.roleData?.dataEntry?.religion || "N/A"}
-                          </span>
-                        </div>
-                      </Col>
-                    </Row>
+                    <Target size={16} className={darkMode ? "text-light" : "text-muted"} />
+                  </div>
+                  <div className="flex-grow-1">
+                    <small className={`d-block ${darkMode ? "text-light" : "text-muted"}`}>
+                      Applied Position
+                    </small>
+                    <Badge bg="primary" className="text-capitalize">
+                      {userData.selectedRole === "dataEntry" ? "Data Entry Operator" : "Internship"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={School} label="Institute" value={userData.institute} />
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={Calendar} label="Application Date" value={formatDate(userData.applicationDate)} />
+            </Col>
+            <Col md={6}>
+              <div className={`p-3 rounded-3 ${
+                darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+              }`}>
+                <div className="d-flex align-items-start">
+                  <div className={`p-2 rounded-2 me-3 ${
+                    darkMode ? "bg-dark" : "bg-white"
+                  }`}>
+                    <CheckCircle size={16} className={darkMode ? "text-light" : "text-muted"} />
+                  </div>
+                  <div className="flex-grow-1">
+                    <small className={`d-block ${darkMode ? "text-light" : "text-muted"}`}>
+                      Current Status
+                    </small>
+                    <Badge 
+                      bg={getStatusColor(userData.currentStatus)}
+                      className="text-capitalize"
+                    >
+                      {userData.currentStatus?.replace(/-/g, ' ') || "Pending"}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={MapPin} label="Postal Address" value={userData.postalAddress} />
+            </Col>
+          </Row>
 
-                    {(userData.roleData?.dataEntry?.optional1Name ||
-                      userData.roleData?.dataEntry?.optional2Name ||
-                      userData.roleData?.dataEntry?.optional3Name) && (
-                      <>
-                        <hr className={`my-3 ${darkMode ? "border-secondary" : "border-light"}`} />
-                        <Row className="g-3">
-                          {userData.roleData.dataEntry.optional1Name && (
-                            <Col md={4}>
-                              <div className="d-flex justify-content-between align-items-center">
-                                <span className={darkMode ? "text-light" : "text-muted"}>
-                                  {userData.roleData.dataEntry.optional1Name}:
-                                </span>
-                                <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                                  {userData.roleData.dataEntry.optional1Result || "N/A"}
-                                </span>
-                              </div>
-                            </Col>
-                          )}
-                          {userData.roleData.dataEntry.optional2Name && (
-                            <Col md={4}>
-                              <div className="d-flex justify-content-between align-items-center">
-                                <span className={darkMode ? "text-light" : "text-muted"}>
-                                  {userData.roleData.dataEntry.optional2Name}:
-                                </span>
-                                <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                                  {userData.roleData.dataEntry.optional2Result || "N/A"}
-                                </span>
-                              </div>
-                            </Col>
-                          )}
-                          {userData.roleData.dataEntry.optional3Name && (
-                            <Col md={4}>
-                              <div className="d-flex justify-content-between align-items-center">
-                                <span className={darkMode ? "text-light" : "text-muted"}>
-                                  {userData.roleData.dataEntry.optional3Name}:
-                                </span>
-                                <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                                  {userData.roleData.dataEntry.optional3Result || "N/A"}
-                                </span>
-                              </div>
-                            </Col>
-                          )}
-                        </Row>
-                      </>
-                    )}
-                  </Card.Body>
-                </Card>
+          <div className={`border-0 rounded-3 ${
+            darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+          }`}>
+            <div 
+              className={`p-3 border-0 rounded-3 ${
+                darkMode ? "bg-transparent text-white" : "bg-transparent text-dark"
+              }`}
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                const accordion = document.querySelector('#roleAccordion');
+                if (accordion) {
+                  accordion.style.display = accordion.style.display === 'none' ? 'block' : 'none';
+                }
+              }}
+            >
+              <h6 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
+                {userData.selectedRole === "dataEntry"
+                  ? "Data Entry Operator Details"
+                  : "Internship Details"}
+              </h6>
+            </div>
 
-                {(userData.roleData?.dataEntry?.aLevelSubject1Name ||
-                  userData.roleData?.dataEntry?.aLevelSubject2Name ||
-                  userData.roleData?.dataEntry?.aLevelSubject3Name) && (
-                  <Card className={`border-0 rounded-3 shadow-sm mt-3 ${
+            <div id="roleAccordion" className={`px-3 pb-3 ${
+              darkMode ? "bg-transparent text-white" : "bg-transparent text-dark"
+            }`}>
+              {userData.selectedRole === "dataEntry" ? (
+                <div className="space-y-4">
+                  <Card className={`border-0 rounded-3 shadow-sm ${
                     darkMode ? "bg-dark text-white border-secondary" : "bg-white text-dark"
                   }`}>
                     <Card.Header className={`border-0 rounded-top-3 ${
                       darkMode ? "bg-secondary text-white border-secondary" : "bg-light text-dark"
                     }`}>
                       <div className="d-flex align-items-center">
-                        <Award size={16} className="me-2" />
-                        A/L Results
+                        <BookOpen size={16} className="me-2" />
+                        O/L Results
                       </div>
                     </Card.Header>
                     <Card.Body className={darkMode ? "text-white" : "text-dark"}>
                       <Row className="g-3">
-                        {userData.roleData.dataEntry.aLevelSubject1Name && (
-                          <Col md={4}>
-                            <div className="d-flex justify-content-between align-items-center">
-                              <span className={darkMode ? "text-light" : "text-muted"}>
-                                {userData.roleData.dataEntry.aLevelSubject1Name}:
-                              </span>
-                              <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                                {userData.roleData.dataEntry.aLevelSubject1Result || "N/A"}
-                              </span>
-                            </div>
-                          </Col>
-                        )}
-                        {userData.roleData.dataEntry.aLevelSubject2Name && (
-                          <Col md={4}>
-                            <div className="d-flex justify-content-between align-items-center">
-                              <span className={darkMode ? "text-light" : "text-muted"}>
-                                {userData.roleData.dataEntry.aLevelSubject2Name}:
-                              </span>
-                              <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                                {userData.roleData.dataEntry.aLevelSubject2Result || "N/A"}
-                              </span>
-                            </div>
-                          </Col>
-                        )}
-                        {userData.roleData.dataEntry.aLevelSubject3Name && (
-                          <Col md={4}>
-                            <div className="d-flex justify-content-between align-items-center">
-                              <span className={darkMode ? "text-light" : "text-muted"}>
-                                {userData.roleData.dataEntry.aLevelSubject3Name}:
-                              </span>
-                              <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
-                                {userData.roleData.dataEntry.aLevelSubject3Result || "N/A"}
-                              </span>
-                            </div>
-                          </Col>
-                        )}
+                        <Col md={4}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className={darkMode ? "text-light" : "text-muted"}>Language:</span>
+                            <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                              {userData.roleData?.dataEntry?.language || "N/A"}
+                            </span>
+                          </div>
+                        </Col>
+                        <Col md={4}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className={darkMode ? "text-light" : "text-muted"}>Mathematics:</span>
+                            <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                              {userData.roleData?.dataEntry?.mathematics || "N/A"}
+                            </span>
+                          </div>
+                        </Col>
+                        <Col md={4}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className={darkMode ? "text-light" : "text-muted"}>Science:</span>
+                            <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                              {userData.roleData?.dataEntry?.science || "N/A"}
+                            </span>
+                          </div>
+                        </Col>
+                        <Col md={4}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className={darkMode ? "text-light" : "text-muted"}>English:</span>
+                            <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                              {userData.roleData?.dataEntry?.english || "N/A"}
+                            </span>
+                          </div>
+                        </Col>
+                        <Col md={4}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className={darkMode ? "text-light" : "text-muted"}>History:</span>
+                            <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                              {userData.roleData?.dataEntry?.history || "N/A"}
+                            </span>
+                          </div>
+                        </Col>
+                        <Col md={4}>
+                          <div className="d-flex justify-content-between align-items-center">
+                            <span className={darkMode ? "text-light" : "text-muted"}>Religion:</span>
+                            <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                              {userData.roleData?.dataEntry?.religion || "N/A"}
+                            </span>
+                          </div>
+                        </Col>
                       </Row>
+
+                      {(userData.roleData?.dataEntry?.optional1Name ||
+                        userData.roleData?.dataEntry?.optional2Name ||
+                        userData.roleData?.dataEntry?.optional3Name) && (
+                        <>
+                          <hr className={`my-3 ${darkMode ? "border-secondary" : "border-light"}`} />
+                          <Row className="g-3">
+                            {userData.roleData.dataEntry.optional1Name && (
+                              <Col md={4}>
+                                <div className="d-flex justify-content-between align-items-center">
+                                  <span className={darkMode ? "text-light" : "text-muted"}>
+                                    {userData.roleData.dataEntry.optional1Name}:
+                                  </span>
+                                  <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                    {userData.roleData.dataEntry.optional1Result || "N/A"}
+                                  </span>
+                                </div>
+                              </Col>
+                            )}
+                            {userData.roleData.dataEntry.optional2Name && (
+                              <Col md={4}>
+                                <div className="d-flex justify-content-between align-items-center">
+                                  <span className={darkMode ? "text-light" : "text-muted"}>
+                                    {userData.roleData.dataEntry.optional2Name}:
+                                  </span>
+                                  <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                    {userData.roleData.dataEntry.optional2Result || "N/A"}
+                                  </span>
+                                </div>
+                              </Col>
+                            )}
+                            {userData.roleData.dataEntry.optional3Name && (
+                              <Col md={4}>
+                                <div className="d-flex justify-content-between align-items-center">
+                                  <span className={darkMode ? "text-light" : "text-muted"}>
+                                    {userData.roleData.dataEntry.optional3Name}:
+                                  </span>
+                                  <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                    {userData.roleData.dataEntry.optional3Result || "N/A"}
+                                  </span>
+                                </div>
+                              </Col>
+                            )}
+                          </Row>
+                        </>
+                      )}
                     </Card.Body>
                   </Card>
-                )}
 
-                <div className="mt-3">
-                  <InfoItem icon={MapPin} label="Preferred Location" value={userData.roleData?.dataEntry?.preferredLocation || "Not specified"} />
+                  {(userData.roleData?.dataEntry?.aLevelSubject1Name ||
+                    userData.roleData?.dataEntry?.aLevelSubject2Name ||
+                    userData.roleData?.dataEntry?.aLevelSubject3Name) && (
+                    <Card className={`border-0 rounded-3 shadow-sm mt-3 ${
+                      darkMode ? "bg-dark text-white border-secondary" : "bg-white text-dark"
+                    }`}>
+                      <Card.Header className={`border-0 rounded-top-3 ${
+                        darkMode ? "bg-secondary text-white border-secondary" : "bg-light text-dark"
+                      }`}>
+                        <div className="d-flex align-items-center">
+                          <Award size={16} className="me-2" />
+                          A/L Results
+                        </div>
+                      </Card.Header>
+                      <Card.Body className={darkMode ? "text-white" : "text-dark"}>
+                        <Row className="g-3">
+                          {userData.roleData.dataEntry.aLevelSubject1Name && (
+                            <Col md={4}>
+                              <div className="d-flex justify-content-between align-items-center">
+                                <span className={darkMode ? "text-light" : "text-muted"}>
+                                  {userData.roleData.dataEntry.aLevelSubject1Name}:
+                                </span>
+                                <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                  {userData.roleData.dataEntry.aLevelSubject1Result || "N/A"}
+                                </span>
+                              </div>
+                            </Col>
+                          )}
+                          {userData.roleData.dataEntry.aLevelSubject2Name && (
+                            <Col md={4}>
+                              <div className="d-flex justify-content-between align-items-center">
+                                <span className={darkMode ? "text-light" : "text-muted"}>
+                                  {userData.roleData.dataEntry.aLevelSubject2Name}:
+                                </span>
+                                <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                  {userData.roleData.dataEntry.aLevelSubject2Result || "N/A"}
+                                </span>
+                              </div>
+                            </Col>
+                          )}
+                          {userData.roleData.dataEntry.aLevelSubject3Name && (
+                            <Col md={4}>
+                              <div className="d-flex justify-content-between align-items-center">
+                                <span className={darkMode ? "text-light" : "text-muted"}>
+                                  {userData.roleData.dataEntry.aLevelSubject3Name}:
+                                </span>
+                                <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                  {userData.roleData.dataEntry.aLevelSubject3Result || "N/A"}
+                                </span>
+                              </div>
+                            </Col>
+                          )}
+                        </Row>
+                      </Card.Body>
+                    </Card>
+                  )}
+
+                  <div className="mt-3">
+                    <InfoItem icon={MapPin} label="Preferred Location" value={userData.roleData?.dataEntry?.preferredLocation || "Not specified"} />
+                  </div>
+                  <div className="mt-3">
+                    <InfoItem icon={School} label="Other Qualifications" value={userData.roleData?.dataEntry?.otherQualifications || "None"} />
+                  </div>
                 </div>
-                <div className="mt-3">
-                  <InfoItem icon={School} label="Other Qualifications" value={userData.roleData?.dataEntry?.otherQualifications || "None"} />
+              ) : (
+                <div className="space-y-3">
+                  <InfoItem icon={BookOpen} label="Category of Application" value={userData.roleData?.internship?.categoryOfApply || "Not specified"} />
+                  <InfoItem icon={School} label="Higher Education" value={userData.roleData?.internship?.higherEducation || "None"} />
+                  <InfoItem icon={Award} label="Other Qualifications" value={userData.roleData?.internship?.otherQualifications || "None"} />
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <InfoItem icon={BookOpen} label="Category of Application" value={userData.roleData?.internship?.categoryOfApply || "Not specified"} />
-                <InfoItem icon={School} label="Higher Education" value={userData.roleData?.internship?.higherEducation || "None"} />
-                <InfoItem icon={Award} label="Other Qualifications" value={userData.roleData?.internship?.otherQualifications || "None"} />
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    )}
-  </ModernCard>
-);
+      )}
+    </ModernCard>
+  );
 
- const renderInterviewDetails = () => (
-  <ModernCard className="mb-4">
-    <SectionHeader 
-      title="Interview Details" 
-      icon={Users} 
-      section="interview"
-      count={userData.interview?.interviews?.length ? `${userData.interview.interviews.length} interview(s)` : "No interviews"}
-    />
-    {expandedSections.interview && (
-      <div className="px-4 pb-4">
-        {userData.interview?.interviews && userData.interview.interviews.length > 0 ? (
-          <div className="d-flex flex-column gap-3">
-            {userData.interview.interviews.map((interview, index) => (
-              <div key={index} className={`p-4 rounded-3 ${
+  const renderInterviewDetails = () => (
+    <ModernCard className="mb-4">
+      <SectionHeader 
+        title="Interview Details" 
+        icon={Users} 
+        section="interview"
+        count={userData.interview?.interviews?.length ? `${userData.interview.interviews.length} interview(s)` : "No interviews"}
+      />
+      {expandedSections.interview && (
+        <div className="px-4 pb-4">
+          {userData.interview?.interviews && userData.interview.interviews.length > 0 ? (
+            <div className="d-flex flex-column gap-3">
+              {userData.interview.interviews.map((interview, index) => (
+                <div key={index} className={`p-4 rounded-3 ${
+                  darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+                }`}>
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <h6 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
+                      <span className={darkMode ? "text-light" : "text-muted"}>Name:</span>
+                      <span name="interviewName" className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                        {interview.interviewName || `Interview ${index + 1}`}
+                      </span>
+                    </h6>
+                    <Badge 
+                      bg={getStatusColor(interview.result?.status)}
+                      className="text-capitalize"
+                    >
+                      {interview.result?.status?.replace('interview-', '') || 'Pending'}
+                    </Badge>
+                  </div>
+                  <Row className="g-2 small">
+                    <Col md={6}>
+                      <span className={darkMode ? "text-light" : "text-muted"}>Evaluated By:</span>
+                      <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                        {interview.result?.evaluatedBy?.name || "N/A"}
+                      </span>
+                    </Col>
+                    <Col md={6}>
+                      <span className={darkMode ? "text-light" : "text-muted"}>Date:</span>
+                      <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                        {formatDate(interview.result?.evaluatedDate)}
+                      </span>
+                    </Col>
+                  </Row>
+                  {interview.result?.feedback && (
+                    <div className={`mt-3 p-3 rounded-2 ${
+                      darkMode ? "bg-dark border-secondary" : "bg-white"
+                    }`}>
+                      <small className={`${darkMode ? "text-light" : "text-muted"}`}>
+                        {interview.result.feedback}
+                      </small>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-5">
+              <Clock size={48} className={`${darkMode ? "text-light" : "text-muted"} mb-3`} />
+              <p className={darkMode ? "text-light" : "text-muted"}>
+                No interview details available yet
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </ModernCard>
+  );
+
+  const renderInductionDetails = () => (
+    <ModernCard className="mb-4">
+      <SectionHeader title="Induction Details" icon={BookOpen} section="induction" />
+      {expandedSections.induction && (
+        <div className="px-4 pb-4">
+          {userData.induction && (userData.induction.inductionAssigned || userData.induction.status !== "induction-not-assigned") ? (
+            <div className="d-flex flex-column gap-3">
+              <div className={`p-4 rounded-3 ${
                 darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
               }`}>
                 <div className="d-flex align-items-center justify-content-between mb-3">
                   <h6 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
                     <span className={darkMode ? "text-light" : "text-muted"}>Name:</span>
-                    <span name="interviewName" className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
-                      {interview.interviewName || `Interview ${index + 1}`}
+                    <span name="inductionName" className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                      {userData.induction.inductionName || "Induction Program"}
                     </span>
                   </h6>
                   <Badge 
-                    bg={getStatusColor(interview.result?.status)}
+                    bg={getStatusColor(userData.induction.result?.status)}
                     className="text-capitalize"
                   >
-                    {interview.result?.status?.replace('interview-', '') || 'Pending'}
+                    {(userData.induction.result?.status || userData.induction.status || "pending").replace('induction-', '')}
                   </Badge>
                 </div>
                 <Row className="g-2 small">
                   <Col md={6}>
                     <span className={darkMode ? "text-light" : "text-muted"}>Evaluated By:</span>
                     <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
-                      {interview.result?.evaluatedBy?.name || "N/A"}
+                      {userData.induction.result?.evaluatedBy?.name || "N/A"}
                     </span>
                   </Col>
                   <Col md={6}>
                     <span className={darkMode ? "text-light" : "text-muted"}>Date:</span>
                     <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
-                      {formatDate(interview.result?.evaluatedDate)}
+                      {formatDate(userData.induction.result?.evaluatedDate)}
                     </span>
                   </Col>
                 </Row>
-                {interview.result?.feedback && (
+                {userData.induction.result?.feedback && (
                   <div className={`mt-3 p-3 rounded-2 ${
                     darkMode ? "bg-dark border-secondary" : "bg-white"
                   }`}>
                     <small className={`${darkMode ? "text-light" : "text-muted"}`}>
-                      {interview.result.feedback}
+                      {userData.induction.result.feedback}
                     </small>
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-5">
-            <Clock size={48} className={`${darkMode ? "text-light" : "text-muted"} mb-3`} />
-            <p className={darkMode ? "text-light" : "text-muted"}>
-              No interview details available yet
-            </p>
-          </div>
-        )}
-      </div>
-    )}
-  </ModernCard>
-);
-
-const renderInductionDetails = () => (
-  <ModernCard className="mb-4">
-    <SectionHeader title="Induction Details" icon={BookOpen} section="induction" />
-    {expandedSections.induction && (
-      <div className="px-4 pb-4">
-        {userData.induction && (userData.induction.inductionAssigned || userData.induction.status !== "induction-not-assigned") ? (
-          <div className="d-flex flex-column gap-3">
-            <div className={`p-4 rounded-3 ${
-              darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
-            }`}>
-              <div className="d-flex align-items-center justify-content-between mb-3">
-                <h6 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
-                  <span className={darkMode ? "text-light" : "text-muted"}>Name:</span>
-                  <span name="inductionName" className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
-                    {userData.induction.inductionName || "Induction Program"}
-                  </span>
-                </h6>
-                <Badge 
-                  bg={getStatusColor(userData.induction.result?.status)}
-                  className="text-capitalize"
-                >
-                  {(userData.induction.result?.status || userData.induction.status || "pending").replace('induction-', '')}
-                </Badge>
-              </div>
-              <Row className="g-2 small">
-                <Col md={6}>
-                  <span className={darkMode ? "text-light" : "text-muted"}>Evaluated By:</span>
-                  <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
-                    {userData.induction.result?.evaluatedBy?.name || "N/A"}
-                  </span>
-                </Col>
-                <Col md={6}>
-                  <span className={darkMode ? "text-light" : "text-muted"}>Date:</span>
-                  <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
-                    {formatDate(userData.induction.result?.evaluatedDate)}
-                  </span>
-                </Col>
-              </Row>
-              {userData.induction.result?.feedback && (
-                <div className={`mt-3 p-3 rounded-2 ${
-                  darkMode ? "bg-dark border-secondary" : "bg-white"
-                }`}>
-                  <small className={`${darkMode ? "text-light" : "text-muted"}`}>
-                    {userData.induction.result.feedback}
-                  </small>
-                </div>
-              )}
             </div>
-          </div>
-        ) : (
-          <div className="text-center py-5">
-            <Clock size={48} className={`${darkMode ? "text-light" : "text-muted"} mb-3`} />
-            <p className={darkMode ? "text-light" : "text-muted"}>
-              No induction details available yet
-            </p>
-          </div>
-        )}
-      </div>
-    )}
-  </ModernCard>
-);
+          ) : (
+            <div className="text-center py-5">
+              <Clock size={48} className={`${darkMode ? "text-light" : "text-muted"} mb-3`} />
+              <p className={darkMode ? "text-light" : "text-muted"}>
+                No induction details available yet
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </ModernCard>
+  );
+
   const renderSchemaDetails = () => (
     <ModernCard className="mb-4">
       <SectionHeader title="Assignment Details" icon={Target} section="assignment" />
@@ -717,14 +714,14 @@ const renderInductionDetails = () => (
             <div className="text-center">
               <div className="mb-4">
                 <div className="d-flex align-items-center justify-content-center mb-4">
-                     <Container className="text-center mt-4 mb-3">
-                          <img
-                            src={logo}
-                            alt="SLT Mobitel Logo"
-                            className="mx-auto d-block"
-                            style={{ height: "50px" }}
-                          />
-                        </Container>
+                  <Container className="text-center mt-4 mb-3">
+                    <img
+                      src={logo}
+                      alt="SLT Mobitel Logo"
+                      className="mx-auto d-block"
+                      style={{ height: "50px" }}
+                    />
+                  </Container>
                 </div>
                 <p className={`display-4 fw-bold mb-3 ${darkMode ? 'text-white' : 'text-dark'}`}>Intern Life Cycle</p>
               </div>
@@ -746,6 +743,7 @@ const renderInductionDetails = () => (
                           onChange={handleNicChange}
                           className={`ps-5 py-3 border-0 rounded-3 ${darkMode ? "bg-dark text-white border-secondary" : "bg-light"}`}
                           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                          autoFocus
                         />
                         <Search className={`position-absolute top-50 start-0 translate-middle-y ms-3 ${darkMode ? "text-light" : "text-muted"}`} size={20} />
                       </div>
