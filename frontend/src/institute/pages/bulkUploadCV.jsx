@@ -1,24 +1,20 @@
 import React, { useState } from "react";
-import {
-  Card,
-  Row,
-  Col,
-  Container,
-  Form,
-  Button,
-  Alert,
-} from "react-bootstrap";
-import { FiFileText, FiUpload } from "react-icons/fi";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import * as XLSX from "xlsx"; // Import the xlsx library
+import * as XLSX from "xlsx"; 
+import { Button, Container, Alert, Form } from "react-bootstrap";
+import { FaPenFancy} from "react-icons/fa";
+import { FiUpload } from "react-icons/fi";
+import logo from "../../assets/logo.png";
+
 
 const BulkCVUpload = ({ darkMode }) => {
   const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [uploadErrors, setUploadErrors] = useState([]);
+  const navigate = useNavigate();
 
-  // Function to validate the Excel file
   const validateExcelFile = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -26,18 +22,7 @@ const BulkCVUpload = ({ darkMode }) => {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: "array" });
 
-        // Log all sheet names in the workbook
-        console.log("Sheet names in the workbook:", workbook.SheetNames);
-
-        // Log the content of each sheet
-        workbook.SheetNames.forEach((sheetName) => {
-          const sheet = workbook.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-          console.log(`Rows in sheet "${sheetName}":`, rows);
-        });
-
-        // Assuming the first sheet is used
-        const sheetName = "Sheet1"; // Explicitly specify the sheet name
+        const sheetName = "Sheet1";
         const sheet = workbook.Sheets[sheetName];
         if (!sheet) {
           reject(`The sheet "${sheetName}" does not exist in the Excel file.`);
@@ -45,12 +30,8 @@ const BulkCVUpload = ({ darkMode }) => {
         }
 
         const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        const headers = rows[0].map((header) => header.trim());
 
-        // Extract headers from the correct row (e.g., row 0 or row 1)
-        const headers = rows[0].map((header) => header.trim()); // Trim headers to remove extra spaces
-        console.log("Headers in the Excel file (trimmed):", headers);
-
-        // Check if required columns are present
         const requiredColumns = [
           "Full Name",
           "Name with Initials",
@@ -70,14 +51,11 @@ const BulkCVUpload = ({ darkMode }) => {
 
         if (missingColumns.length > 0) {
           reject(
-            `The Excel file is missing the following required columns: ${missingColumns.join(
-              ", "
-            )}`
+            `The Excel file is missing the following required columns: ${missingColumns.join(", ")}`
           );
         }
 
-        // Skip empty rows instead of rejecting the file
-        const dataRows = rows.slice(1); // Skip the header row
+        const dataRows = rows.slice(1);
         const nonEmptyRows = dataRows.filter((row) =>
           row.some((cell) => cell !== null && cell !== "" && cell !== undefined)
         );
@@ -88,12 +66,11 @@ const BulkCVUpload = ({ darkMode }) => {
 
         resolve();
       };
-      reader.onerror = (error) => reject("Error reading the file.");
+      reader.onerror = () => reject("Error reading the file.");
       reader.readAsArrayBuffer(file);
     });
   };
 
-  // Handle file upload
   const handleFileUpload = async (e) => {
     e.preventDefault();
     if (!file) {
@@ -102,7 +79,6 @@ const BulkCVUpload = ({ darkMode }) => {
     }
 
     try {
-      // Validate the file before uploading
       await validateExcelFile(file);
 
       const formData = new FormData();
@@ -145,97 +121,111 @@ const BulkCVUpload = ({ darkMode }) => {
   };
 
   return (
-    <Container
-      fluid
-      className={`p-4 ${
-        darkMode ? "bg-dark text-light" : "bg-light text-dark"
+    
+    <div
+      className={`d-flex flex-column min-vh-100 ${
+        darkMode ? "bg-dark text-white" : "bg-light text-dark"
       }`}
+      
     >
-      <Row className="justify-content-center">
-        <Col md={8} lg={6}>
-          <Card className={darkMode ? "bg-secondary text-light" : ""}>
-            <Card.Body>
-              <Card.Title className="text-center mb-4">
-                <FiFileText size={30} className="me-2" />
-                Bulk CV Upload
-              </Card.Title>
+      <Container className="text-center mt-4 mb-3">
+        <img
+          src={logo}
+          alt="SLT Mobitel Logo"
+          className="mx-auto d-block"
+          style={{ height: "50px" }}
+        />
+        <h3 className="mt-3">Bulk CV Upload</h3>
+      </Container>
 
-              {/* Download Templates Section */}
-              <div className="mb-4">
-                <h5>Download Templates:</h5>
-                <Button
-                  variant="primary"
-                  className="me-2"
-                  href="/templates/Data_Entry_Operator_Template.xlsx"
-                  download="Data_Entry_Operator_Template.xlsx"
-                >
-                  Download Data Entry Operator Template
-                </Button>
-                <Button
-                  variant="success"
-                  href="/templates/Internship_Template.xlsx"
-                  download
-                >
-                  Download Internship Template
-                </Button>
-              </div>
+      <Container
+        className="mt-4 p-4 rounded"
+        style={{
+          background: darkMode ? "#343a40" : "#ffffff",
+          color: darkMode ? "white" : "black",
+          border: darkMode ? "1px solid #454d55" : "1px solid #ced4da",
+        }}
+      >
+        <h5 className="mb-3">
+          <FaPenFancy
+            className="me-2"
+            style={{ fontSize: "1.2rem", color: darkMode ? "white" : "black" }}
+          />
+          Bulk CV Upload
+        </h5>
 
-              {/* Upload Section */}
-              <Form onSubmit={handleFileUpload}>
-                <Form.Group controlId="formFile" className="mb-3">
-                  <Form.Label>
-                    Upload Excel File <span className="text-danger">*</span>
-                  </Form.Label>
-                  <Form.Control
-                    type="file"
-                    accept=".xlsx, .xls"
-                    onChange={(e) => setFile(e.target.files[0])}
-                    required
-                  />
-                  <Form.Text className="text-muted">
-                    Please upload an Excel file in the provided template format.
-                  </Form.Text>
-                </Form.Group>
+        <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
-                <Button
-                  variant={darkMode ? "light" : "primary"}
-                  type="submit"
-                  className="w-100"
-                >
-                  <FiUpload className="me-2" />
-                  Upload
-                </Button>
-              </Form>
+        {/* Download Templates */}
+        <div className="mb-4">
+          <h5>Download Templates:</h5>
+          <Button
+            variant="primary"
+            className="me-2"
+            href="/templates/Data_Entry_Operator_Template.xlsx"
+            download="Data_Entry_Operator_Template.xlsx"
+          >
+            Download Data Entry Operator Template
+          </Button>
+          <Button
+            variant="success"
+            href="/templates/Internship_Template.xlsx"
+            download
+          >
+            Download Internship Template
+          </Button>
+        </div>
 
-              {/* Error and Success Messages */}
-              {error && (
-                <Alert variant="danger" className="mt-3">
-                  {error}
-                </Alert>
-              )}
-              {success && (
-                <Alert variant="success" className="mt-3">
-                  {success}
-                </Alert>
-              )}
+        {/* Upload Section */}
+        <Form onSubmit={handleFileUpload}>
+          <Form.Group controlId="formFile" className="mb-3">
+            <Form.Label>
+              Upload Excel File <span className="text-danger">*</span>
+            </Form.Label>
+            <Form.Control
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={(e) => setFile(e.target.files[0])}
+              required
+            />
+            <Form.Text className="text-muted">
+              Please upload an Excel file in the provided template format.
+            </Form.Text>
+          </Form.Group>
 
-              {/* Display backend validation errors*/}
-              {uploadErrors.length > 0 && (
-                <div className="mt-3">
-                  <h5>Upload Errors:</h5>
-                  {uploadErrors.map((err, index) => (
-                    <Alert key={index} variant="danger" className="mt-2">
-                      Row {err.row}: {err.message}
-                    </Alert>
-                  ))}
-                </div>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+          <Button
+            variant={darkMode ? "light" : "primary"}
+            type="submit"
+            className="w-100"
+          >
+            <FiUpload className="me-2" />
+            Upload
+          </Button>
+        </Form>
+
+        {error && (
+          <Alert variant="danger" className="mt-3">
+            {error}
+          </Alert>
+        )}
+        {success && (
+          <Alert variant="success" className="mt-3">
+            {success}
+          </Alert>
+        )}
+        {uploadErrors.length > 0 && (
+          <div className="mt-3">
+            <h5>Upload Errors:</h5>
+            {uploadErrors.map((err, idx) => (
+              <Alert variant="warning" key={idx}>
+                {err}
+              </Alert>
+            ))}
+          </div>
+        )}
+      </Container>
+    </div>
   );
 };
 
-export default BulkCVUpload;
+export default BulkCVUpload; 
