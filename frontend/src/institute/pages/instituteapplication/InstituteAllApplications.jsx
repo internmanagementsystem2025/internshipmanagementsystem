@@ -187,7 +187,7 @@ const InstituteAllApplications = ({ darkMode }) => {
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
         {/* Filter Input and New CV Button */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="d-flex flex-wrap gap-2  justify-content-between align-items-center mb-3">
           <Form.Control
             type="text"
             placeholder="Filter by Full Name or NIC"
