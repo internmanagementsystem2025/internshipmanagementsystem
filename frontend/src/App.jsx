@@ -165,6 +165,7 @@ function App() {
     "/view-cv/:cvId",
     "/edit-cv/:cvId",
     "/institute-help-support",
+    "/bulk-cv-upload"
 
   ];
   const adminRoutes = [

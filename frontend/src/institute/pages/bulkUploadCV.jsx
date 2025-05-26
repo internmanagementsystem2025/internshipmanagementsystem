@@ -158,23 +158,24 @@ const BulkCVUpload = ({ darkMode }) => {
 
         {/* Download Templates */}
         <div className="mb-4">
-          <h5>Download Templates:</h5>
-          <Button
-            variant="primary"
-            className="me-2"
-            href="/templates/Data_Entry_Operator_Template.xlsx"
-            download="Data_Entry_Operator_Template.xlsx"
-          >
-            Download Data Entry Operator Template
-          </Button>
-          <Button
-            variant="success"
-            href="/templates/Internship_Template.xlsx"
-            download
-          >
-            Download Internship Template
-          </Button>
-        </div>
+  <h5>Download Templates:</h5>
+  <div className="d-flex flex-wrap gap-3"> {/* This adds consistent spacing between items */}
+    <Button
+      variant="primary"
+      href="/templates/Data_Entry_Operator_Template.xlsx"
+      download="Data_Entry_Operator_Template.xlsx"
+    >
+      Download Data Entry Operator Template
+    </Button>
+    <Button
+      variant="success"
+      href="/templates/Internship_Template.xlsx"
+      download
+    >
+      Download Internship Template
+    </Button>
+  </div>
+</div>
 
         {/* Upload Section */}
         <Form onSubmit={handleFileUpload}>

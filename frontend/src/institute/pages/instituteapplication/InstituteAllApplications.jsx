@@ -5,6 +5,21 @@ import { Table, Button, Container, Spinner, Alert, Form } from "react-bootstrap"
 import { FaPenFancy, FaChevronLeft, FaChevronRight } from "react-icons/fa"; 
 import logo from "../../../assets/logo.png";
 
+// Helper function to decode JWT token
+const decodeToken = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+};
+
 const InstituteAllApplications = ({ darkMode }) => {
   const [cvData, setCvData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,19 +39,38 @@ const InstituteAllApplications = ({ darkMode }) => {
           return;
         }
 
-        const response = await axios.get("http://localhost:5000/api/cvs/mycvs", {
+        // Decode the JWT token to get user ID
+        const decodedToken = decodeToken(token);
+        if (!decodedToken || !decodedToken.id) {
+          setError("Invalid token. Please login again.");
+          navigate("/login");
+          return;
+        }
+
+        const currentUserId = decodedToken.id;
+        console.log("Current User ID:", currentUserId); // Debug log
+
+        // Use the user-specific endpoint
+        const response = await axios.get(`http://localhost:5000/api/cvs/user/${currentUserId}/all`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (response.status === 200) {
           setCvData(response.data);
+          setError(""); // Clear any previous errors
         } else {
           setCvData([]);
         }
       } catch (error) {
-        setError("Failed to fetch CV data.");
-        console.error("Error fetching CVs:", error.message);
-        setCvData([]);
+        if (error.response?.status === 404) {
+          // No CVs found for this user - this is normal
+          setCvData([]);
+          setError("");
+        } else {
+          setError("Failed to fetch CV data.");
+          console.error("Error fetching CVs:", error);
+          setCvData([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -57,10 +91,61 @@ const InstituteAllApplications = ({ darkMode }) => {
     navigate("/institute-add-cv");
   };
 
+  // Helper function to check if CV can be edited
+  const canEditCV = (status) => {
+    // Only allow editing for "cv-submitted" status
+    return status === "cv-submitted";
+  };
+
+  // Helper function to get status badge classes
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case "draft":
+        return "bg-info";
+      case "cv-submitted":
+        return "bg-secondary";
+      case "cv-approved":
+        return "bg-success";
+      case "cv-rejected":
+        return "bg-danger";
+      case "interview-scheduled":
+      case "interview-re-scheduled":
+        return "bg-warning text-dark";
+      case "interview-passed":
+        return "bg-success";
+      case "interview-failed":
+        return "bg-danger";
+      case "induction-scheduled":
+      case "induction-re-scheduled":
+        return "bg-warning text-dark";
+      case "induction-passed":
+      case "induction-assigned":
+        return "bg-success";
+      case "induction-failed":
+        return "bg-danger";
+      case "schema-assigned":
+        return "bg-info";
+      case "schema-completed":
+        return "bg-success";
+      case "terminated":
+        return "bg-dark";
+      default:
+        return "bg-secondary";
+    }
+  };
+
+  // Helper function to format status display text
+  const formatStatusText = (status) => {
+    if (!status) return "Draft";
+    return status.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
   const filteredCvs = cvData?.filter(
     (cv) =>
-      cv.fullName.toLowerCase().includes(filter.toLowerCase()) ||
-      cv.nic.toLowerCase().includes(filter.toLowerCase())
+      cv.fullName?.toLowerCase().includes(filter.toLowerCase()) ||
+      cv.nic?.toLowerCase().includes(filter.toLowerCase())
   ) || [];
 
   const indexOfLastCv = currentPage * itemsPerPage;
@@ -74,7 +159,7 @@ const InstituteAllApplications = ({ darkMode }) => {
     "Full Name",
     "NIC",
     "Intern Type",
-    "CV Status",
+    "Application Status",
     "View",
     "Edit",
   ];
@@ -102,7 +187,7 @@ const InstituteAllApplications = ({ darkMode }) => {
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
         {/* Filter Input and New CV Button */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
           <Form.Control
             type="text"
             placeholder="Filter by Full Name or NIC"
@@ -141,16 +226,30 @@ const InstituteAllApplications = ({ darkMode }) => {
                       <td>{cv.fullName || "N/A"}</td>
                       <td>{cv.nic || "N/A"}</td>
                       <td>{cv.selectedRole || "N/A"}</td>
-                      <td>{cv.cvStatus || "N/A"}</td>
+                      <td>
+                        <span className={`badge ${getStatusBadgeClass(cv.currentStatus)}`}>
+                          {formatStatusText(cv.currentStatus)}
+                        </span>
+                      </td>
 
                       <td>
-                        <Button size="sm" variant="outline-primary" onClick={() => handleView(cv._id)} className="fw-semibold" >
+                        <Button 
+                          size="sm" 
+                          variant="outline-primary" 
+                          onClick={() => handleView(cv._id)} 
+                          className="fw-semibold"
+                        >
                           View
                         </Button>
                       </td>
                       <td>
-                        {cv.cvStatus === "pending" && (
-                          <Button size="sm" variant="outline-success" onClick={() => handleEdit(cv._id)} className="fw-semibold" >
+                        {canEditCV(cv.currentStatus) && (
+                          <Button 
+                            size="sm" 
+                            variant="outline-success" 
+                            onClick={() => handleEdit(cv._id)} 
+                            className="fw-semibold"
+                          >
                             Edit
                           </Button>
                         )}
@@ -160,7 +259,7 @@ const InstituteAllApplications = ({ darkMode }) => {
                 ) : (
                   <tr>
                     <td colSpan="8" className="text-center">
-                      No CVs found
+                      No CVs found for this user
                     </td>
                   </tr>
                 )}
