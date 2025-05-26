@@ -4,7 +4,12 @@ import {
   Container, Row, Col, Card, Form, Button, Spinner, Alert,
   Badge, Accordion, Tab, Tabs, ListGroup
 } from "react-bootstrap";
-import { BookOpen, School, MapPin, Award, Layers } from "lucide-react";
+import { 
+  BookOpen, School, MapPin, Award, Users, Target,
+  Search, User, Calendar, Phone, Mail, FileText, 
+  CheckCircle, XCircle, Clock, AlertCircle,
+  ChevronDown, ChevronRight
+} from "lucide-react";
 import logo from "../../../assets/logo.png";
 import { format } from 'date-fns';
 
@@ -13,6 +18,13 @@ const InternLifeCycle = ({ darkMode }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [expandedSections, setExpandedSections] = useState({
+    basic: true,
+    application: true,
+    interview: false,
+    induction: false,
+    assignment: false
+  });
 
   const handleSearch = async () => {
     if (!nic.trim()) {
@@ -38,7 +50,22 @@ const InternLifeCycle = ({ darkMode }) => {
     }
   };
 
-  // Format date helper function
+  const handleNicChange = (e) => {
+    const value = e.target.value;
+    setNic(value);
+    
+    if (error) {
+      setError("");
+    }
+  };
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
@@ -48,555 +75,746 @@ const InternLifeCycle = ({ darkMode }) => {
     }
   };
 
-  // Render basic information section
-  const renderBasicInfo = () => (
-    <Card className={`mb-4 ${darkMode ? "bg-dark text-white" : ""}`}>
-      <Card.Header className={darkMode ? "bg-secondary text-white" : "bg-light"}>
-        <h5 className="mb-0">Basic Information</h5>
-      </Card.Header>
-      <Card.Body>
-        <Row>
-          <Col md={6}>
-            <ListGroup variant="flush">
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Full Name:</strong> {userData.fullName}
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Name with Initials:</strong> {userData.nameWithInitials}
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Gender:</strong> {userData.gender}
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Date of Birth:</strong> {formatDate(userData.birthday)}
-              </ListGroup.Item>
-            </ListGroup>
-          </Col>
-          <Col md={6}>
-            <ListGroup variant="flush">
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>NIC:</strong> {userData.nic}
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Mobile:</strong> {userData.mobileNumber}
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Email:</strong> {userData.emailAddress}
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>District:</strong> {userData.district}
-              </ListGroup.Item>
-            </ListGroup>
-          </Col>
-        </Row>
-      </Card.Body>
-    </Card>
+  const getStatusColor = (status) => {
+    if (status?.includes("passed") || status?.includes("completed")) return "success";
+    if (status?.includes("failed") || status?.includes("rejected") || status === "terminated") return "danger";
+    if (status?.includes("progress") || status?.includes("pending")) return "info";
+    return "secondary";
+  };
+
+  const ModernCard = ({ children, className = "" }) => (
+    <div 
+      className={`rounded-4 shadow-lg border-0 ${
+        darkMode 
+          ? "bg-dark text-white border-secondary" 
+          : "bg-white text-dark"
+      } ${className}`} 
+      style={{borderRadius: '1.5rem'}}
+    >
+      {children}
+    </div>
   );
 
-  // Render CV details section
-  const renderCVDetails = () => (
-    <Card className={`mb-4 ${darkMode ? "bg-dark text-white" : ""}`}>
-      <Card.Header className={darkMode ? "bg-secondary text-white" : "bg-light"}>
-        <h5 className="mb-0">Application Details</h5>
-      </Card.Header>
-      <Card.Body>
-        <Row>
+  const SectionHeader = ({ title, icon: Icon, section, count }) => (
+    <div
+      onClick={() => toggleSection(section)}
+      className={`d-flex align-items-center justify-content-between p-4 ${
+        darkMode ? "text-white" : "text-dark"
+      }`}
+      style={{ 
+        cursor: 'pointer', 
+        borderRadius: '1.5rem 1.5rem 0 0',
+        transition: 'background-color 0.2s ease'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }}
+    >
+      <div className="d-flex align-items-center">
+        <div className={`p-2 rounded-3 me-3 ${
+          darkMode 
+            ? "bg-primary bg-opacity-25" 
+            : "bg-primary bg-opacity-10"
+        }`}>
+          <Icon size={20} className="text-primary" />
+        </div>
+        <div>
+          <h5 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
+            {title}
+          </h5>
+          {count && (
+            <small className={darkMode ? "text-light" : "text-muted"}>
+              {count}
+            </small>
+          )}
+        </div>
+      </div>
+      {expandedSections[section] ? 
+        <ChevronDown size={20} className={darkMode ? "text-light" : "text-muted"} /> : 
+        <ChevronRight size={20} className={darkMode ? "text-light" : "text-muted"} />
+      }
+    </div>
+  );
+
+  const InfoItem = ({ icon: Icon, label, value, className = "" }) => (
+    <div className={`p-3 rounded-3 ${
+      darkMode 
+        ? "bg-secondary bg-opacity-10 border-secondary" 
+        : "bg-light"
+    } ${className}`}>
+      <div className="d-flex align-items-start">
+        <div className={`p-2 rounded-2 me-3 ${
+          darkMode ? "bg-dark" : "bg-white"
+        }`}>
+          <Icon size={16} className={darkMode ? "text-light" : "text-muted"} />
+        </div>
+        <div className="flex-grow-1">
+          <small className={`d-block ${darkMode ? "text-light" : "text-muted"}`}>
+            {label}
+          </small>
+          <div 
+            className={`${darkMode ? "text-white" : "text-dark"}`} 
+            style={{wordBreak: 'break-word'}}
+          >
+            {value || "N/A"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderBasicInfo = () => (
+    <ModernCard className="mb-4">
+      <SectionHeader title="Basic Information" icon={User} section="basic" />
+      {expandedSections.basic && (
+        <div className="px-4 pb-4">
+          <Row className="g-3">
+            <Col md={6}>
+              <InfoItem icon={User} label="Full Name" value={userData.fullName} />
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={FileText} label="Name with Initials" value={userData.nameWithInitials} />
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={User} label="Gender" value={userData.gender} />
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={Calendar} label="Date of Birth" value={formatDate(userData.birthday)} />
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={FileText} label="NIC" value={userData.nic} />
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={Phone} label="Mobile" value={userData.mobileNumber} />
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={Mail} label="Email" value={userData.emailAddress} />
+            </Col>
+            <Col md={6}>
+              <InfoItem icon={MapPin} label="District" value={userData.district} />
+            </Col>
+          </Row>
+        </div>
+      )}
+    </ModernCard>
+  );
+
+const renderCVDetails = () => (
+  <ModernCard className="mb-4">
+    <SectionHeader title="Application Details" icon={FileText} section="application" />
+    {expandedSections.application && (
+      <div className="px-4 pb-4">
+        <Row className="g-3 mb-4">
           <Col md={6}>
-            <ListGroup variant="flush">
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Reference No:</strong> {userData.refNo}
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Applied Position:</strong> 
-                <Badge bg="primary" className="ms-2 text-capitalize">
-                  {userData.selectedRole === "dataEntry" ? "Data Entry Operator" : "Internship"}
-                </Badge>
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Institute:</strong> {userData.institute}
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Application Date:</strong> {formatDate(userData.applicationDate)}
-              </ListGroup.Item>
-            </ListGroup>
+            <InfoItem icon={FileText} label="Reference No" value={userData.refNo} />
           </Col>
           <Col md={6}>
-            <ListGroup variant="flush">
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Status:</strong> 
-                <Badge 
-                  bg={
-                    userData.currentStatus.includes("rejected") || 
-                    userData.currentStatus.includes("failed") || 
-                    userData.currentStatus === "terminated" ? "danger" : 
-                    userData.currentStatus.includes("completed") ? "success" : "info"
-                  }
-                  className="ms-2 text-capitalize"
-                >
-                  {userData.currentStatus.replace(/-/g, ' ')}
-                </Badge>
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Postal Address:</strong> {userData.postalAddress}
-              </ListGroup.Item>
-              <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                <strong>Emergency Contact:</strong> {userData.emergencyContactName1} ({userData.emergencyContactNumber1})
-              </ListGroup.Item>
-              {userData.referredBy && (
-                <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                  <strong>Referred By:</strong> {userData.referredBy}
-                </ListGroup.Item>
-              )}
-            </ListGroup>
+            <div className={`p-3 rounded-3 ${
+              darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+            }`}>
+              <div className="d-flex align-items-start">
+                <div className={`p-2 rounded-2 me-3 ${
+                  darkMode ? "bg-dark" : "bg-white"
+                }`}>
+                  <Target size={16} className={darkMode ? "text-light" : "text-muted"} />
+                </div>
+                <div className="flex-grow-1">
+                  <small className={`d-block ${darkMode ? "text-light" : "text-muted"}`}>
+                    Applied Position
+                  </small>
+                  <Badge bg="primary" className="text-capitalize">
+                    {userData.selectedRole === "dataEntry" ? "Data Entry Operator" : "Internship"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </Col>
+          <Col md={6}>
+            <InfoItem icon={School} label="Institute" value={userData.institute} />
+          </Col>
+          <Col md={6}>
+            <InfoItem icon={Calendar} label="Application Date" value={formatDate(userData.applicationDate)} />
+          </Col>
+          <Col md={6}>
+            <div className={`p-3 rounded-3 ${
+              darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+            }`}>
+              <div className="d-flex align-items-start">
+                <div className={`p-2 rounded-2 me-3 ${
+                  darkMode ? "bg-dark" : "bg-white"
+                }`}>
+                  <CheckCircle size={16} className={darkMode ? "text-light" : "text-muted"} />
+                </div>
+                <div className="flex-grow-1">
+                  <small className={`d-block ${darkMode ? "text-light" : "text-muted"}`}>
+                    Current Status
+                  </small>
+                  <Badge 
+                    bg={getStatusColor(userData.currentStatus)}
+                    className="text-capitalize"
+                  >
+                    {userData.currentStatus?.replace(/-/g, ' ') || "Pending"}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </Col>
+          <Col md={6}>
+            <InfoItem icon={MapPin} label="Postal Address" value={userData.postalAddress} />
           </Col>
         </Row>
 
-        {/* Role-specific details */}
-<Accordion className="mt-4">
-      <Accordion.Item
-        eventKey="0"
-        className={darkMode ? "bg-dark text-white border-secondary" : ""}
-      >
-        <Accordion.Header>
-          {userData.selectedRole === "dataEntry"
-            ? "Data Entry Operator Details"
-            : "Internship Details"}
-        </Accordion.Header>
+        <div className={`border-0 rounded-3 ${
+          darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+        }`}>
+          <div 
+            className={`p-3 border-0 rounded-3 ${
+              darkMode ? "bg-transparent text-white" : "bg-transparent text-dark"
+            }`}
+            style={{ cursor: 'pointer' }}
+            onClick={() => {
+              const accordion = document.querySelector('#roleAccordion');
+              if (accordion) {
+                accordion.style.display = accordion.style.display === 'none' ? 'block' : 'none';
+              }
+            }}
+          >
+            <h6 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
+              {userData.selectedRole === "dataEntry"
+                ? "Data Entry Operator Details"
+                : "Internship Details"}
+            </h6>
+          </div>
 
-        <Accordion.Body>
-          {userData.selectedRole === "dataEntry" ? (
-            <>
-              {/* O/L Results (Main + Optional in one card) */}
-              <Card className="mb-3 shadow-sm">
-                <Card.Header>
-                  <BookOpen size={16} className="me-2" />
-                  O/L Results
-                </Card.Header>
-                <Card.Body>
-                  <Row className="mb-2">
-                    <Col md={4}>
-                      <strong>Language:</strong>{" "}
-                      {userData.roleData?.dataEntry?.language || "N/A"}
-                    </Col>
-                    <Col md={4}>
-                      <strong>Mathematics:</strong>{" "}
-                      {userData.roleData?.dataEntry?.mathematics || "N/A"}
-                    </Col>
-                    <Col md={4}>
-                      <strong>Science:</strong>{" "}
-                      {userData.roleData?.dataEntry?.science || "N/A"}
-                    </Col>
-                  </Row>
-                  <Row className="mb-3">
-                    <Col md={4}>
-                      <strong>English:</strong>{" "}
-                      {userData.roleData?.dataEntry?.english || "N/A"}
-                    </Col>
-                    <Col md={4}>
-                      <strong>History:</strong>{" "}
-                      {userData.roleData?.dataEntry?.history || "N/A"}
-                    </Col>
-                    <Col md={4}>
-                      <strong>Religion:</strong>{" "}
-                      {userData.roleData?.dataEntry?.religion || "N/A"}
-                    </Col>
-                  </Row>
+          <div id="roleAccordion" className={`px-3 pb-3 ${
+            darkMode ? "bg-transparent text-white" : "bg-transparent text-dark"
+          }`}>
+            {userData.selectedRole === "dataEntry" ? (
+              <div className="space-y-4">
+                <Card className={`border-0 rounded-3 shadow-sm ${
+                  darkMode ? "bg-dark text-white border-secondary" : "bg-white text-dark"
+                }`}>
+                  <Card.Header className={`border-0 rounded-top-3 ${
+                    darkMode ? "bg-secondary text-white border-secondary" : "bg-light text-dark"
+                  }`}>
+                    <div className="d-flex align-items-center">
+                      <BookOpen size={16} className="me-2" />
+                      O/L Results
+                    </div>
+                  </Card.Header>
+                  <Card.Body className={darkMode ? "text-white" : "text-dark"}>
+                    <Row className="g-3">
+                      <Col md={4}>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className={darkMode ? "text-light" : "text-muted"}>Language:</span>
+                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                            {userData.roleData?.dataEntry?.language || "N/A"}
+                          </span>
+                        </div>
+                      </Col>
+                      <Col md={4}>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className={darkMode ? "text-light" : "text-muted"}>Mathematics:</span>
+                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                            {userData.roleData?.dataEntry?.mathematics || "N/A"}
+                          </span>
+                        </div>
+                      </Col>
+                      <Col md={4}>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className={darkMode ? "text-light" : "text-muted"}>Science:</span>
+                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                            {userData.roleData?.dataEntry?.science || "N/A"}
+                          </span>
+                        </div>
+                      </Col>
+                      <Col md={4}>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className={darkMode ? "text-light" : "text-muted"}>English:</span>
+                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                            {userData.roleData?.dataEntry?.english || "N/A"}
+                          </span>
+                        </div>
+                      </Col>
+                      <Col md={4}>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className={darkMode ? "text-light" : "text-muted"}>History:</span>
+                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                            {userData.roleData?.dataEntry?.history || "N/A"}
+                          </span>
+                        </div>
+                      </Col>
+                      <Col md={4}>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <span className={darkMode ? "text-light" : "text-muted"}>Religion:</span>
+                          <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                            {userData.roleData?.dataEntry?.religion || "N/A"}
+                          </span>
+                        </div>
+                      </Col>
+                    </Row>
 
-                  {/* Optional Subjects */}
-                  {(userData.roleData?.dataEntry?.optional1Name ||
-                    userData.roleData?.dataEntry?.optional2Name ||
-                    userData.roleData?.dataEntry?.optional3Name) && (
-                    <>
-                      <h6 className="mt-3">Optional Subjects</h6>
-                      <Row>
-                        {userData.roleData.dataEntry.optional1Name && (
+                    {(userData.roleData?.dataEntry?.optional1Name ||
+                      userData.roleData?.dataEntry?.optional2Name ||
+                      userData.roleData?.dataEntry?.optional3Name) && (
+                      <>
+                        <hr className={`my-3 ${darkMode ? "border-secondary" : "border-light"}`} />
+                        <Row className="g-3">
+                          {userData.roleData.dataEntry.optional1Name && (
+                            <Col md={4}>
+                              <div className="d-flex justify-content-between align-items-center">
+                                <span className={darkMode ? "text-light" : "text-muted"}>
+                                  {userData.roleData.dataEntry.optional1Name}:
+                                </span>
+                                <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                  {userData.roleData.dataEntry.optional1Result || "N/A"}
+                                </span>
+                              </div>
+                            </Col>
+                          )}
+                          {userData.roleData.dataEntry.optional2Name && (
+                            <Col md={4}>
+                              <div className="d-flex justify-content-between align-items-center">
+                                <span className={darkMode ? "text-light" : "text-muted"}>
+                                  {userData.roleData.dataEntry.optional2Name}:
+                                </span>
+                                <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                  {userData.roleData.dataEntry.optional2Result || "N/A"}
+                                </span>
+                              </div>
+                            </Col>
+                          )}
+                          {userData.roleData.dataEntry.optional3Name && (
+                            <Col md={4}>
+                              <div className="d-flex justify-content-between align-items-center">
+                                <span className={darkMode ? "text-light" : "text-muted"}>
+                                  {userData.roleData.dataEntry.optional3Name}:
+                                </span>
+                                <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                  {userData.roleData.dataEntry.optional3Result || "N/A"}
+                                </span>
+                              </div>
+                            </Col>
+                          )}
+                        </Row>
+                      </>
+                    )}
+                  </Card.Body>
+                </Card>
+
+                {(userData.roleData?.dataEntry?.aLevelSubject1Name ||
+                  userData.roleData?.dataEntry?.aLevelSubject2Name ||
+                  userData.roleData?.dataEntry?.aLevelSubject3Name) && (
+                  <Card className={`border-0 rounded-3 shadow-sm mt-3 ${
+                    darkMode ? "bg-dark text-white border-secondary" : "bg-white text-dark"
+                  }`}>
+                    <Card.Header className={`border-0 rounded-top-3 ${
+                      darkMode ? "bg-secondary text-white border-secondary" : "bg-light text-dark"
+                    }`}>
+                      <div className="d-flex align-items-center">
+                        <Award size={16} className="me-2" />
+                        A/L Results
+                      </div>
+                    </Card.Header>
+                    <Card.Body className={darkMode ? "text-white" : "text-dark"}>
+                      <Row className="g-3">
+                        {userData.roleData.dataEntry.aLevelSubject1Name && (
                           <Col md={4}>
-                            <strong>
-                              {userData.roleData.dataEntry.optional1Name}:
-                            </strong>{" "}
-                            {userData.roleData.dataEntry.optional1Result ||
-                              "N/A"}
+                            <div className="d-flex justify-content-between align-items-center">
+                              <span className={darkMode ? "text-light" : "text-muted"}>
+                                {userData.roleData.dataEntry.aLevelSubject1Name}:
+                              </span>
+                              <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                {userData.roleData.dataEntry.aLevelSubject1Result || "N/A"}
+                              </span>
+                            </div>
                           </Col>
                         )}
-                        {userData.roleData.dataEntry.optional2Name && (
+                        {userData.roleData.dataEntry.aLevelSubject2Name && (
                           <Col md={4}>
-                            <strong>
-                              {userData.roleData.dataEntry.optional2Name}:
-                            </strong>{" "}
-                            {userData.roleData.dataEntry.optional2Result ||
-                              "N/A"}
+                            <div className="d-flex justify-content-between align-items-center">
+                              <span className={darkMode ? "text-light" : "text-muted"}>
+                                {userData.roleData.dataEntry.aLevelSubject2Name}:
+                              </span>
+                              <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                {userData.roleData.dataEntry.aLevelSubject2Result || "N/A"}
+                              </span>
+                            </div>
                           </Col>
                         )}
-                        {userData.roleData.dataEntry.optional3Name && (
+                        {userData.roleData.dataEntry.aLevelSubject3Name && (
                           <Col md={4}>
-                            <strong>
-                              {userData.roleData.dataEntry.optional3Name}:
-                            </strong>{" "}
-                            {userData.roleData.dataEntry.optional3Result ||
-                              "N/A"}
+                            <div className="d-flex justify-content-between align-items-center">
+                              <span className={darkMode ? "text-light" : "text-muted"}>
+                                {userData.roleData.dataEntry.aLevelSubject3Name}:
+                              </span>
+                              <span className={`fw-bold ${darkMode ? "text-white" : "text-dark"}`}>
+                                {userData.roleData.dataEntry.aLevelSubject3Result || "N/A"}
+                              </span>
+                            </div>
                           </Col>
                         )}
                       </Row>
-                    </>
-                  )}
-                </Card.Body>
-              </Card>
+                    </Card.Body>
+                  </Card>
+                )}
 
-              {/* A/L Results */}
-              {(userData.roleData?.dataEntry?.aLevelSubject1Name ||
-                userData.roleData?.dataEntry?.aLevelSubject2Name ||
-                userData.roleData?.dataEntry?.aLevelSubject3Name) && (
-                <Card className="mb-3 shadow-sm">
-                  <Card.Header>
-                    <Award size={16} className="me-2" />
-                    A/L Results
-                  </Card.Header>
-                  <Card.Body>
-                    <Row>
-                      {userData.roleData.dataEntry.aLevelSubject1Name && (
-                        <Col md={4}>
-                          <strong>
-                            {userData.roleData.dataEntry.aLevelSubject1Name}:
-                          </strong>{" "}
-                          {userData.roleData.dataEntry.aLevelSubject1Result ||
-                            "N/A"}
-                        </Col>
-                      )}
-                      {userData.roleData.dataEntry.aLevelSubject2Name && (
-                        <Col md={4}>
-                          <strong>
-                            {userData.roleData.dataEntry.aLevelSubject2Name}:
-                          </strong>{" "}
-                          {userData.roleData.dataEntry.aLevelSubject2Result ||
-                            "N/A"}
-                        </Col>
-                      )}
-                      {userData.roleData.dataEntry.aLevelSubject3Name && (
-                        <Col md={4}>
-                          <strong>
-                            {userData.roleData.dataEntry.aLevelSubject3Name}:
-                          </strong>{" "}
-                          {userData.roleData.dataEntry.aLevelSubject3Result ||
-                            "N/A"}
-                        </Col>
-                      )}
-                    </Row>
-                  </Card.Body>
-                </Card>
-              )}
-
-              {/* Preferred Location */}
-              <Card className="mb-3 shadow-sm">
-                <Card.Header>
-                  <MapPin size={16} className="me-2" />
-                  Preferred Location
-                </Card.Header>
-                <Card.Body>
-                  <p>
-                    {userData.roleData?.dataEntry?.preferredLocation ||
-                      "Not specified"}
-                  </p>
-                </Card.Body>
-              </Card>
-
-              {/* Other Qualifications */}
-              <Card className="mb-3 shadow-sm">
-                <Card.Header>
-                  <School size={16} className="me-2" />
-                  Other Qualifications
-                </Card.Header>
-                <Card.Body>
-                  <p>
-                    {userData.roleData?.dataEntry?.otherQualifications ||
-                      "None"}
-                  </p>
-                </Card.Body>
-              </Card>
-            </>
-          ) : (
-            <>
-              {/* Internship Category */}
-              <Card className="mb-3 shadow-sm">
-                <Card.Header>
-                  <BookOpen size={16} className="me-2" />
-                  Category of Application
-                </Card.Header>
-                <Card.Body>
-                  <p>
-                    {userData.roleData?.internship?.categoryOfApply ||
-                      "Not specified"}
-                  </p>
-                </Card.Body>
-              </Card>
-
-              {/* Higher Education */}
-              <Card className="mb-3 shadow-sm">
-                <Card.Header>
-                  <School size={16} className="me-2" />
-                  Higher Education
-                </Card.Header>
-                <Card.Body>
-                  <p>
-                    {userData.roleData?.internship?.higherEducation || "None"}
-                  </p>
-                </Card.Body>
-              </Card>
-
-              {/* Other Qualifications */}
-              <Card className="mb-3 shadow-sm">
-                <Card.Header>
-                  <Award size={16} className="me-2" />
-                  Other Qualifications
-                </Card.Header>
-                <Card.Body>
-                  <p>
-                    {userData.roleData?.internship?.otherQualifications ||
-                      "None"}
-                  </p>
-                </Card.Body>
-              </Card>
-            </>
-          )}
-        </Accordion.Body>
-      </Accordion.Item>
-    </Accordion>
-
-      </Card.Body>
-    </Card>
-  );
-
-  // Render interview details section
-  const renderInterviewDetails = () => (
-    <Card className={`mb-4 ${darkMode ? "bg-dark text-white" : ""}`}>
-      <Card.Header className={darkMode ? "bg-secondary text-white" : "bg-light"}>
-        <h5 className="mb-0">Interview Details</h5>
-      </Card.Header>
-      <Card.Body>
-        {userData.interview.interviews && userData.interview.interviews.length > 0 ? (
-          <Tabs
-            defaultActiveKey="interview-0"
-            id="interview-tabs"
-            className={`mb-3 ${darkMode ? "dark-tabs" : ""}`}
-          >
-            {userData.interview.interviews.map((interview, index) => (
-              <Tab
-                key={`interview-${index}`}
-                eventKey={`interview-${index}`}
-                title={`Interview ${index + 1}`}
-                className={darkMode ? "text-white" : ""}
-              >
-                <ListGroup variant="flush">
-                  <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                    <strong>Status:</strong> 
-                    <Badge 
-                      bg={
-                        interview.result?.status === "interview-passed" ? "success" :
-                        interview.result?.status === "interview-failed" ? "danger" : "warning"
-                      }
-                      className="ms-2"
-                    >
-                      {interview.result?.status?.replace('interview-', '') || 'Pending'}
-                    </Badge>
-                  </ListGroup.Item>
-                  <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                    <strong>Interview Name:</strong> {interview.interviewName || "N/A"}
-                  </ListGroup.Item>
-                  <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                    <strong>Evaluated By:</strong> {interview.result?.evaluatedBy?.name || "N/A"}
-                  </ListGroup.Item>
-                  <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                    <strong>Evaluation Date:</strong> {formatDate(interview.result?.evaluatedDate)}
-                  </ListGroup.Item>
-                  <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-                    <strong>Feedback:</strong> {interview.result?.feedback || "No feedback provided"}
-                  </ListGroup.Item>
-                </ListGroup>
-              </Tab>
-            ))}
-          </Tabs>
-        ) : (
-          <Alert variant="info">
-            No interview details available yet.
-          </Alert>
-        )}
-      </Card.Body>
-    </Card>
-  );
-
-// Render induction details section
-const renderInductionDetails = () => (
-  <Card className={`mb-4 ${darkMode ? "bg-dark text-white" : ""}`}>
-    <Card.Header className={darkMode ? "bg-secondary text-white" : "bg-light"}>
-      <h5 className="mb-0">Induction Details</h5>
-    </Card.Header>
-    <Card.Body>
-      {userData.induction && (userData.induction.inductionAssigned || userData.induction.status !== "induction-not-assigned") ? (
-        <ListGroup variant="flush">
-          <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-            <strong>Status:</strong> 
-            <Badge 
-              bg={
-                userData.induction.result?.status === "induction-passed" ? "success" :
-                userData.induction.result?.status === "induction-failed" ? "danger" : "warning"
-              }
-              className="ms-2"
-            >
-              {(userData.induction.result?.status || userData.induction.status || "pending").replace('induction-', '')}
-            </Badge>
-          </ListGroup.Item>
-          <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-            <strong>Induction Name:</strong> {userData.induction.inductionName || "N/A"}
-          </ListGroup.Item>
-          <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-            <strong>Evaluated By:</strong> {userData.induction.result?.evaluatedBy?.name || "N/A"}
-          </ListGroup.Item>
-          <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-            <strong>Evaluation Date:</strong> {formatDate(userData.induction.result?.evaluatedDate)}
-          </ListGroup.Item>
-          <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-            <strong>Feedback:</strong> {userData.induction.result?.feedback || "No feedback provided"}
-          </ListGroup.Item>
-        </ListGroup>
-      ) : (
-        <Alert variant="info">
-          No induction details available yet.
-        </Alert>
-      )}
-    </Card.Body>
-  </Card>
+                <div className="mt-3">
+                  <InfoItem icon={MapPin} label="Preferred Location" value={userData.roleData?.dataEntry?.preferredLocation || "Not specified"} />
+                </div>
+                <div className="mt-3">
+                  <InfoItem icon={School} label="Other Qualifications" value={userData.roleData?.dataEntry?.otherQualifications || "None"} />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <InfoItem icon={BookOpen} label="Category of Application" value={userData.roleData?.internship?.categoryOfApply || "Not specified"} />
+                <InfoItem icon={School} label="Higher Education" value={userData.roleData?.internship?.higherEducation || "None"} />
+                <InfoItem icon={Award} label="Other Qualifications" value={userData.roleData?.internship?.otherQualifications || "None"} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+  </ModernCard>
 );
 
-  // Render schema assignment details section
-  const renderSchemaDetails = () => (
-    <Card className={`mb-4 ${darkMode ? "bg-dark text-white" : ""}`}>
-      <Card.Header className={darkMode ? "bg-secondary text-white" : "bg-light"}>
-        <h5 className="mb-0">Assignment Details</h5>
-      </Card.Header>
-      <Card.Body>
-        {userData.schemaAssignment.schemaAssigned ? (
-          <ListGroup variant="flush">
-            <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-              <strong>Status:</strong> 
-              <Badge 
-                bg={
-                  userData.schemaAssignment.status === "schema-completed" ? "success" :
-                  userData.schemaAssignment.status === "terminated" ? "danger" : "info"
-                }
-                className="ms-2"
-              >
-                {userData.schemaAssignment.status.replace('schema-', '')}
-              </Badge>
-            </ListGroup.Item>
-            <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-              <strong>Scheme Name:</strong> {userData.schemaAssignment.schemeName || "N/A"}
-            </ListGroup.Item>
-            <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-              <strong>Manager:</strong> {userData.schemaAssignment.managerName || "N/A"} ({userData.schemaAssignment.managerRole})
-            </ListGroup.Item>
-            <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-              <strong>Period:</strong> {userData.schemaAssignment.internshipPeriod} months
-            </ListGroup.Item>
-            <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-              <strong>Dates:</strong> {formatDate(userData.schemaAssignment.startDate)} to {formatDate(userData.schemaAssignment.endDate)}
-            </ListGroup.Item>
-            <ListGroup.Item className={darkMode ? "bg-dark text-white" : ""}>
-              <strong>Evaluation:</strong> 
-              {userData.schemaAssignment.evaluation ? (
-                <>
+ const renderInterviewDetails = () => (
+  <ModernCard className="mb-4">
+    <SectionHeader 
+      title="Interview Details" 
+      icon={Users} 
+      section="interview"
+      count={userData.interview?.interviews?.length ? `${userData.interview.interviews.length} interview(s)` : "No interviews"}
+    />
+    {expandedSections.interview && (
+      <div className="px-4 pb-4">
+        {userData.interview?.interviews && userData.interview.interviews.length > 0 ? (
+          <div className="d-flex flex-column gap-3">
+            {userData.interview.interviews.map((interview, index) => (
+              <div key={index} className={`p-4 rounded-3 ${
+                darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+              }`}>
+                <div className="d-flex align-items-center justify-content-between mb-3">
+                  <h6 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
+                    <span className={darkMode ? "text-light" : "text-muted"}>Name:</span>
+                    <span name="interviewName" className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                      {interview.interviewName || `Interview ${index + 1}`}
+                    </span>
+                  </h6>
                   <Badge 
-                    bg={
-                      userData.schemaAssignment.evaluation.status === "satisfactory" ? "success" :
-                      userData.schemaAssignment.evaluation.status === "unsatisfactory" ? "danger" : "warning"
-                    }
-                    className="ms-2"
+                    bg={getStatusColor(interview.result?.status)}
+                    className="text-capitalize"
                   >
-                    {userData.schemaAssignment.evaluation.status}
+                    {interview.result?.status?.replace('interview-', '') || 'Pending'}
                   </Badge>
-                  <div className="mt-2">
-                    <strong>Feedback:</strong> {userData.schemaAssignment.evaluation.feedback || "No feedback provided"}
+                </div>
+                <Row className="g-2 small">
+                  <Col md={6}>
+                    <span className={darkMode ? "text-light" : "text-muted"}>Evaluated By:</span>
+                    <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                      {interview.result?.evaluatedBy?.name || "N/A"}
+                    </span>
+                  </Col>
+                  <Col md={6}>
+                    <span className={darkMode ? "text-light" : "text-muted"}>Date:</span>
+                    <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                      {formatDate(interview.result?.evaluatedDate)}
+                    </span>
+                  </Col>
+                </Row>
+                {interview.result?.feedback && (
+                  <div className={`mt-3 p-3 rounded-2 ${
+                    darkMode ? "bg-dark border-secondary" : "bg-white"
+                  }`}>
+                    <small className={`${darkMode ? "text-light" : "text-muted"}`}>
+                      {interview.result.feedback}
+                    </small>
                   </div>
-                </>
-              ) : "Pending"}
-            </ListGroup.Item>
-          </ListGroup>
+                )}
+              </div>
+            ))}
+          </div>
         ) : (
-          <Alert variant="info">
-            No assignment details available yet.
-          </Alert>
+          <div className="text-center py-5">
+            <Clock size={48} className={`${darkMode ? "text-light" : "text-muted"} mb-3`} />
+            <p className={darkMode ? "text-light" : "text-muted"}>
+              No interview details available yet
+            </p>
+          </div>
         )}
-      </Card.Body>
-    </Card>
+      </div>
+    )}
+  </ModernCard>
+);
+
+const renderInductionDetails = () => (
+  <ModernCard className="mb-4">
+    <SectionHeader title="Induction Details" icon={BookOpen} section="induction" />
+    {expandedSections.induction && (
+      <div className="px-4 pb-4">
+        {userData.induction && (userData.induction.inductionAssigned || userData.induction.status !== "induction-not-assigned") ? (
+          <div className="d-flex flex-column gap-3">
+            <div className={`p-4 rounded-3 ${
+              darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+            }`}>
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h6 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
+                  <span className={darkMode ? "text-light" : "text-muted"}>Name:</span>
+                  <span name="inductionName" className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                    {userData.induction.inductionName || "Induction Program"}
+                  </span>
+                </h6>
+                <Badge 
+                  bg={getStatusColor(userData.induction.result?.status)}
+                  className="text-capitalize"
+                >
+                  {(userData.induction.result?.status || userData.induction.status || "pending").replace('induction-', '')}
+                </Badge>
+              </div>
+              <Row className="g-2 small">
+                <Col md={6}>
+                  <span className={darkMode ? "text-light" : "text-muted"}>Evaluated By:</span>
+                  <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                    {userData.induction.result?.evaluatedBy?.name || "N/A"}
+                  </span>
+                </Col>
+                <Col md={6}>
+                  <span className={darkMode ? "text-light" : "text-muted"}>Date:</span>
+                  <span className={`ms-2 ${darkMode ? "text-white" : "text-dark"}`}>
+                    {formatDate(userData.induction.result?.evaluatedDate)}
+                  </span>
+                </Col>
+              </Row>
+              {userData.induction.result?.feedback && (
+                <div className={`mt-3 p-3 rounded-2 ${
+                  darkMode ? "bg-dark border-secondary" : "bg-white"
+                }`}>
+                  <small className={`${darkMode ? "text-light" : "text-muted"}`}>
+                    {userData.induction.result.feedback}
+                  </small>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-5">
+            <Clock size={48} className={`${darkMode ? "text-light" : "text-muted"} mb-3`} />
+            <p className={darkMode ? "text-light" : "text-muted"}>
+              No induction details available yet
+            </p>
+          </div>
+        )}
+      </div>
+    )}
+  </ModernCard>
+);
+  const renderSchemaDetails = () => (
+    <ModernCard className="mb-4">
+      <SectionHeader title="Assignment Details" icon={Target} section="assignment" />
+      {expandedSections.assignment && (
+        <div className="px-4 pb-4">
+          {userData.schemaAssignment?.schemaAssigned ? (
+            <div className="space-y-4">
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <h6 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
+                  {userData.schemaAssignment.schemeName}
+                </h6>
+                <Badge 
+                  bg={getStatusColor(userData.schemaAssignment.status)}
+                  className="text-capitalize"
+                >
+                  {userData.schemaAssignment.status?.replace('schema-', '') || 'Pending'}
+                </Badge>
+              </div>
+              
+              <Row className="g-3">
+                <Col md={6}>
+                  <InfoItem 
+                    icon={Users} 
+                    label="Manager" 
+                    value={`${userData.schemaAssignment.managerName || 'N/A'} ${userData.schemaAssignment.managerRole ? `(${userData.schemaAssignment.managerRole})` : ''}`}
+                  />
+                </Col>
+                <Col md={6}>
+                  <InfoItem 
+                    icon={Calendar} 
+                    label="Duration" 
+                    value={userData.schemaAssignment.internshipPeriod ? `${userData.schemaAssignment.internshipPeriod} months` : 'N/A'}
+                  />
+                </Col>
+                <Col md={6}>
+                  <InfoItem icon={Calendar} label="Start Date" value={formatDate(userData.schemaAssignment.startDate)} />
+                </Col>
+                <Col md={6}>
+                  <InfoItem icon={Calendar} label="End Date" value={formatDate(userData.schemaAssignment.endDate)} />
+                </Col>
+              </Row>
+
+              {userData.schemaAssignment.evaluation && (
+                <div className="border-top pt-4 mt-4">
+                  <h6 className={`mb-3 ${darkMode ? "text-white" : "text-dark"}`}>Evaluation</h6>
+                  <div className="d-flex align-items-center justify-content-between mb-3">
+                    <span className={darkMode ? "text-light" : "text-muted"}>Status:</span>
+                    <Badge 
+                      bg={getStatusColor(userData.schemaAssignment.evaluation.status)}
+                      className="text-capitalize"
+                    >
+                      {userData.schemaAssignment.evaluation.status}
+                    </Badge>
+                  </div>
+                  {userData.schemaAssignment.evaluation.feedback && (
+                    <div className={`p-4 rounded-3 ${
+                      darkMode ? "bg-secondary bg-opacity-10 border-secondary" : "bg-light"
+                    }`}>
+                      <p className={`mb-0 ${darkMode ? "text-light" : "text-muted"}`}>
+                        {userData.schemaAssignment.evaluation.feedback}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-5">
+              <Clock size={48} className={`${darkMode ? "text-light" : "text-muted"} mb-3`} />
+              <p className={darkMode ? "text-light" : "text-muted"}>
+                No assignment details available yet
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </ModernCard>
   );
 
   return (
-    <div className={`status-report-page d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
-      {/* Header with Background */}
-      <div className="header-section py-5" style={{
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-      }}>
-        <Container>
-          <div className="text-center">
-            <img 
-              src={logo} 
-              alt="Company Logo" 
-              className="mx-auto d-block mb-3" 
-              style={{ height: "60px", filter: darkMode ? 'brightness(1.2)' : 'none' }} 
-            />
-            <h2 className="mb-4 fw-bold">INTERN LIFE CYCLE</h2>
-            
-            {/* NIC Search Section */}
-            <Row className="justify-content-center">
-              <Col md={8} lg={6}>
-                <Card className={`border-0 shadow ${darkMode ? "bg-dark text-white" : ""}`}>
-                  <Card.Body className="p-4">
-                    <p className="mb-3">Enter your NIC number to view your application details</p>
-                    <Form className="d-flex gap-2">
-                      <Form.Control
-                        type="text"
-                        placeholder="Enter NIC Number"
-                        value={nic}
-                        onChange={(e) => setNic(e.target.value)}
-                        className={`flex-grow-1 ${darkMode ? "bg-dark text-white border-secondary" : ""}`}
-                      />
-                      <Button 
-                        variant="primary" 
+    <div 
+      className={`min-vh-100 ${darkMode ? 'bg-dark text-white' : 'bg-light text-dark'}`} 
+      style={{
+        background: !darkMode 
+          ? 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' 
+          : 'linear-gradient(135deg, #1a1a1a 0%, #2d3748 100%)',
+        minHeight: '100vh'
+      }}
+    >
+      <div className="position-relative overflow-hidden">
+        <div 
+          className="position-absolute top-0 start-0 w-100 h-100" 
+          style={{
+            background: darkMode
+              ? 'linear-gradient(135deg, rgba(26, 26, 26, 0.9) 0%, rgba(45, 55, 72, 0.9) 100%)'
+              : 'linear-gradient(135deg, rgba(248, 249, 250, 0.9) 0%, rgba(233, 236, 239, 0.9) 100%)',
+            zIndex: 1
+          }}
+        />
+        <div className="position-relative px-4 py-5" style={{ zIndex: 2 }}>
+          <Container>
+            <div className="text-center">
+              <div className="mb-4">
+                <div className="d-flex align-items-center justify-content-center mb-4">
+                     <Container className="text-center mt-4 mb-3">
+                          <img
+                            src={logo}
+                            alt="SLT Mobitel Logo"
+                            className="mx-auto d-block"
+                            style={{ height: "50px" }}
+                          />
+                        </Container>
+                </div>
+                <p className={`display-4 fw-bold mb-3 ${darkMode ? 'text-white' : 'text-dark'}`}>Intern Life Cycle</p>
+              </div>
+
+              <Row className="justify-content-center">
+                <Col md={8} lg={6}>
+                  <ModernCard className={darkMode ? "bg-dark bg-opacity-75" : "bg-white bg-opacity-95"}>
+                    <div className="p-4">
+                      <div className="text-center mb-4">
+                        <h5 className={darkMode ? "text-white" : "text-dark"}>Find Your Application</h5>
+                        <p className={darkMode ? "text-light" : "text-muted"}>Enter your NIC number to view your status</p>
+                      </div>
+                      
+                      <div className="position-relative mb-3">
+                        <Form.Control
+                          type="text"
+                          placeholder="Enter NIC Number"
+                          value={nic}
+                          onChange={handleNicChange}
+                          className={`ps-5 py-3 border-0 rounded-3 ${darkMode ? "bg-dark text-white border-secondary" : "bg-light"}`}
+                          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        />
+                        <Search className={`position-absolute top-50 start-0 translate-middle-y ms-3 ${darkMode ? "text-light" : "text-muted"}`} size={20} />
+                      </div>
+                      
+                      <Button
                         onClick={handleSearch}
-                        className="px-4"
                         disabled={loading}
+                        className="w-100 py-3 rounded-3 border-0 fw-semibold"
+                        style={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                        }}
                       >
-                        {loading ? <Spinner as="span" animation="border" size="sm" /> : "Search"}
+                        {loading ? (
+                          <>
+                            <Spinner as="span" animation="border" size="sm" className="me-2" />
+                            Searching...
+                          </>
+                        ) : (
+                          <>
+                            <Search size={20} className="me-2" />
+                            Search Application
+                          </>
+                        )}
                       </Button>
-                    </Form>
-                  </Card.Body>
-                </Card>
-              </Col>
-            </Row>
-          </div>
-        </Container>
+                    </div>
+                  </ModernCard>
+                </Col>
+              </Row>
+            </div>
+          </Container>
+        </div>
       </div>
 
-      <Container className="py-4">
-        {/* Error Message */}
+      <Container className="py-5">
         {error && (
-          <Alert 
-            variant="danger" 
-            className="text-center mb-4 shadow-sm"
-            dismissible
-            onClose={() => setError("")}
-          >
-            {error}
-          </Alert>
+          <ModernCard className={`mb-4 ${darkMode ? "bg-danger bg-opacity-10 border-danger" : ""}`}>
+            <div className="p-4 d-flex align-items-center">
+              <AlertCircle className="text-danger me-3 flex-shrink-0" size={24} />
+              <div className="flex-grow-1">
+                <h6 className="text-danger mb-1">Error</h6>
+                <p className="text-danger">{error}</p>
+              </div>
+              <Button
+                variant="link"
+                onClick={() => setError("")}
+                className="text-danger p-0 border-0"
+              >
+                <XCircle size={20} />
+              </Button>
+            </div>
+          </ModernCard>
         )}
 
-        {/* Loading State */}
         {loading && (
           <div className="text-center py-5">
-            <Spinner animation="border" variant="primary" style={{ width: '3rem', height: '3rem' }} />
-            <p className="mt-3">Loading your application details...</p>
+            <div className="mb-4">
+              <div 
+                className="spinner-border text-primary mx-auto" 
+                style={{ width: '4rem', height: '4rem' }}
+                role="status"
+              >
+                <span className="visually-hidden">Loading...</span>
+              </div>
+            </div>
+            <h4 className={`mb-2 ${darkMode ? "text-white" : "text-dark"}`}>Loading Application</h4>
+            <p className={darkMode ? "text-light" : "text-muted"}>Please wait while we fetch your details...</p>
           </div>
         )}
 
-        {/* Display user data sections */}
         {userData && (
           <>
             {renderBasicInfo()}
@@ -609,16 +827,11 @@ const renderInductionDetails = () => (
       </Container>
 
       <style jsx>{`
-        :global(.dark-tabs .nav-link) {
-          color: #adb5bd;
+        .cursor-pointer {
+          cursor: pointer;
         }
-        :global(.dark-tabs .nav-link.active) {
-          background-color: #495057;
-          color: white;
-          border-color: #495057;
-        }
-        :global(.dark-tabs .nav-tabs) {
-          border-bottom-color: #495057;
+        .backdrop-blur {
+          backdrop-filter: blur(10px);
         }
       `}</style>
     </div>
