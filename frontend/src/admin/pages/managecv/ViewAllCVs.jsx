@@ -27,7 +27,7 @@ const ViewAllCVs = ({ darkMode = false }) => {
   const [filterCategory, setFilterCategory] = useState("fullName");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
   const navigate = useNavigate();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [cvToDelete, setCvToDelete] = useState(null);

@@ -105,6 +105,7 @@ import EmailVerification  from "./components/login/EmailVerification";
 import InternCertificateRequest  from "./admin/pages/certificaterequest/InternCertificateRequest";
 import ViewCertificateRequest  from "./components/pages/ViewCertificateRequest";
 import DownloadCertificate  from "./individual/pages/certificaterequest/DownloadCertificate";
+import AdminReports  from "./admin/pages/reports/AdminReports";
 
 
 function App() {
@@ -228,6 +229,7 @@ function App() {
     "/add-new-station",
     "/view-rotational-stations/:id",
     "/edit-rotational-stations/:id",
+    "/admin-reports" ,
   ];
 
   const staffRoutes = [
@@ -388,6 +390,7 @@ function App() {
     <Route path="/schedule-rotations" element={<ScheduleRotations darkMode={darkMode} />} />
     <Route path="/intern-certificate-request" element={<InternCertificateRequest darkMode={darkMode} />} />
     <Route path="/view-certificate-request/:id" element={<ViewCertificateRequest darkMode={darkMode} />} />
+    <Route path="/admin-reports" element={<AdminReports darkMode={darkMode} />} />
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />

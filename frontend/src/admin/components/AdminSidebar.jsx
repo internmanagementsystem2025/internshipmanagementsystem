@@ -947,7 +947,7 @@ const AdminSidebar = ({ darkMode }) => {
               {/* Reports */}
               <Nav.Link
                 as={Link}
-                to="/reports"
+                to="/admin-reports" 
                 onClick={() => setShow(false)}
                 onMouseEnter={() => setHovered("reports")}
                 onMouseLeave={() => setHovered(null)}
