@@ -9,24 +9,18 @@ import {
   Alert,
   Row,
   Col,
-  Card,
   Badge,
 } from "react-bootstrap";
 import { 
-  FaFileDownload, 
   FaFilePdf, 
   FaFileExcel, 
-  FaChartBar,
   FaFilter,
-  FaUsers,
-  FaCalendarAlt,
-  FaBuilding
 } from "react-icons/fa";
 import logo from "../../../assets/logo.png";
 import ReportsFilters from "./ReportsFilters";
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000/api";
 
@@ -395,123 +389,251 @@ const AdminReports = ({ darkMode = false }) => {
 
   // Export to PDF
   const exportToPDF = async () => {
-    setExportLoading(true);
-    try {
-      const statistics = generateStatistics();
-      const doc = new jsPDF();
-      
-      // Add title
-      doc.setFontSize(16);
-      doc.text("SLT Mobitel CV Reports", 105, 20, { align: 'center' });
-      
-      doc.setFontSize(10);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 28, { align: 'center' });
-      
-      let yPosition = 45;
-      
-      // Summary statistics
+  setExportLoading(true);
+  try {
+    const statistics = generateStatistics();
+    
+    // Initialize jsPDF
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+    
+    // Add title
+    doc.setFontSize(18);
+    doc.text("SLT Mobitel CV Reports", 105, 20, { align: 'center' });
+    
+    doc.setFontSize(12);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 30, { align: 'center' });
+    
+    let yPosition = 45;
+    
+    // Summary statistics section
+    doc.setFontSize(14);
+    doc.text("Summary Statistics", 20, yPosition);
+    yPosition += 10;
+    
+    // Create summary data without using autoTable first
+    const summaryText = [
+      `Total CVs: ${statistics.total}`,
+      `Approved: ${statistics.approved}`,
+      `Pending: ${statistics.pending}`,
+      `Rejected: ${statistics.rejected}`,
+      `Interview Stage: ${statistics.interview}`
+    ];
+    
+    doc.setFontSize(11);
+    summaryText.forEach((text, index) => {
+      doc.text(text, 25, yPosition + (index * 7));
+    });
+    
+    yPosition += summaryText.length * 7 + 15;
+    
+    // District breakdown (simple text format to avoid autoTable issues)
+    if (Object.keys(statistics.byDistrict).length > 0) {
       doc.setFontSize(14);
-      doc.text("Summary Statistics", 20, yPosition);
+      doc.text("Distribution by District", 20, yPosition);
       yPosition += 10;
       
       doc.setFontSize(10);
-      const summaryStats = [
-        [`Total CVs: ${statistics.total}`, `Approved: ${statistics.approved}`],
-        [`Pending: ${statistics.pending}`, `Rejected: ${statistics.rejected}`],
-        [`Interview Stage: ${statistics.interview}`, '']
-      ];
+      const districts = Object.entries(statistics.byDistrict)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10); // Show top 10
+      
+      districts.forEach(([district, count], index) => {
+        const text = `${district}: ${count}`;
+        doc.text(text, 25, yPosition + (index * 6));
+      });
+      
+      yPosition += districts.length * 6 + 15;
+    }
+    
+    // Check if we need a new page
+    if (yPosition > 240) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    // Detailed CV data (simple table format)
+    const maxRecords = Math.min(filteredData.length, 30); // Reduce number for simple format
+    
+    if (filteredData.length > 0) {
+      doc.setFontSize(14);
+      doc.text(`CV Details (First ${maxRecords} records)`, 20, yPosition);
+      yPosition += 15;
+      
+      // Table headers
+      doc.setFontSize(9);
+      doc.text("#", 20, yPosition);
+      doc.text("Ref No", 30, yPosition);
+      doc.text("Name", 55, yPosition);
+      doc.text("District", 100, yPosition);
+      doc.text("Status", 130, yPosition);
+      
+      yPosition += 7;
+      
+      // Draw header line
+      doc.line(20, yPosition - 2, 180, yPosition - 2);
+      
+      // Table data
+      filteredData.slice(0, maxRecords).forEach((cv, index) => {
+        if (yPosition > 280) {
+          doc.addPage();
+          yPosition = 20;
+          
+          // Repeat headers on new page
+          doc.setFontSize(9);
+          doc.text("#", 20, yPosition);
+          doc.text("Ref No", 30, yPosition);
+          doc.text("Name", 55, yPosition);
+          doc.text("District", 100, yPosition);
+          doc.text("Status", 130, yPosition);
+          yPosition += 7;
+          doc.line(20, yPosition - 2, 180, yPosition - 2);
+        }
+        
+        const refNo = (cv.refNo || "N/A").substring(0, 12);
+        const name = (cv.fullName || "N/A").substring(0, 20);
+        const district = (cv.district || "N/A").substring(0, 15);
+        const status = (cv.currentStatus || "Pending").substring(0, 15);
+        
+        doc.text((index + 1).toString(), 20, yPosition);
+        doc.text(refNo, 30, yPosition);
+        doc.text(name, 55, yPosition);
+        doc.text(district, 100, yPosition);
+        doc.text(status, 130, yPosition);
+        
+        yPosition += 6;
+      });
+    }
+    
+    // Add footer note if data was limited
+    if (filteredData.length > maxRecords) {
+      const pageHeight = doc.internal.pageSize.height;
+      doc.setFontSize(8);
+      doc.text(
+        `Note: Showing ${maxRecords} of ${filteredData.length} total records. Use Excel export for complete data.`, 
+        20, 
+        pageHeight - 15
+      );
+    }
+    
+    // Generate filename
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `SLT_Mobitel_CV_Report_${timestamp}.pdf`;
+    
+    // Save PDF
+    doc.save(filename);
+    
+    alert(`PDF report exported successfully as ${filename}`);
+    
+  } catch (error) {
+    console.error("Error exporting to PDF:", error);
+    alert(`Failed to export PDF report. Error: ${error.message}`);
+  } finally {
+    setExportLoading(false);
+  }
+};
+
+// Alternative version WITH autoTable (if you can fix the import):
+const exportToPDFWithAutoTable = async () => {
+  setExportLoading(true);
+  try {
+    const statistics = generateStatistics();
+    const doc = new jsPDF();
+    
+    // Test if autoTable is available
+    if (typeof doc.autoTable !== 'function') {
+      throw new Error('autoTable plugin not loaded. Using simple table format instead.');
+    }
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text("SLT Mobitel CV Reports", 105, 20, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 28, { align: 'center' });
+    
+    let yPosition = 45;
+    
+    // Summary statistics with autoTable
+    const summaryData = [
+      ['Total CVs', statistics.total],
+      ['Approved CVs', statistics.approved],
+      ['Pending CVs', statistics.pending],
+      ['Rejected CVs', statistics.rejected],
+      ['Interview Stage', statistics.interview]
+    ];
+    
+    doc.autoTable({
+      head: [['Metric', 'Count']],
+      body: summaryData,
+      startY: yPosition,
+      theme: 'grid',
+      styles: { fontSize: 10 }
+    });
+    
+    yPosition = doc.lastAutoTable.finalY + 15;
+    
+    // District data with autoTable
+    if (Object.keys(statistics.byDistrict).length > 0) {
+      const districtData = Object.entries(statistics.byDistrict)
+        .sort(([,a], [,b]) => b - a)
+        .map(([district, count]) => [district, count]);
       
       doc.autoTable({
-        body: summaryStats,
+        head: [['District', 'Count']],
+        body: districtData,
         startY: yPosition,
-        theme: 'grid',
-        styles: { fontSize: 10 },
-        columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: 80 } }
+        theme: 'striped',
+        styles: { fontSize: 9 }
       });
       
       yPosition = doc.lastAutoTable.finalY + 15;
-      
-      // District breakdown
-      if (Object.keys(statistics.byDistrict).length > 0) {
-        doc.setFontSize(12);
-        doc.text("Distribution by District", 20, yPosition);
-        yPosition += 5;
-        
-        const districtData = Object.entries(statistics.byDistrict).map(([district, count]) => [district, count]);
-        
-        doc.autoTable({
-          head: [['District', 'Count']],
-          body: districtData,
-          startY: yPosition,
-          theme: 'striped',
-          styles: { fontSize: 9 },
-          columnStyles: { 0: { cellWidth: 120 }, 1: { cellWidth: 40 } }
-        });
-        
-        yPosition = doc.lastAutoTable.finalY + 10;
-      }
-      
-      // Add new page if needed
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 20;
-      }
-      
-      // Detailed CV data (first 50 records to fit in PDF)
-      const limitedData = filteredData.slice(0, 50).map((cv, index) => [
-        index + 1,
-        cv.refNo || "N/A",
-        cv.fullName || "N/A",
-        cv.district || "N/A",
-        cv.selectedRole || "N/A",
-        cv.currentStatus || "Pending"
-      ]);
-      
-      if (limitedData.length > 0) {
-        doc.setFontSize(12);
-        doc.text("CV Details (First 50 records)", 20, yPosition);
-        yPosition += 5;
-        
-        doc.autoTable({
-          head: [['#', 'Ref No', 'Name', 'District', 'Type', 'Status']],
-          body: limitedData,
-          startY: yPosition,
-          theme: 'striped',
-          styles: { fontSize: 8 },
-          columnStyles: {
-            0: { cellWidth: 15 },
-            1: { cellWidth: 25 },
-            2: { cellWidth: 40 },
-            3: { cellWidth: 30 },
-            4: { cellWidth: 30 },
-            5: { cellWidth: 30 }
-          }
-        });
-      }
-      
-      // Add footer note if data was limited
-      if (filteredData.length > 50) {
-        doc.setFontSize(8);
-        doc.text(`Note: Only first 50 records shown. Total filtered records: ${filteredData.length}`, 20, doc.internal.pageSize.height - 10);
-        doc.text("For complete data, please use Excel export.", 20, doc.internal.pageSize.height - 5);
-      }
-      
-      // Generate filename with timestamp
-      const timestamp = new Date().toISOString().slice(0, 10);
-      const filename = `SLT_Mobitel_CV_Report_${timestamp}.pdf`;
-      
-      // Save PDF
-      doc.save(filename);
-      
-      alert(`PDF report exported successfully as ${filename}`);
-    } catch (error) {
-      console.error("Error exporting to PDF:", error);
-      alert("Failed to export PDF report. Please try again.");
-    } finally {
-      setExportLoading(false);
     }
-  };
-
+    
+    // CV details with autoTable
+    const limitedData = filteredData.slice(0, 50).map((cv, index) => [
+      index + 1,
+      cv.refNo || "N/A",
+      (cv.fullName || "N/A").substring(0, 25),
+      cv.district || "N/A",
+      cv.selectedRole || "N/A",
+      cv.currentStatus || "Pending"
+    ]);
+    
+    if (limitedData.length > 0) {
+      doc.autoTable({
+        head: [['#', 'Ref No', 'Name', 'District', 'Type', 'Status']],
+        body: limitedData,
+        startY: yPosition,
+        theme: 'striped',
+        styles: { fontSize: 8 },
+        columnStyles: {
+          0: { cellWidth: 15 },
+          1: { cellWidth: 25 },
+          2: { cellWidth: 40 },
+          3: { cellWidth: 30 },
+          4: { cellWidth: 30 },
+          5: { cellWidth: 30 }
+        }
+      });
+    }
+    
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const filename = `SLT_Mobitel_CV_Report_${timestamp}.pdf`;
+    
+    doc.save(filename);
+    alert(`PDF report exported successfully as ${filename}`);
+    
+  } catch (error) {
+    console.error("Error exporting to PDF:", error);
+    // Fallback to simple version
+    exportToPDF();
+  } finally {
+    setExportLoading(false);
+  }
+};
   // Statistics for dashboard cards
   const statistics = generateStatistics();
 
@@ -587,7 +709,7 @@ const AdminReports = ({ darkMode = false }) => {
           border: darkMode ? "1px solid #454d55" : "1px solid #ced4da",
         }}
       >
-        <Row className="align-items-center mb-3">
+        <Row className="align-items-center mb-3 gap-3">
           <Col>
             <h5 className="mb-0">
               <FaFilter className="me-2" />
