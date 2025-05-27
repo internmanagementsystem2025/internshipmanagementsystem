@@ -7,7 +7,7 @@ import { SchemeManagers } from "./SchemeManagers";
 import SchemeInfo from "./SchemeInfo";
 import InternsPlaced from "./InternPlaced";
 import SchemeInternsPending from "./SchemeInternsPending";
-import ManagerSchemeResolution from "./ManagerSchemeResolution";
+
 
 const ViewScheme = ({ darkMode }) => {
   const navigate = useNavigate();
