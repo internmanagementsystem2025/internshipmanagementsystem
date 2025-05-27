@@ -518,7 +518,7 @@ const AdminAddCVs = ({ darkMode }) => {
             </Form.Group>
 
             {/* Form Navigation Buttons */}
-            <div className="d-flex justify-content-between mt-4">
+            <div className="d-flex flex-wrap gap-2 justify-content-between mt-4">
               <button 
                 type="button" 
                 className={`btn ${darkMode ? "btn-outline-light" : "btn-outline-secondary"} px-5`}

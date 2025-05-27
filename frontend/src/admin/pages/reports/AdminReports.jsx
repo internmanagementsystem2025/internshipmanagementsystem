@@ -709,7 +709,7 @@ const exportToPDFWithAutoTable = async () => {
           border: darkMode ? "1px solid #454d55" : "1px solid #ced4da",
         }}
       >
-        <Row className="align-items-center mb-3">
+        <Row className="align-items-center mb-3 gap-3">
           <Col>
             <h5 className="mb-0">
               <FaFilter className="me-2" />
