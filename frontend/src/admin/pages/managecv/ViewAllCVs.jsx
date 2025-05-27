@@ -560,12 +560,12 @@ The CV has been moved to deleted items and can be restored by administrators if 
             md={4}
             sm={6}
             xs={12}
-            className="d-flex justify-content-md-end justify-content-center mt-3 mt-md-0"
+            className="d-flex justify-content-md-end justify-content-left mt-3 mt-md-0"
           >
             <Button
               variant="primary"
               onClick={() => navigate("/admin-add-cv")}
-              className="mx-2"
+              className="mx-0"
               style={{ width: "auto" }}
             >
               Add New CV

@@ -592,7 +592,7 @@ const InterviewResults = ({ darkMode }) => {
         </Row>
 
         {/* Export Buttons */}
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center mb-3">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-left mb-3">
           <div className="mb-2 mb-sm-0">
             <span>Total Scheduled: {filteredCvData.length}</span>
             {selectedRows.length > 0 && (
@@ -604,7 +604,7 @@ const InterviewResults = ({ darkMode }) => {
               variant="success"
               size="sm"
               onClick={exportToExcel}
-              style={{ marginLeft: "10px", marginTop: "5px" }}
+              style={{ marginLeft: "3px", marginTop: "5px" }}
               disabled={filteredCvData.length === 0}
             >
               <FaFileExcel className="me-1" /> Export Excel

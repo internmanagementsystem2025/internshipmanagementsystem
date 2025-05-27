@@ -585,7 +585,7 @@ const ScheduleRotations = ({ darkMode }) => {
               value={searchTerm}
               onChange={handleSearch}
               className={darkMode ? "bg-dark text-white border-secondary" : ""}
-              style={{ width: "250px" }}
+              style={{ width: "150px",fontSize:"12px" }}
             />
           </div>
           <div className="d-flex">
