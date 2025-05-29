@@ -583,7 +583,6 @@ export const SchemeManagers = ({ darkMode = false }) => {
           <Button
             variant={darkMode ? "outline-light" : "primary"}
             onClick={() => setIsModalOpen(true)}
-            size="lg"
             disabled={loading || employees.length === 0}
           >
             <PersonPlus className="me-2" /> Assign Manager

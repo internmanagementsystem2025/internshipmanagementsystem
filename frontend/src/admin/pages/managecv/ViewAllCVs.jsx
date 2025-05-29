@@ -11,14 +11,102 @@ import {
   Row,
   Col,
   ButtonGroup,
+  Card,
 } from "react-bootstrap";
-import { FaChevronLeft, FaChevronRight, FaFileCode } from "react-icons/fa";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaFileCode,
+  FaChartBar,
+  FaCalendarAlt,
+  FaUsers,
+  FaUserTie,
+  FaBriefcase,
+} from "react-icons/fa";
 import logo from "../../../assets/logo.png";
 import DeleteConfirmationModal from "../../../components/notifications/DeleteConfirmationModal";
 
 const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000/api";
 
 const ViewAllCVs = ({ darkMode = false }) => {
+  // State for analytics
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const allStatuses = [
+    "cv-submitted",
+    "cv-approved",
+    "cv-rejected",
+    "interview-scheduled",
+    "interview-re-scheduled",
+    "interview-passed",
+    "interview-failed",
+    "induction-scheduled",
+    "induction-re-scheduled",
+    "induction-passed",
+    "induction-failed",
+    "induction-assigned",
+    "schema-assigned",
+    "schema-completed",
+    "terminated",
+  ];
+
+  // Color palettes
+  const lightModeColors = [
+    "#0d6efd",
+    "#198754",
+    "#dc3545",
+    "#fd7e14",
+    "#6f42c1",
+    "#20c997",
+    "#ffc107",
+    "#e83e8c",
+    "#6610f2",
+    "#17a2b8",
+    "#28a745",
+    "#007bff",
+    "#495057",
+    "#6c757d",
+    "#343a40",
+    "#adb5bd",
+  ];
+
+  const darkModeColors = [
+    "#4dabf7",
+    "#51cf66",
+    "#ff6b6b",
+    "#ffa94d",
+    "#9775fa",
+    "#4ecdc4",
+    "#ffe066",
+    "#ff8cc8",
+    "#845ef7",
+    "#74c0fc",
+    "#69db7c",
+    "#339af0",
+    "#868e96",
+    "#adb5bd",
+    "#ced4da",
+    "#dee2e6",
+  ];
+
+  const colorPalette = darkMode ? darkModeColors : lightModeColors;
+  const genderColors = darkMode
+    ? { Male: "#4dabf7", Female: "#ff8cc8", Other: "#69db7c" }
+    : { Male: "#0d6efd", Female: "#e83e8c", Other: "#28a745" };
+
+  // State for CV table
   const [cvData, setCvData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,32 +115,50 @@ const ViewAllCVs = ({ darkMode = false }) => {
   const [filterCategory, setFilterCategory] = useState("fullName");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
-  const itemsPerPage = 20;
-  const navigate = useNavigate();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [cvToDelete, setCvToDelete] = useState(null);
   const [filteredData, setFilteredData] = useState([]);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const itemsPerPage = 20;
+  const navigate = useNavigate();
 
-  // Helper function to render name with gender prefix
+  // Helper functions
   const renderNameWithPrefix = (fullName, gender) => {
     const name = fullName || "N/A";
-    if (gender?.toLowerCase() === 'male') {
+    if (gender?.toLowerCase() === "male") {
       return `Mr. ${name}`;
-    } else if (gender?.toLowerCase() === 'female') {
+    } else if (gender?.toLowerCase() === "female") {
       return `Ms. ${name}`;
     }
     return name;
   };
 
-  // Helper function to check if any CV has internship role
   const hasInternshipCVs = () => {
-    return filteredData.some(cv => cv.selectedRole === 'internship');
+    return filteredData.some((cv) => cv.selectedRole === "internship");
   };
 
-  // Validate MongoDB ObjectId
   const isValidMongoId = (id) => {
-    return id && typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id);
+    return id && typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id);
+  };
+
+  const formatStatus = (status) => {
+    if (!status) return "PENDING";
+    return status.toUpperCase().replace(/-/g, " ");
+  };
+
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case "cv-approved":
+        return "bg-success";
+      case "cv-rejected":
+        return "bg-danger";
+      case "interview-scheduled":
+      case "induction-assigned":
+      case "schema-assigned":
+        return "bg-info";
+      default:
+        return "bg-warning";
+    }
   };
 
   // Fetch CVs from API
@@ -96,7 +202,10 @@ const ViewAllCVs = ({ darkMode = false }) => {
           localStorage.removeItem("token");
           navigate("/login");
         } else {
-          setError(error.response?.data?.message || "Failed to fetch CV data. Please try again.");
+          setError(
+            error.response?.data?.message ||
+              "Failed to fetch CV data. Please try again."
+          );
         }
       } finally {
         setLoading(false);
@@ -123,12 +232,16 @@ const ViewAllCVs = ({ darkMode = false }) => {
       if (statusFilter !== "all") {
         filtered = filtered.filter((cv) => {
           const currentStatus = cv.currentStatus || "";
-          
+
           switch (statusFilter) {
             case "cv-approved":
               return currentStatus === "cv-approved";
             case "cv-pending":
-              return currentStatus === "cv-submitted" || currentStatus === "cv-pending" || !currentStatus;
+              return (
+                currentStatus === "cv-submitted" ||
+                currentStatus === "cv-pending" ||
+                !currentStatus
+              );
             case "interview-scheduled":
               return (
                 currentStatus === "interview-scheduled" ||
@@ -162,50 +275,160 @@ const ViewAllCVs = ({ darkMode = false }) => {
     applyFilters();
   }, [searchTerm, filterCategory, statusFilter, dateFilter, cvData]);
 
-  // Pagination calculations
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
-  const indexOfLastCV = currentPage * itemsPerPage;
-  const indexOfFirstCV = indexOfLastCV - itemsPerPage;
-  const currentCVs = filteredData.slice(indexOfFirstCV, indexOfLastCV);
+  // Analytics data processing functions
+  const getMonthlySubmissionData = () => {
+    const monthlyData = Array.from({ length: 12 }, (_, i) => ({
+      month: new Date(0, i).toLocaleString("default", { month: "short" }),
+      count: 0,
+    }));
 
-  // Dynamic columns based on whether there are internship CVs
-  const getColumns = () => {
-    const baseColumns = [
-      { key: "#", label: "#", width: "60px" },
-      { key: "nic", label: "NIC", width: "140px" },
-      { key: "refNo", label: "Ref No", width: "120px" },
-      { key: "name", label: "Name", width: "180px" },
-      { key: "cvFrom", label: "CV From", width: "110px" },
-      { key: "internType", label: "Intern Type", width: "130px" },
-      { key: "applicationDate", label: "Application Date", width: "150px" },
-      { key: "district", label: "District", width: "120px" },
-      { key: "institute", label: "Institute", width: "200px" },
-      { key: "referredBy", label: "Referred By", width: "140px" },
-    ];
+    cvData.forEach((cv) => {
+      if (cv.applicationDate) {
+        const date = new Date(cv.applicationDate);
+        if (date.getFullYear() === selectedYear) {
+          const month = date.getMonth();
+          monthlyData[month].count++;
+        }
+      }
+    });
 
-    if (hasInternshipCVs()) {
-      baseColumns.push({ key: "categoryOfApply", label: "Category of Apply", width: "160px" });
+    return monthlyData;
+  };
+
+  const getStatusData = () => {
+    const statusCounts = {};
+
+    // Initialize all statuses with 0
+    allStatuses.forEach((status) => {
+      statusCounts[status] = 0;
+    });
+
+    // Count actual statuses from ALL data (no date filtering)
+    cvData.forEach((cv) => {
+      const status = cv.currentStatus || "cv-submitted";
+      if (statusCounts.hasOwnProperty(status)) {
+        statusCounts[status]++;
+      }
+    });
+
+    // Convert to chart format and filter out zero values
+    return Object.entries(statusCounts)
+      .filter(([_, count]) => count > 0)
+      .map(([status, count], index) => ({
+        status: status.replace(/-/g, " ").toUpperCase(),
+        count,
+        color: colorPalette[index % colorPalette.length],
+      }));
+  };
+
+  const getGenderData = () => {
+    const genderCounts = { Male: 0, Female: 0, Other: 0 };
+
+    cvData.forEach((cv) => {
+      if (cv.applicationDate) {
+        const date = new Date(cv.applicationDate);
+        if (date.getFullYear() === selectedYear) {
+          const gender = cv.gender;
+          if (gender) {
+            const normalizedGender = gender.toLowerCase();
+            if (normalizedGender === "male") {
+              genderCounts.Male++;
+            } else if (normalizedGender === "female") {
+              genderCounts.Female++;
+            } else {
+              genderCounts.Other++;
+            }
+          } else {
+            genderCounts.Other++;
+          }
+        }
+      }
+    });
+
+    return Object.entries(genderCounts)
+      .filter(([_, count]) => count > 0)
+      .map(([gender, count]) => ({
+        gender,
+        count,
+        color: genderColors[gender],
+      }));
+  };
+
+  const getInternTypeData = () => {
+    const internTypes = {};
+
+    cvData.forEach((cv) => {
+      if (cv.applicationDate) {
+        const date = new Date(cv.applicationDate);
+        if (date.getFullYear() === selectedYear) {
+          const role = cv.selectedRole || "Not Specified";
+          internTypes[role] = (internTypes[role] || 0) + 1;
+        }
+      }
+    });
+
+    return Object.entries(internTypes)
+      .map(([type, count], index) => ({
+        type: type.charAt(0).toUpperCase() + type.slice(1),
+        count,
+        color: colorPalette[index % colorPalette.length],
+      }));
+  };
+
+  const getAvailableYears = () => {
+    const years = new Set();
+    cvData.forEach((cv) => {
+      if (cv.applicationDate) {
+        years.add(new Date(cv.applicationDate).getFullYear());
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  };
+
+  // Custom Tooltip components
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          className="shadow-lg rounded-lg p-3"
+          style={{
+            backgroundColor: darkMode ? "#495057" : "#ffffff",
+            border: `1px solid ${darkMode ? "#6c757d" : "#dee2e6"}`,
+            color: darkMode ? "#ffffff" : "#000000",
+          }}
+        >
+          <p className="mb-1 fw-bold">{label}</p>
+          <p className="mb-0" style={{ color: payload[0].color }}>
+            <strong>Count: {payload[0].value}</strong>
+          </p>
+        </div>
+      );
     }
-
-    baseColumns.push(
-      { key: "status", label: "Status", width: "120px" },
-      { key: "view", label: "View", width: "80px" },
-      { key: "delete", label: "Delete", width: "80px" }
-    );
-
-    return baseColumns;
+    return null;
   };
 
-  const columns = getColumns();
-
-  // Calculate total table width
-  const getTotalTableWidth = () => {
-    return columns.reduce((total, col) => {
-      return total + parseInt(col.width.replace('px', ''));
-    }, 0);
+  const PieTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div
+          className="shadow-lg rounded-lg p-3"
+          style={{
+            backgroundColor: darkMode ? "#495057" : "#ffffff",
+            border: `1px solid ${darkMode ? "#6c757d" : "#dee2e6"}`,
+            color: darkMode ? "#ffffff" : "#000000",
+          }}
+        >
+          <p className="mb-1 fw-bold">{payload[0].name}</p>
+          <p className="mb-0" style={{ color: payload[0].payload.color }}>
+            <strong>Count: {payload[0].value}</strong>
+          </p>
+        </div>
+      );
+    }
+    return null;
   };
 
-  // Handle view CV
+  // CV Table functions
   const handleView = (cvId) => {
     if (!isValidMongoId(cvId)) {
       alert("Invalid CV ID format");
@@ -214,11 +437,9 @@ const ViewAllCVs = ({ darkMode = false }) => {
     navigate(`/view-cv/${cvId}`);
   };
 
-  // Handle delete CV with form data
   const handleDelete = async (deletionData) => {
     if (!cvToDelete) return;
 
-    // Validate ID format
     if (!isValidMongoId(cvToDelete._id)) {
       alert("Invalid CV ID format");
       setShowDeleteModal(false);
@@ -234,29 +455,26 @@ const ViewAllCVs = ({ darkMode = false }) => {
         return;
       }
 
-      // Use the soft delete endpoint with the form data
       const response = await axios.delete(`${API_BASE_URL}/cvs/${cvToDelete._id}`, {
         headers: { Authorization: `Bearer ${token}` },
         data: {
           adminName: deletionData.adminName,
           employeeId: deletionData.employeeId,
           deletionReason: deletionData.deletionReason,
-          deletionComments: deletionData.deletionComments
-        }
+          deletionComments: deletionData.deletionComments,
+        },
       });
 
       if (response.status === 200) {
-        // Remove the CV from the current data
-        setCvData(prevData => prevData.filter((cv) => cv._id !== cvToDelete._id));
-        setFilteredData(prevData => prevData.filter((cv) => cv._id !== cvToDelete._id));
+        setCvData((prevData) => prevData.filter((cv) => cv._id !== cvToDelete._id));
+        setFilteredData((prevData) => prevData.filter((cv) => cv._id !== cvToDelete._id));
         
-        // Show success message
         alert(`CV deleted successfully! 
         
 Deletion Details:
-- Ref No: ${response.data.deletionInfo?.refNo || cvToDelete.refNo || 'N/A'}  
-- Deleted by: ${response.data.deletionInfo?.deletedBy || deletionData.adminName || 'N/A'}
-- Reason: ${deletionData.deletionReason.replace(/_/g, ' ').toUpperCase()}
+- Ref No: ${response.data.deletionInfo?.refNo || cvToDelete.refNo || "N/A"}  
+- Deleted by: ${response.data.deletionInfo?.deletedBy || deletionData.adminName || "N/A"}
+- Reason: ${deletionData.deletionReason.replace(/_/g, " ").toUpperCase()}
 
 The CV has been moved to deleted items and can be restored by administrators if needed.`);
       } else {
@@ -288,100 +506,114 @@ The CV has been moved to deleted items and can be restored by administrators if 
     }
   };
 
-  // Handle opening delete modal
   const handleDeleteClick = (cvId) => {
     const cvToDeleteData = cvData.find((cv) => cv._id === cvId);
     if (cvToDeleteData) {
-      setCvToDelete(cvToDeleteData); 
+      setCvToDelete(cvToDeleteData);
       setShowDeleteModal(true);
     } else {
       alert("CV not found");
     }
   };
 
-  // Handle closing delete modal
   const handleCloseDeleteModal = () => {
     setShowDeleteModal(false);
     setCvToDelete(null);
     setDeleteLoading(false);
   };
 
-  // Format status display
-  const formatStatus = (status) => {
-    if (!status) return "PENDING";
-    return status.toUpperCase().replace(/-/g, " ");
-  };
+  // Table columns and pagination
+  const getColumns = () => {
+    const baseColumns = [
+      { key: "#", label: "#", width: "60px" },
+      { key: "nic", label: "NIC", width: "140px" },
+      { key: "refNo", label: "Ref No", width: "120px" },
+      { key: "name", label: "Name", width: "180px" },
+      { key: "cvFrom", label: "CV From", width: "110px" },
+      { key: "internType", label: "Intern Type", width: "130px" },
+      { key: "applicationDate", label: "Application Date", width: "150px" },
+      { key: "district", label: "District", width: "120px" },
+      { key: "institute", label: "Institute", width: "200px" },
+      { key: "referredBy", label: "Referred By", width: "140px" },
+    ];
 
-  // Get status badge class
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case "cv-approved":
-        return "bg-success";
-      case "cv-rejected":
-        return "bg-danger";
-      case "interview-scheduled":
-      case "induction-assigned":
-      case "schema-assigned":
-        return "bg-info";
-      default:
-        return "bg-warning";
+    if (hasInternshipCVs()) {
+      baseColumns.push({
+        key: "categoryOfApply",
+        label: "Category of Apply",
+        width: "160px",
+      });
     }
+
+    baseColumns.push(
+      { key: "status", label: "Status", width: "120px" },
+      { key: "view", label: "View", width: "80px" },
+      { key: "delete", label: "Delete", width: "80px" }
+    );
+
+    return baseColumns;
   };
 
-  // Enhanced table styles for better horizontal scrolling
+  const columns = getColumns();
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
+  const indexOfLastCV = currentPage * itemsPerPage;
+  const indexOfFirstCV = indexOfLastCV - itemsPerPage;
+  const currentCVs = filteredData.slice(indexOfFirstCV, indexOfLastCV);
+
+  // Table styles
   const tableContainerStyles = {
-    overflowX: 'auto',
-    overflowY: 'visible',
-    WebkitOverflowScrolling: 'touch', 
-    scrollbarWidth: 'auto',
-    scrollbarColor: darkMode ? '#6c757d #343a40' : '#6c757d #f8f9fa', 
-    border: darkMode ? '1px solid #454d55' : '1px solid #dee2e6',
-    borderRadius: '0.375rem',
-    boxShadow: darkMode 
-      ? '0 0.125rem 0.25rem rgba(255, 255, 255, 0.075)' 
-      : '0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)',
-    position: 'relative',
-    minHeight: '200px' 
+    overflowX: "auto",
+    overflowY: "visible",
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "auto",
+    scrollbarColor: darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa",
+    border: darkMode ? "1px solid #454d55" : "1px solid #dee2e6",
+    borderRadius: "0.375rem",
+    boxShadow: darkMode
+      ? "0 0.125rem 0.25rem rgba(255, 255, 255, 0.075)"
+      : "0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)",
+    position: "relative",
+    minHeight: "200px",
   };
 
   const scrollbarStyles = `
     .enhanced-table-container::-webkit-scrollbar {
       height: 12px;
-      background-color: ${darkMode ? '#343a40' : '#f8f9fa'};
+      background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
       border-radius: 6px;
     }
     
     .enhanced-table-container::-webkit-scrollbar-track {
-      background-color: ${darkMode ? '#343a40' : '#f8f9fa'};
+      background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
       border-radius: 6px;
-      border: 1px solid ${darkMode ? '#454d55' : '#dee2e6'};
+      border: 1px solid ${darkMode ? "#454d55" : "#dee2e6"};
     }
     
     .enhanced-table-container::-webkit-scrollbar-thumb {
-      background-color: ${darkMode ? '#6c757d' : '#adb5bd'};
+      background-color: ${darkMode ? "#6c757d" : "#adb5bd"};
       border-radius: 6px;
-      border: 2px solid ${darkMode ? '#343a40' : '#f8f9fa'};
+      border: 2px solid ${darkMode ? "#343a40" : "#f8f9fa"};
       transition: background-color 0.2s ease;
     }
     
     .enhanced-table-container::-webkit-scrollbar-thumb:hover {
-      background-color: ${darkMode ? '#868e96' : '#868e96'};
+      background-color: ${darkMode ? "#868e96" : "#868e96"};
     }
     
     .enhanced-table-container::-webkit-scrollbar-thumb:active {
-      background-color: ${darkMode ? '#495057' : '#6c757d'};
+      background-color: ${darkMode ? "#495057" : "#6c757d"};
     }
     
     .enhanced-table-container {
       scrollbar-width: auto;
-      scrollbar-color: ${darkMode ? '#6c757d #343a40' : '#6c757d #f8f9fa'};
+      scrollbar-color: ${darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa"};
     }
 
     /* Fixed table layout with precise column widths */
     .enhanced-table-container table {
       table-layout: fixed;
-      width: ${getTotalTableWidth()}px;
-      min-width: ${getTotalTableWidth()}px;
+      width: ${columns.reduce((total, col) => total + parseInt(col.width.replace("px", "")), 0)}px;
+      min-width: ${columns.reduce((total, col) => total + parseInt(col.width.replace("px", "")), 0)}px;
     }
 
     .enhanced-table-container th,
@@ -394,13 +626,17 @@ The CV has been moved to deleted items and can be restored by administrators if 
     }
 
     /* Specific column widths */
-    ${columns.map((col, index) => `
+    ${columns
+      .map(
+        (col, index) => `
     .enhanced-table-container th:nth-child(${index + 1}),
     .enhanced-table-container td:nth-child(${index + 1}) { 
       width: ${col.width}; 
       min-width: ${col.width}; 
       max-width: ${col.width}; 
-    }`).join('\n')}
+    }`
+      )
+      .join("\n")}
 
     /* Smooth scrolling behavior */
     .enhanced-table-container {
@@ -409,7 +645,7 @@ The CV has been moved to deleted items and can be restored by administrators if 
 
     /* Focus styles for accessibility */
     .enhanced-table-container:focus {
-      outline: 2px solid ${darkMode ? '#0d6efd' : '#0d6efd'};
+      outline: 2px solid ${darkMode ? "#0d6efd" : "#0d6efd"};
       outline-offset: 2px;
     }
 
@@ -418,8 +654,8 @@ The CV has been moved to deleted items and can be restored by administrators if 
       position: sticky;
       top: 0;
       z-index: 10;
-      background-color: ${darkMode ? '#343a40' : '#f8f9fa'};
-      border-bottom: 2px solid ${darkMode ? '#454d55' : '#dee2e6'};
+      background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
+      border-bottom: 2px solid ${darkMode ? "#454d55" : "#dee2e6"};
     }
 
     /* Better cell content handling */
@@ -446,7 +682,7 @@ The CV has been moved to deleted items and can be restored by administrators if 
     }
   `;
 
-  // Render main content
+  // Loading and error states
   if (loading) {
     return (
       <div
@@ -471,8 +707,8 @@ The CV has been moved to deleted items and can be restored by administrators if 
           <Alert variant="danger">
             <h5>Error Loading CVs</h5>
             <p>{error}</p>
-            <Button 
-              variant="outline-danger" 
+            <Button
+              variant="outline-danger"
               onClick={() => window.location.reload()}
             >
               Retry
@@ -483,67 +719,342 @@ The CV has been moved to deleted items and can be restored by administrators if 
     );
   }
 
+  // Get analytics data
+  const monthlyData = getMonthlySubmissionData();
+  const statusData = getStatusData();
+  const genderData = getGenderData();
+  const internTypeData = getInternTypeData();
+  const availableYears = getAvailableYears();
+
   return (
     <div
       className={`d-flex flex-column min-vh-100 ${
         darkMode ? "bg-dark text-white" : "bg-light text-dark"
       }`}
-       style={{ paddingBottom: '3rem' }} 
+      style={{ paddingBottom: "3rem" }}
     >
       {/* Inject custom scrollbar styles */}
       <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
-      
-      <Container className="text-center mt-4 mb-3">
-        <img
-          src={logo}
-          alt="SLT Mobitel Logo"
-          className="mx-auto d-block"
-          style={{ height: "50px" }}
-          onError={(e) => {
-            e.target.style.display = 'none';
-          }}
-        />
-        <h3 className="mt-3">VIEW ALL CVs</h3>
-      </Container>
 
-      <Container
-        className="mt-4 p-4 rounded"
-        style={{
-          background: darkMode ? "#343a40" : "#ffffff",
-          color: darkMode ? "white" : "black",
-          border: darkMode ? "1px solid #454d55" : "1px solid #ced4da",
-        }}
-      >
-        <h5 className="mb-3">
-          <FaFileCode
-            className="me-2"
-            style={{ fontSize: "1.2rem", color: darkMode ? "white" : "black" }}
-          />
-          View All CVs
-        </h5>
-        <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
+      <Container className="py-4">
+        {/* Header */}
+        <div className="text-center mb-5">
+          <div className="mb-3">
+            <img
+              src={logo}
+              alt="SLT Mobitel Logo"
+              className="mx-auto d-block"
+              style={{ height: "50px", maxWidth: "200px" }}
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
+            />
+          </div>
+          <h1
+            className={`display-5 fw-bold mb-3 ${
+              darkMode ? "text-white" : "text-dark"
+            }`}
+          >
+            CV Management Dashboard
+          </h1>
+          <p className={`lead ${darkMode ? "text-white-50" : "text-muted"}`}>
+            Comprehensive insights and management for CV submissions
+          </p>
+        </div>
 
-        {/* Filter Section */}
-        <Row className="mb-3">
-          <Col md={3} sm={6} xs={12}>
-            <Form.Group controlId="filterCategory">
-              <Form.Label>Filter Category</Form.Label>
-              <Form.Select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
+        {/* Year Filter */}
+        <Row className="mb-4">
+          <Col lg={4} md={6} className="mx-auto">
+            <Card
+              className={`border-0 shadow-sm ${
+                darkMode ? "bg-dark text-white" : "bg-white"
+              }`}
+            >
+              <Card.Body>
+                <Form.Group>
+                  <Form.Label className="fw-bold mb-3">
+                    <FaCalendarAlt
+                      className={`me-2 ${
+                        darkMode ? "text-white" : "text-primary"
+                      }`}
+                    />
+                    Select Year for Analysis
+                  </Form.Label>
+                  <Form.Select
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                    className={`form-select-lg ${
+                      darkMode
+                        ? "bg-dark text-white border-secondary"
+                        : "bg-white text-dark border-light"
+                    }`}
+                    style={{ fontSize: "1.1rem" }}
+                  >
+                    {availableYears.map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </Form.Select>
+                  <small
+                    className={`mt-2 d-block ${
+                      darkMode ? "text-white-50" : "text-muted"
+                    }`}
+                  >
+                    Monthly data will be filtered by selected year
+                  </small>
+                </Form.Group>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Analytics Charts */}
+        <Row className="g-4 mb-5">
+          {/* Monthly Submissions Chart */}
+          <Col  md={4} className="mb-4">
+            <Card
+              className={`border-0 shadow-lg h-100 ${
+                darkMode ? "bg-dark" : "bg-white"
+              }`}
+            >
+              <Card.Header
+                className={`border-0 py-3 ${
+                  darkMode ? "bg-secondary text-white" : "bg-primary text-white"
+                }`}
               >
-                <option value="fullName">Name</option>
-                <option value="nic">NIC</option>
-                <option value="refNo">Ref No</option>
-                <option value="district">District</option>
-                <option value="institute">Institute</option>
-                <option value="userType">CV From</option>
-                <option value="selectedRole">Intern Type</option>
-                <option value="referredBy">Referred By</option>
-              </Form.Select>
-            </Form.Group>
+                <h5 className="mb-0 fw-bold">
+                  <FaCalendarAlt className="me-2" />
+                  Monthly CV Submissions - {selectedYear}
+                </h5>
+                <small className="opacity-75">Filtered by selected year</small>
+              </Card.Header>
+              <Card.Body>
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart
+                    data={monthlyData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={darkMode ? "#495057" : "#dee2e6"}
+                    />
+                    <XAxis
+                      dataKey="month"
+                      stroke={darkMode ? "#adb5bd" : "#6c757d"}
+                      fontSize={12}
+                      fontWeight="500"
+                    />
+                    <YAxis
+                      stroke={darkMode ? "#adb5bd" : "#6c757d"}
+                      fontSize={12}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar
+                      dataKey="count"
+                      fill={darkMode ? "#4dabf7" : "#0d6efd"}
+                      name="CV Submissions"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card.Body>
+            </Card>
           </Col>
 
+          {/* Status Distribution Chart - ALL TIME */}
+          <Col  md={4} className="mb-4">
+            <Card
+              className={`border-0 shadow-lg h-100 ${
+                darkMode ? "bg-dark" : "bg-white"
+              }`}
+            >
+              <Card.Header
+                className={`border-0 py-3 ${
+                  darkMode ? "bg-secondary text-white" : "bg-primary text-white"
+                }`}
+              >
+                <h5 className="mb-0 fw-bold">
+                  <FaUserTie className="me-2" />
+                  Current Status Distribution
+                </h5>
+                <small className="opacity-75">All time data - no date filter</small>
+              </Card.Header>
+              <Card.Body>
+                <ResponsiveContainer width="100%" height={350}>
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={120}
+                      innerRadius={40}
+                      paddingAngle={2}
+                      dataKey="count"
+                      nameKey="status"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<PieTooltip />} />
+                    <Legend
+                      wrapperStyle={{
+                        fontSize: "12px",
+                        color: darkMode ? "#adb5bd" : "#6c757d",
+                      }}
+                      iconType="circle"
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Card.Body>
+            </Card>
+          </Col>
+
+          {/* Gender Distribution Chart 
+          <Col xl={6} lg={6} md={12} className="mb-4">
+            <Card
+              className={`border-0 shadow-lg h-100 ${
+                darkMode ? "bg-dark" : "bg-white"
+              }`}
+            >
+              <Card.Header
+                className={`border-0 py-3 ${
+                  darkMode ? "bg-secondary text-white" : "bg-primary text-white"
+                }`}
+              >
+                <h5 className="mb-0 fw-bold">
+                  <FaUsers className="me-2" />
+                  Gender Distribution - {selectedYear}
+                </h5>
+                <small className="opacity-75">Filtered by selected year</small>
+              </Card.Header>
+              <Card.Body>
+                <ResponsiveContainer width="100%" height={350}>
+                  <PieChart>
+                    <Pie
+                      data={genderData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={120}
+                      innerRadius={60}
+                      paddingAngle={5}
+                      dataKey="count"
+                      nameKey="gender"
+                    >
+                      {genderData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<PieTooltip />} />
+                    <Legend
+                      wrapperStyle={{
+                        fontSize: "14px",
+                        color: darkMode ? "#adb5bd" : "#6c757d",
+                      }}
+                      iconType="rect"
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Card.Body>
+            </Card>
+          </Col>   */}
+
+          {/* Intern Type Distribution Chart */}
+          <Col  md={4} className="mb-4">
+            <Card
+              className={`border-0 shadow-lg h-100 ${
+                darkMode ? "bg-dark" : "bg-white"
+              }`}
+            >
+              <Card.Header
+                className={`border-0 py-3 ${
+                  darkMode ? "bg-secondary text-white" : "bg-primary text-white"
+                }`}
+              >
+                <h5 className="mb-0 fw-bold">
+                  <FaBriefcase className="me-2" />
+                  Intern Type Distribution - {selectedYear}
+                </h5>
+                <small className="opacity-75">Filtered by selected year</small>
+              </Card.Header>
+              <Card.Body>
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart
+                    data={internTypeData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={darkMode ? "#495057" : "#dee2e6"}
+                    />
+                    <XAxis
+                      dataKey="type"
+                      stroke={darkMode ? "#adb5bd" : "#6c757d"}
+                      fontSize={11}
+                      angle={-20}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis
+                      stroke={darkMode ? "#adb5bd" : "#6c757d"}
+                      fontSize={12}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar
+                      dataKey="count"
+                      name="Application Count"
+                      radius={[4, 4, 0, 0]}
+                    >
+                      {internTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* CV Table Section */}
+        <Container
+          className="mt-4 p-4 rounded"
+          style={{
+            background: darkMode ? "#343a40" : "#ffffff",
+            color: darkMode ? "white" : "black",
+            border: darkMode ? "1px solid #454d55" : "1px solid #ced4da",
+          }}
+        >
+          <h5 className="mb-3">
+            <FaFileCode
+              className="me-2"
+              style={{ fontSize: "1.2rem", color: darkMode ? "white" : "black" }}
+            />
+            View All CVs
+          </h5>
+          <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
+
+          {/* Filter Section */}
+          <Row className="mb-3">
+            <Col md={3} sm={6} xs={12}>
+              <Form.Group controlId="filterCategory">
+                <Form.Label>Filter Category</Form.Label>
+                <Form.Select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                >
+                  <option value="fullName">Name</option>
+                  <option value="nic">NIC</option>
+                  <option value="refNo">Ref No</option>
+                  <option value="district">District</option>
+                  <option value="institute">Institute</option>
+                  <option value="userType">CV From</option>
+                  <option value="selectedRole">Intern Type</option>
+                  <option value="referredBy">Referred By</option>
+                </Form.Select>
+              </Form.Group>
+            </Col>
           <Col md={5} sm={12} xs={12}>
             <Form.Group controlId="searchInput">
               <Form.Label>Search</Form.Label>
@@ -801,6 +1312,7 @@ The CV has been moved to deleted items and can be restored by administrators if 
         </div>
 
       </Container>
+        </Container>
       
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
@@ -811,7 +1323,9 @@ The CV has been moved to deleted items and can be restored by administrators if 
         darkMode={darkMode}
         loading={deleteLoading}
       />
+    
     </div>
+    
   );
 };
 
