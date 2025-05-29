@@ -667,6 +667,42 @@ const AdminSidebar = ({ darkMode }) => {
                     <FiFilePlus size={18} className="me-2" />
                     New scheme
                   </Nav.Link>
+                 
+                  <Nav.Link
+                    as={Link}
+                    to="/add-new-supervisor"
+                    onClick={() => setShow(false)}
+                    onMouseEnter={() => setHovered("add-new-supervisor")}
+                    onMouseLeave={() => setHovered(null)}
+                    style={{
+                      color: hovered === "add-new-supervisor" ? "#fff" : darkMode ? "#fff" : "#000",
+                      backgroundColor: hovered === "add-new-supervisor" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
+                      borderRadius: "5px",
+                      padding: "8px",
+                      margin: "3px 0",
+                    }}
+                  >
+                    <FiUsers size={18} className="me-2" />
+                    Manage Supervisor
+                  </Nav.Link>
+
+                  <Nav.Link
+                    as={Link}
+                    to="/select-new-supervisor"
+                    onClick={() => setShow(false)}
+                    onMouseEnter={() => setHovered("select-new-supervisor")}
+                    onMouseLeave={() => setHovered(null)}
+                    style={{
+                      color: hovered === "select-new-supervisor" ? "#fff" : darkMode ? "#fff" : "#000",
+                      backgroundColor: hovered === "select-new-supervisor" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
+                      borderRadius: "5px",
+                      padding: "8px",
+                      margin: "3px 0",
+                    }}
+                  >
+                    <FiUsers size={18} className="me-2" />
+                    Select Supervisor
+                  </Nav.Link>
                 </div>
               )}
               
