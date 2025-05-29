@@ -52,10 +52,12 @@ import AddNewInstitute from "./admin/pages/institute/AddNewInstitute";
 import AddNewInduction from "./admin/pages/induction/AddNewInduction";
 import InductionResults from "./admin/pages/induction/InductionResults";
 import ViewAllSchemes from "./admin/pages/scheme/ViewAllSchemes";
+import AddSupervisor from "./admin/pages/scheme/AddSupervisor";
+import SelectSupervisor from "./admin/pages/scheme/SelectSupervisor";
 import ViewInductionDetails from "./admin/pages/induction/ViewInductionDetails";
 import EditInduction from "./admin/pages/induction/EditInduction";
 import AddNewScheme from "./admin/pages/scheme/AddNewScheme";
-import ViewScheme from "./admin/pages/scheme/ViewScheme";
+// import ViewScheme from "./admin/pages/scheme/ViewScheme";
 import AddStaff from "./admin/pages/scheme/AddStaff";
 import EditScheme from "./admin/pages/scheme/EditScheme";
 import EmailConfirmPage from "./components/login/EmailConfirmPage";
@@ -193,6 +195,7 @@ function App() {
     "/induction-results",
     "/view-all-scheme",
     "/add-new-scheme",
+    "/add-new-supervisor",
     "/view-scheme",
     "/add-staff",
     "/schedule-induction",
@@ -355,7 +358,9 @@ function App() {
     <Route path="/induction-results" element={<InductionResults darkMode={darkMode} />} />
     <Route path="/view-all-scheme" element={<ViewAllSchemes darkMode={darkMode} />} />
     <Route path="/add-new-scheme" element={<AddNewScheme darkMode={darkMode} />} />
-    <Route path="/view-scheme/:schemeId" element={<ViewScheme darkMode={darkMode} />} />
+    <Route path="/view-scheme/:schemeId" element={<EditScheme darkMode={darkMode} />} />
+    <Route path="/add-new-supervisor" element={<AddSupervisor darkMode={darkMode} />} />
+    <Route path="/select-new-supervisor" element={<SelectSupervisor darkMode={darkMode} />} />
     <Route path="/add-staff" element={<AddStaff darkMode={darkMode} />} />
     <Route path="/edit-scheme/:schemeId" element={<EditScheme darkMode={darkMode} />} />
     <Route path="/schedule-scheme" element={<ScheduleScheme darkMode={darkMode} />} />
