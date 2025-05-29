@@ -33,6 +33,7 @@ const rotationalRoutes = require("./routes/rotationalRoutes");
 const userActivityRoutes = require("./routes/userActivityRoutes");
 const certificateLetterRoutes = require("./routes/certificateLetterRoutes");
 const { passport } = require('./config/oauthStrategies');
+const employeeRoutes = require('./routes/employeeRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -44,7 +45,6 @@ app.use(passport.initialize());
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(errorHandler);
 autoDeleteRejectedCVs();
 
 // Serve static files (for image uploads, etc.)
@@ -75,6 +75,10 @@ app.use("/api/stations", stationRoutes);
 app.use("/api/rotational", rotationalRoutes);
 app.use("/api/user-activity", userActivityRoutes);
 app.use("/api/certificate-letters", certificateLetterRoutes);
+app.use('/api/employees', employeeRoutes);
+
+
+app.use(errorHandler);
 // MongoDB Connection
 const connectDB = async () => {
   try {
