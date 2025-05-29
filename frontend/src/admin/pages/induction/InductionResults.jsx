@@ -587,7 +587,7 @@ const InductionResults = ({ darkMode }) => {
         </Row>
 
         {/* Export Buttons */}
-        <div className="d-flex justify-content-end mb-3">
+        <div className="d-flex justify-content-left mb-3">
           <Button
             variant="success"
             size="sm"
@@ -608,7 +608,7 @@ const InductionResults = ({ darkMode }) => {
         </div>
 
         {/* Bulk Actions */}
-        <div className="d-flex justify-content-end mb-3">
+        <div className="d-flex justify-content-left mb-3">
           <Button
             variant="success"
             size="sm"

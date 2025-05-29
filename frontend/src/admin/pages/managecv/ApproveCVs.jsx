@@ -273,7 +273,7 @@ const ApproveCVs = ({ darkMode }) => {
         </h5>
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
         {/* Filter Input with Batch Buttons */}
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center mb-3">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-left mb-3">
           <div className="mb-2 mb-sm-0">
             <Form.Control
               type="text"

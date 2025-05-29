@@ -128,7 +128,7 @@ const AllCertificate = ({ darkMode }) => {
           </Form.Group>
 
           <div className="d-flex flex-wrap justify-content-end align-items-center mt-2 mt-sm-0">
-            <Button variant="primary" onClick={() => navigate("/add-certificate")} className="mx-2 mb-2 mb-sm-0">
+            <Button variant="primary" onClick={() => navigate("/add-certificate")} className="mx-0 mb-2 mb-sm-0">
               New Certificate
             </Button>
           </div>

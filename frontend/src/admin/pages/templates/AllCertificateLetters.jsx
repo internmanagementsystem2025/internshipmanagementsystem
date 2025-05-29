@@ -131,7 +131,7 @@ const AllCertificateLetters = ({ darkMode }) => {
 
           {/* Buttons for Adding and Scheduling Interviews */}
           <div className="d-flex flex-wrap justify-content-end align-items-center mt-2 mt-sm-0">
-            <Button variant="primary" onClick={() => navigate("/add-certificate-letter")} className="mx-2 mb-2 mb-sm-0">
+            <Button variant="primary" onClick={() => navigate("/add-certificate-letter")} className="mx-0 mb-2 mb-sm-0">
               New Letter
             </Button>
           </div>
