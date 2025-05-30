@@ -170,6 +170,15 @@ router.use((err, req, res, next) => {
     message: err.message || "Internal server error",
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
+  
+  router.get(
+  '/user/:userId/all',
+  authMiddleware,
+  cvController.getAllCVsForInstitute
+);
+
 });
+
+
 
 module.exports = router;
