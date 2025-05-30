@@ -2438,9 +2438,9 @@ const bulkUploadCV = async (req, res) => {
           institute: row["Institute"],
           userId: instituteId,
           userType: userType,
-          currentStatus: "pending",
+          currentStatus: "cv-approved",
           cvApproval: {
-            status: "pending",
+            status: "cv-approved",
           },
           // Initialize roleData
           roleData: {
@@ -2556,6 +2556,89 @@ const bulkUploadCV = async (req, res) => {
   }
 };
 
+const handleFileUpload = async (e) => {
+  e.preventDefault();
+  if (!file) {
+    setError("Please select a file to upload.");
+    return;
+  }
+
+  try {
+    await validateExcelFile(file);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("You are not authenticated. Please log in.");
+      return;
+    }
+
+    const response = await axios.post(
+      "http://localhost:5000/api/cvs/bulk-upload",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.data.errors?.length > 0) {
+      setUploadErrors(response.data.errors);
+      setError("Some CVs could not be uploaded. See details below.");
+      setSuccess(null);
+    } else {
+      setSuccess("File uploaded successfully!");
+      setError(null);
+      setUploadErrors([]);
+      
+      // Add this to trigger a refresh in the parent component
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cvUploadSuccess'));
+      }
+    }
+  } catch (err) {
+    setError(err.message || "Error uploading file.");
+    setSuccess(null);
+    console.error("Upload error:", err);
+  }
+};
+
+const getAllCVsForInstitute = async (req, res) => {
+  try {
+    if (!req.user || req.user.userType !== "institute") {
+      return res.status(400).json({ message: "Access denied" });
+    }
+
+    const instituteId = req.user.id;
+    const cvs = await CV.find({ userId: instituteId })
+      .populate('uploadedFiles') // populate file references
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Generate missing reference numbers
+    const updatedCvs = await Promise.all(
+      cvs.map(async (cv) => {
+        if (!cv.refNo) {
+          const refNo = `REF-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+          await CV.updateOne({ _id: cv._id }, { $set: { refNo } });
+          return { ...cv, refNo };
+        }
+        return cv;
+      })
+    );
+
+    res.status(200).json(updatedCvs);
+  } catch (error) {
+    console.error("Error in getAllCVsForInstitute:", error);
+    res.status(500).json({ 
+      message: "Server error",
+      error: error.message 
+    });
+  }
+};
 module.exports = {
   createCV,
   getCVById,
@@ -2595,4 +2678,6 @@ module.exports = {
   rescheduleInterview,
   rescheduleInduction,
   upload,
+  getAllCVsForInstitute,
+  handleFileUpload,
 };
