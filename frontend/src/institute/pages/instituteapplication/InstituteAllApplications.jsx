@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Table, Button, Container, Spinner, Alert, Form } from "react-bootstrap";
@@ -29,55 +29,59 @@ const InstituteAllApplications = ({ darkMode }) => {
   const [itemsPerPage] = useState(10);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchUserCVs = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          navigate("/login");
-          return;
-        }
-
-        // Decode the JWT token to get user ID
-        const decodedToken = decodeToken(token);
-        if (!decodedToken || !decodedToken.id) {
-          setError("Invalid token. Please login again.");
-          navigate("/login");
-          return;
-        }
-
-        const currentUserId = decodedToken.id;
-        console.log("Current User ID:", currentUserId); // Debug log
-
-        // Use the user-specific endpoint
-        const response = await axios.get(`http://localhost:5000/api/cvs/user/${currentUserId}/all`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.status === 200) {
-          setCvData(response.data);
-          setError(""); // Clear any previous errors
-        } else {
-          setCvData([]);
-        }
-      } catch (error) {
-        if (error.response?.status === 404) {
-          // No CVs found for this user - this is normal
-          setCvData([]);
-          setError("");
-        } else {
-          setError("Failed to fetch CV data.");
-          console.error("Error fetching CVs:", error);
-          setCvData([]);
-        }
-      } finally {
-        setLoading(false);
+  // Refetch function
+  const fetchUserCVs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/login");
+        return;
       }
-    };
-
-    fetchUserCVs();
+      const decodedToken = decodeToken(token);
+      if (!decodedToken || !decodedToken.id) {
+        setError("Invalid token. Please login again.");
+        navigate("/login");
+        return;
+      }
+      const currentUserId = decodedToken.id;
+      const response = await axios.get(
+        `http://localhost:5000/api/cvs/user/${currentUserId}/all`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (response.status === 200) {
+        setCvData(response.data);
+        setError("");
+      } else {
+        setCvData([]);
+      }
+    } catch (error) {
+      if (error.response?.status === 404) {
+        setCvData([]);
+        setError("");
+      } else {
+        setError("Failed to fetch CV data.");
+        setCvData([]);
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [navigate]);
+
+  useEffect(() => {
+    fetchUserCVs();
+
+    // Listen for bulk upload success event
+    const handleUploadSuccess = () => {
+      fetchUserCVs();
+    };
+    window.addEventListener("cvUploadSuccess", handleUploadSuccess);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("cvUploadSuccess", handleUploadSuccess);
+    };
+  }, [fetchUserCVs, navigate]);
 
   const handleView = (cvId) => {
     navigate(`/view-cv/${cvId}`);
