@@ -160,13 +160,13 @@ exports.deleteScheme = async (req, res) => {
   }
 };
 
-// Assign managers to a scheme with full employee details
+// Assign managers to a scheme with full employee details (6-level hierarchy)
 exports.assignManagers = async (req, res) => {
   try {
     const { id } = req.params;
     const managerData = req.body;
     
-    console.log('Received manager assignment data:', JSON.stringify(managerData, null, 2));
+    console.log('Received 6-level manager assignment data:', JSON.stringify(managerData, null, 2));
     
     const scheme = await Scheme.findById(id);
     if (!scheme) {
@@ -177,7 +177,7 @@ exports.assignManagers = async (req, res) => {
       });
     }
 
-    // Helper function to process manager data
+    // Helper function to process manager data for any level
     const processManagerData = (managerInfo) => {
       if (!managerInfo || !managerInfo.id) return null;
       
@@ -194,42 +194,34 @@ exports.assignManagers = async (req, res) => {
         gradeLevel: managerInfo.gradeLevel,
         allocationCount: parseInt(managerInfo.allocationCount) || 0,
         availableAllocation: parseInt(managerInfo.allocationCount) || 0,
-        assignedCount: 0, // Will be recalculated
+        assignedCount: 0, 
         assignedDate: managerData.assignedDate || new Date().toISOString(),
         assignedBy: managerData.assignedBy || 'system'
       };
     };
 
-    // Process each manager type
-    if (managerData.generalManager) {
-      const gmData = processManagerData(managerData.generalManager);
-      if (gmData) {
-        scheme.generalManager = gmData;
-        console.log('Assigned General Manager:', gmData.name);
-      }
-    }
+    // Process each level manager (1-6)
+    const assignedManagers = [];
     
-    if (managerData.deputyManager) {
-      const dmData = processManagerData(managerData.deputyManager);
-      if (dmData) {
-        scheme.deputyManager = dmData;
-        console.log('Assigned Deputy Manager:', dmData.name);
-      }
-    }
-    
-    if (managerData.supervisor) {
-      const sData = processManagerData(managerData.supervisor);
-      if (sData) {
-        scheme.supervisor = sData;
-        console.log('Assigned Supervisor:', sData.name);
+    for (let level = 1; level <= 6; level++) {
+      const levelKey = `level${level}Manager`;
+      
+      if (managerData[levelKey]) {
+        const managerInfo = processManagerData(managerData[levelKey]);
+        if (managerInfo) {
+          scheme[levelKey] = managerInfo;
+          assignedManagers.push({
+            level: level,
+            name: managerInfo.name,
+            allocation: managerInfo.allocationCount
+          });
+          console.log(`Assigned Level ${level} Manager:`, managerInfo.name);
+        }
       }
     }
 
     // Validate total allocation doesn't exceed scheme allocation
-    const totalManagerAllocation = 
-      (scheme.generalManager?.allocationCount || 0) +
-      (scheme.deputyManager?.allocationCount || 0) +
-      (scheme.supervisor?.allocationCount || 0);
+    const totalManagerAllocation = scheme.getTotalManagerAllocation();
 
     if (totalManagerAllocation > scheme.totalAllocation) {
       return res.status(400).json({
@@ -249,8 +241,9 @@ exports.assignManagers = async (req, res) => {
     
     res.status(200).json({ 
       success: true,
-      message: 'Managers assigned successfully', 
-      data: updatedScheme
+      message: `Successfully assigned ${assignedManagers.length} managers across ${assignedManagers.length} levels`, 
+      data: updatedScheme,
+      assignedManagers: assignedManagers
     });
     
   } catch (error) {
@@ -263,7 +256,7 @@ exports.assignManagers = async (req, res) => {
   }
 };
 
-// Helper function to recalculate scheme allocation
+// Helper function to recalculate scheme allocation for 6-level system
 const recalculateSchemeAllocation = async (schemeId) => {
   try {
     const scheme = await Scheme.findById(schemeId);
@@ -272,50 +265,36 @@ const recalculateSchemeAllocation = async (schemeId) => {
     // Count all interns assigned to this scheme
     const allocatedCount = await Intern.countDocuments({ schemeId: schemeId });
     
-    // Count interns assigned to each manager type
-    const generalManagerCount = await Intern.countDocuments({ 
-      schemeId: schemeId, 
-      managerType: 'generalManager'
-    });
+    // Count interns assigned to each manager level
+    const levelCounts = {};
     
-    const deputyManagerCount = await Intern.countDocuments({ 
-      schemeId: schemeId, 
-      managerType: 'deputyManager' 
-    });
-    
-    const supervisorCount = await Intern.countDocuments({ 
-      schemeId: schemeId, 
-      managerType: 'supervisor' 
-    });
+    for (let level = 1; level <= 6; level++) {
+      const managerType = `level${level}Manager`;
+      
+      levelCounts[level] = await Intern.countDocuments({ 
+        schemeId: schemeId, 
+        managerType: managerType
+      });
+    }
     
     console.log(`Recalculation for scheme ${schemeId}:`, {
       total: allocatedCount,
-      gm: generalManagerCount,
-      dm: deputyManagerCount,
-      supervisor: supervisorCount
+      levelBreakdown: levelCounts
     });
     
     // Update scheme counts
     scheme.totalAllocatedCount = allocatedCount;
     scheme.totalEmptyCount = scheme.totalAllocation - allocatedCount;
     
-    // Update manager assigned counts
-    if (scheme.generalManager) {
-      scheme.generalManager.assignedCount = generalManagerCount;
-      scheme.generalManager.availableAllocation = 
-        Math.max(0, scheme.generalManager.allocationCount - generalManagerCount);
-    }
-    
-    if (scheme.deputyManager) {
-      scheme.deputyManager.assignedCount = deputyManagerCount;
-      scheme.deputyManager.availableAllocation = 
-        Math.max(0, scheme.deputyManager.allocationCount - deputyManagerCount);
-    }
-    
-    if (scheme.supervisor) {
-      scheme.supervisor.assignedCount = supervisorCount;
-      scheme.supervisor.availableAllocation = 
-        Math.max(0, scheme.supervisor.allocationCount - supervisorCount);
+    // Update manager assigned counts for each level
+    for (let level = 1; level <= 6; level++) {
+      const levelKey = `level${level}Manager`;
+      
+      if (scheme[levelKey] && scheme[levelKey].employeeId) {
+        scheme[levelKey].assignedCount = levelCounts[level] || 0;
+        scheme[levelKey].availableAllocation = 
+          Math.max(0, scheme[levelKey].allocationCount - (levelCounts[level] || 0));
+      }
     }
     
     await scheme.save();
@@ -358,7 +337,7 @@ exports.recalculateAllocation = async (req, res) => {
   }
 };
 
-// Get manager details for a scheme
+// Get manager details for a scheme (6-level system)
 exports.getSchemeManagers = async (req, res) => {
   try {
     const { id } = req.params;
@@ -373,9 +352,12 @@ exports.getSchemeManagers = async (req, res) => {
     }
     
     const managers = {
-      generalManager: scheme.generalManager,
-      deputyManager: scheme.deputyManager,
-      supervisor: scheme.supervisor,
+      level1Manager: scheme.level1Manager,
+      level2Manager: scheme.level2Manager,
+      level3Manager: scheme.level3Manager,
+      level4Manager: scheme.level4Manager,
+      level5Manager: scheme.level5Manager,
+      level6Manager: scheme.level6Manager,
       schemeDetails: {
         schemeName: scheme.schemeName,
         totalAllocation: scheme.totalAllocation,
@@ -399,17 +381,22 @@ exports.getSchemeManagers = async (req, res) => {
   }
 };
 
-// Remove a manager from a scheme
+// Remove a manager from a scheme (6-level system)
 exports.removeManager = async (req, res) => {
   try {
     const { id } = req.params;
     const { managerType } = req.body;
     
-    if (!['generalManager', 'deputyManager', 'supervisor'].includes(managerType)) {
+    const validManagerTypes = [
+      'level1Manager', 'level2Manager', 'level3Manager',
+      'level4Manager', 'level5Manager', 'level6Manager'
+    ];
+    
+    if (!validManagerTypes.includes(managerType)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid manager type',
-        message: 'Manager type must be generalManager, deputyManager, or supervisor'
+        message: 'Manager type must be one of: ' + validManagerTypes.join(', ')
       });
     }
     
@@ -456,7 +443,7 @@ exports.removeManager = async (req, res) => {
   }
 };
 
-// Get scheme statistics
+// Get scheme statistics (6-level system)
 exports.getSchemeStats = async (req, res) => {
   try {
     const { id } = req.params;
@@ -470,7 +457,7 @@ exports.getSchemeStats = async (req, res) => {
       });
     }
     
-    // Get detailed intern statistics
+    // Get detailed intern statistics for 6-level system
     const internStats = await Intern.aggregate([
       { $match: { schemeId: id } },
       {
@@ -492,9 +479,12 @@ exports.getSchemeStats = async (req, res) => {
         utilizationPercentage: Math.round((scheme.totalAllocatedCount / scheme.totalAllocation) * 100)
       },
       managers: {
-        generalManager: scheme.generalManager,
-        deputyManager: scheme.deputyManager,
-        supervisor: scheme.supervisor
+        level1Manager: scheme.level1Manager,
+        level2Manager: scheme.level2Manager,
+        level3Manager: scheme.level3Manager,
+        level4Manager: scheme.level4Manager,
+        level5Manager: scheme.level5Manager,
+        level6Manager: scheme.level6Manager
       },
       internDistribution: internStats.reduce((acc, stat) => {
         acc[stat._id] = {
@@ -504,7 +494,10 @@ exports.getSchemeStats = async (req, res) => {
         return acc;
       }, {}),
       summary: {
-        totalManagers: [scheme.generalManager, scheme.deputyManager, scheme.supervisor].filter(Boolean).length,
+        totalManagers: [
+          scheme.level1Manager, scheme.level2Manager, scheme.level3Manager,
+          scheme.level4Manager, scheme.level5Manager, scheme.level6Manager
+        ].filter(Boolean).length,
         totalAllocatedPositions: scheme.totalAllocatedCount,
         remainingPositions: scheme.totalEmptyCount,
         allocationComplete: scheme.totalAllocatedCount === scheme.totalAllocation

@@ -168,75 +168,33 @@ export const SchemeManagers = ({ darkMode = false }) => {
     return stats;
   };
 
-  // Process scheme managers into level-wise structure
+  // Process scheme managers into level-wise structure for 6-level system
   const processLevelWiseManagers = (schemeData) => {
     const levelManagers = {};
     
     if (!schemeData) return levelManagers;
 
-    // Check for level-based manager properties
-    Object.keys(schemeData).forEach(key => {
-      if (key.includes('Manager') || key.includes('supervisor')) {
-        const manager = schemeData[key];
-        if (manager && manager.hierarchyLevel) {
-          const level = manager.hierarchyLevel;
-          if (!levelManagers[level]) {
-            levelManagers[level] = [];
-          }
-          levelManagers[level].push({
-            ...manager,
-            role: key,
-            roleTitle: getRoleTitle(key, level)
-          });
+    // Process 6-level manager structure
+    for (let level = 1; level <= 6; level++) {
+      const managerKey = `level${level}Manager`;
+      const manager = schemeData[managerKey];
+      
+      if (manager && manager.employeeId) {
+        if (!levelManagers[level]) {
+          levelManagers[level] = [];
         }
+        
+        levelManagers[level].push({
+          ...manager,
+          role: managerKey,
+          roleTitle: `Level ${level} Manager`,
+          level: level
+        });
       }
-    });
-
-    // If no level-based managers found, check legacy structure
-    if (Object.keys(levelManagers).length === 0) {
-      const legacyRoles = [
-        { key: 'generalManager', title: 'General Manager', defaultLevel: 1 },
-        { key: 'deputyManager', title: 'Deputy Manager', defaultLevel: 2 },
-        { key: 'supervisor', title: 'Supervisor', defaultLevel: 3 }
-      ];
-
-      legacyRoles.forEach(({ key, title, defaultLevel }) => {
-        const manager = schemeData[key];
-        if (manager) {
-          const level = manager.hierarchyLevel || defaultLevel;
-          if (!levelManagers[level]) {
-            levelManagers[level] = [];
-          }
-          levelManagers[level].push({
-            ...manager,
-            role: key,
-            roleTitle: title
-          });
-        }
-      });
     }
 
+    console.log('Processed level-wise managers:', levelManagers);
     return levelManagers;
-  };
-
-  // Get role title based on role key and level
-  const getRoleTitle = (roleKey, level) => {
-    const roleTitles = {
-      'generalManager': 'General Manager',
-      'deputyManager': 'Deputy Manager', 
-      'supervisor': 'Supervisor'
-    };
-
-    if (roleTitles[roleKey]) {
-      return roleTitles[roleKey];
-    }
-
-    // For dynamic level managers
-    if (roleKey.includes('level') && roleKey.includes('Manager')) {
-      return `Level ${level} Manager`;
-    }
-
-    return `Level ${level} Manager`;
   };
 
   // Get level colors for consistent styling
@@ -324,6 +282,7 @@ export const SchemeManagers = ({ darkMode = false }) => {
     }
   }, [scheme]);
 
+  // Updated handler for 6-level manager assignment
   const handleAssignManager = async (managerData) => {
     try {
       setLoading(true);
@@ -331,49 +290,49 @@ export const SchemeManagers = ({ darkMode = false }) => {
 
       console.log('Assigning managers with data:', managerData);
 
-      // Extract manager assignments from the modal data
-      const { generalManager, deputyManager, supervisor } = managerData;
+      // Extract manager assignments for 6-level system
+      const managerAssignments = {};
 
-      // Find full employee details from our loaded employees
-      const getEmployeeById = (id) => employees.find(emp => emp.id === id);
-
-      // Get or fetch employee details
-      const getOrFetchEmployee = async (empData) => {
-        if (!empData?.id) return null;
+      // Process each level (1-6)
+      for (let level = 1; level <= 6; level++) {
+        const levelKey = `level${level}Manager`;
+        const managerInfo = managerData[levelKey];
         
-        let employee = getEmployeeById(empData.id);
-        if (!employee) {
-          employee = await getEmployeeDetails(empData.id);
+        if (managerInfo && managerInfo.id) {
+          // Find full employee details from our loaded employees
+          let employee = employees.find(emp => emp.id === managerInfo.id);
+          if (!employee) {
+            employee = await getEmployeeDetails(managerInfo.id);
+          }
+          
+          if (employee) {
+            managerAssignments[levelKey] = {
+              id: employee.id,
+              name: employee.name,
+              employeeCode: employee.employeeCode,
+              email: employee.email,
+              department: employee.department,
+              position: employee.position,
+              hierarchyLevel: employee.hierarchyLevel,
+              allocationCount: managerInfo.allocationCount || 0,
+              divisionCode: employee.divisionCode,
+              costCenter: employee.costCenter,
+              gradeLevel: employee.gradeLevel
+            };
+          }
         }
-        
-        if (!employee) return null;
+      }
 
-        return {
-          id: employee.id,
-          name: employee.name,
-          employeeCode: employee.employeeCode,
-          email: employee.email,
-          department: employee.department,
-          position: employee.position,
-          hierarchyLevel: employee.hierarchyLevel,
-          allocationCount: empData.allocationCount || 0,
-          divisionCode: employee.divisionCode,
-          costCenter: employee.costCenter,
-          gradeLevel: employee.gradeLevel
-        };
-      };
-
+      // Prepare assignment data
       const assignManagerData = {
-        generalManager: await getOrFetchEmployee(generalManager),
-        deputyManager: await getOrFetchEmployee(deputyManager),
-        supervisor: await getOrFetchEmployee(supervisor),
+        ...managerAssignments,
         assignedDate: new Date().toISOString(),
         assignedBy: localStorage.getItem('current_user_id') || 'system',
         schemeId: schemeId,
         totalAllocation: scheme?.totalAllocation || 0
       };
 
-      console.log("Sending manager assignment data:", assignManagerData);
+      console.log("Sending 6-level manager assignment data:", assignManagerData);
 
       // Update your scheme system
       const assignResponse = await axios.put(
@@ -572,7 +531,7 @@ export const SchemeManagers = ({ darkMode = false }) => {
           <div>
             <h4 className="mb-1">
               <Diagram3 className="me-2" />
-              Level-wise Manager Assignment System
+              6-Level Manager Assignment System
             </h4>
             <small className="text-muted">
               Connected to Employee Database | {employees.length} employees loaded
@@ -675,7 +634,7 @@ export const SchemeManagers = ({ darkMode = false }) => {
           </Col>
         </Row>
 
-        {/* Level-wise Manager Cards */}
+        {/* 6-Level Manager Cards */}
         {assignedLevels.length > 0 ? (
           <Row className="mb-4">
             {assignedLevels.map((level) => {
@@ -687,7 +646,7 @@ export const SchemeManagers = ({ darkMode = false }) => {
                   <Card className={`bg-${darkMode ? 'dark' : 'light'} text-${darkMode ? 'white' : 'dark'} h-100 border-0 shadow`}>
                     <Card.Header className={`bg-${levelColor} text-white`}>
                       <h5 className="mb-0">
-                        Level {level} - {manager.roleTitle}
+                        {manager?.position || `Level ${level} Manager`}
                       </h5>
                     </Card.Header>
                     <Card.Body>
@@ -715,21 +674,26 @@ export const SchemeManagers = ({ darkMode = false }) => {
                           </div>
                         )}
 
-                        {manager?.position && (
+                        {manager?.email && (
                           <div className="d-flex justify-content-between align-items-center mb-2">
-                            <strong>Position:</strong>
-                            <span>{manager.position}</span>
+                            <strong>Email:</strong>
+                            <small>{manager.email}</small>
                           </div>
                         )}
 
                         <div className="d-flex justify-content-between align-items-center mb-2">
                           <strong>Hierarchy Level:</strong>
-                          <span className={`badge bg-${levelColor}`}>{level}</span>
+                          <span className={`badge bg-${levelColor}`}>{manager.hierarchyLevel || level}</span>
                         </div>
                         
-                        <div className="d-flex justify-content-between align-items-center mb-3">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
                           <strong>Allocation:</strong>
                           <span className="badge bg-info">{manager?.allocationCount || 0}</span>
+                        </div>
+
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                          <strong>Assigned:</strong>
+                          <span className="badge bg-success">{manager?.assignedCount || 0}</span>
                         </div>
                       </div>
 
@@ -750,9 +714,9 @@ export const SchemeManagers = ({ darkMode = false }) => {
               <Alert variant="info" className="text-center">
                 <Diagram3 size={48} className="mb-3" />
                 <h5>No Managers Assigned Yet</h5>
-                <p>Use the "Assign Manager" button above to assign managers at different hierarchy levels.</p>
+                <p>Use the "Assign Manager" button above to assign managers at different hierarchy levels (Level 1-6).</p>
                 <small className="text-muted">
-                  The system will display level-wise manager cards once assignments are made.
+                  The 6-level system supports comprehensive hierarchical management assignments.
                 </small>
               </Alert>
             </Col>

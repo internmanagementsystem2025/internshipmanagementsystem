@@ -2,9 +2,18 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Spinner, Alert } from "react-bootstrap";
 import axios from "axios";
 
-const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
+const AssignSchemeModal = ({ 
+  show, 
+  onClose, 
+  onConfirm, 
+  refNo, 
+  darkMode, 
+  isBatch = false, 
+  selectedCount = 0 
+}) => {
   const [schemes, setSchemes] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     schemeId: "",
     managerId: "",
@@ -15,104 +24,27 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
   const [selectedScheme, setSelectedScheme] = useState(null);
   const [message, setMessage] = useState({ text: "", variant: "" });
   const [schemeManagers, setSchemeManagers] = useState([]);
-  const token = localStorage.getItem("token");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Fetch schemes
-        const schemesResponse = await axios.get(
-          "http://localhost:5000/api/schemes",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+  // Create axios instance
+  const api = axios.create({
+    baseURL: "http://localhost:5000/api",
+  });
 
-        setSchemes(schemesResponse.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setMessage({
-          text: `Failed to fetch schemes: ${error.message}`,
-          variant: "danger",
-        });
-      } finally {
-        setLoading(false);
+  // Add request interceptor to include auth token
+  api.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem("token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
-    };
-
-    if (show) {
-      fetchData();
-      // Reset form when modal opens
-      setFormData({
-        schemeId: "",
-        managerId: "",
-        internshipPeriod: 6,
-        startDate: getTodayFormatted(),
-        forRequest: "no",
-      });
-      setSelectedScheme(null);
-      setSchemeManagers([]);
-      setMessage({ text: "", variant: "" });
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
     }
-  }, [show, token]);
+  );
 
-  useEffect(() => {
-    // Update available managers when a scheme is selected
-    if (selectedScheme) {
-      const managers = [];
-
-      if (
-        selectedScheme.generalManager?.name &&
-        selectedScheme.generalManager?.availableAllocation > 0
-      ) {
-        managers.push({
-          id: "generalManager",
-          name: selectedScheme.generalManager.name,
-          role: "General Manager",
-          availableAllocation:
-            selectedScheme.generalManager.availableAllocation || 0,
-        });
-      }
-
-      if (
-        selectedScheme.deputyManager?.name &&
-        selectedScheme.deputyManager?.availableAllocation > 0
-      ) {
-        managers.push({
-          id: "deputyManager",
-          name: selectedScheme.deputyManager.name,
-          role: "Deputy Manager",
-          availableAllocation:
-            selectedScheme.deputyManager.availableAllocation || 0,
-        });
-      }
-
-      if (
-        selectedScheme.supervisor?.name &&
-        selectedScheme.supervisor?.availableAllocation > 0
-      ) {
-        managers.push({
-          id: "supervisor",
-          name: selectedScheme.supervisor.name,
-          role: "Supervisor",
-          availableAllocation:
-            selectedScheme.supervisor.availableAllocation || 0,
-        });
-      }
-
-      setSchemeManagers(managers);
-
-      setFormData((prev) => ({
-        ...prev,
-        managerId: "",
-      }));
-    } else {
-      setSchemeManagers([]);
-    }
-  }, [selectedScheme]);
-
-  // Helper function to get today's date in yyyy-MM-dd format for the date picker
+  // Helper function to get today's date in yyyy-MM-dd format
   const getTodayFormatted = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -121,24 +53,141 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
     return `${year}-${month}-${day}`;
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  // Reset form data
+  const resetForm = () => {
     setFormData({
-      ...formData,
-      [name]: value,
+      schemeId: "",
+      managerId: "",
+      internshipPeriod: 6,
+      startDate: getTodayFormatted(),
+      forRequest: "no",
+    });
+    setSelectedScheme(null);
+    setSchemeManagers([]);
+    setMessage({ text: "", variant: "" });
+  };
+
+  // Fetch schemes when modal opens
+  useEffect(() => {
+    const fetchSchemes = async () => {
+      if (!show) return;
+      
+      setLoading(true);
+      setMessage({ text: "", variant: "" });
+      
+      try {
+        const response = await api.get("/schemes");
+        const schemesData = response.data?.data || response.data || [];
+        
+        if (Array.isArray(schemesData)) {
+          // Filter only active schemes
+          const activeSchemes = schemesData.filter(scheme => scheme.isActive !== false);
+          setSchemes(activeSchemes);
+        } else {
+          console.error("Invalid schemes data structure:", schemesData);
+          setSchemes([]);
+          setMessage({
+            text: "Failed to load schemes: Invalid data format",
+            variant: "danger",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching schemes:", error);
+        const errorMessage = error.response?.data?.message || 
+                            error.response?.data?.error || 
+                            error.message || 
+                            "Failed to fetch schemes";
+        setMessage({
+          text: `Failed to fetch schemes: ${errorMessage}`,
+          variant: "danger",
+        });
+        setSchemes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (show) {
+      resetForm();
+      fetchSchemes();
+    }
+  }, [show]);
+
+  // Update available managers when scheme is selected
+  useEffect(() => {
+    if (!selectedScheme) {
+      setSchemeManagers([]);
+      setFormData(prev => ({ ...prev, managerId: "" }));
+      return;
+    }
+
+    const managers = [];
+
+    // Check all 6 levels of managers based on your schema
+    const managerLevels = [
+      { key: 'level1Manager', level: 1, title: 'Executive Level' },
+      { key: 'level2Manager', level: 2, title: 'Senior Management' },
+      { key: 'level3Manager', level: 3, title: 'Middle Management' },
+      { key: 'level4Manager', level: 4, title: 'Team Leadership' },
+      { key: 'level5Manager', level: 5, title: 'Supervisory Level' },
+      { key: 'level6Manager', level: 6, title: 'Operational Level' }
+    ];
+
+    managerLevels.forEach(({ key, level, title }) => {
+      const manager = selectedScheme[key];
+      if (manager?.employeeId && manager?.name) {
+        const availableAllocation = manager.availableAllocation || 0;
+        
+        // Only include managers with available allocation
+        if (availableAllocation > 0) {
+          managers.push({
+            id: level.toString(), // Use level as ID for backend compatibility
+            employeeId: manager.employeeId,
+            name: manager.name,
+            role: `${title} (Level ${level})`,
+            position: manager.position || title,
+            department: manager.department || 'N/A',
+            availableAllocation: availableAllocation,
+            allocationCount: manager.allocationCount || 0,
+            assignedCount: manager.assignedCount || 0,
+            level: level
+          });
+        }
+      }
     });
 
-    if (name === "schemeId" && value) {
-      const scheme = schemes.find((s) => s._id === value);
-      setSelectedScheme(scheme);
-    } else if (name === "schemeId" && !value) {
-      setSelectedScheme(null);
+    // Sort managers by hierarchy level
+    managers.sort((a, b) => a.level - b.level);
+
+    setSchemeManagers(managers);
+    setFormData(prev => ({ ...prev, managerId: "" }));
+  }, [selectedScheme]);
+
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // Update selected scheme when scheme changes
+    if (name === "schemeId") {
+      if (value) {
+        const scheme = schemes.find((s) => s._id === value);
+        setSelectedScheme(scheme);
+      } else {
+        setSelectedScheme(null);
+      }
     }
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate required fields
     if (!formData.schemeId || !formData.managerId || !formData.startDate) {
       setMessage({
         text: "Please fill all required fields",
@@ -146,57 +195,110 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
       });
       return;
     }
-    
-    try {
-      setLoading(true); // Show loading state during submission
-      setMessage({ text: "", variant: "" }); // Clear any previous messages
 
-      // Call the onConfirm prop (which calls handleAssignScheme from parent)
-      const result = await onConfirm(formData);
-
-      // Only show success and close if the operation was successful
+    // Validate internship period
+    if (formData.internshipPeriod < 1 || formData.internshipPeriod > 24) {
       setMessage({
-        text: "Scheme assigned successfully!",
+        text: "Internship period must be between 1 and 24 months",
+        variant: "danger",
+      });
+      return;
+    }
+
+    // Validate start date is not in the past
+    const startDate = new Date(formData.startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (startDate < today) {
+      setMessage({
+        text: "Start date cannot be in the past",
+        variant: "danger",
+      });
+      return;
+    }
+
+    // Check if selected manager has available allocation
+    const selectedManager = schemeManagers.find(m => m.id === formData.managerId);
+    if (selectedManager && selectedManager.availableAllocation <= 0) {
+      setMessage({
+        text: "Selected manager has no available allocation",
+        variant: "danger",
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setMessage({ text: "", variant: "" });
+
+      // Prepare data for submission
+      const submissionData = {
+        ...formData,
+        managerLevel: parseInt(formData.managerId), // Convert to number for backend
+        forRequest: formData.forRequest === "yes"
+      };
+
+      // Call the parent's onConfirm function
+      await onConfirm(submissionData);
+
+      // Show success message
+      setMessage({
+        text: isBatch 
+          ? `Successfully assigned scheme to ${selectedCount} candidates!`
+          : "Scheme assigned successfully!",
         variant: "success",
       });
 
-      // Close the modal after 2 seconds
+      // Close modal after short delay
       setTimeout(() => {
         handleClose();
-      }, 2000);
+      }, 1500);
+
     } catch (error) {
+      console.error("Error in form submission:", error);
       setMessage({
-        text: `Failed to assign scheme: ${error.message || "Unknown error"}`,
+        text: error.message || "Failed to assign scheme. Please try again.",
         variant: "danger",
       });
     } finally {
-      setLoading(false); // Hide loading state
+      setSubmitting(false);
     }
   };
 
-  // Reset message when modal closes
+  // Handle modal close
   const handleClose = () => {
-    setMessage({ text: "", variant: "" });
-    onClose();
+    if (!submitting) {
+      resetForm();
+      onClose();
+    }
   };
 
+  // Get scheme display text with available positions
   const getSchemeDisplayText = (scheme) => {
-    const emptyCount =
-      scheme.totalEmptyCount !== undefined
-        ? scheme.totalEmptyCount
-        : scheme.totalAllocation - (scheme.totalAllocatedCount || 0);
+    const emptyCount = scheme.totalEmptyCount !== undefined
+      ? scheme.totalEmptyCount
+      : Math.max(0, (scheme.totalAllocation || 0) - (scheme.totalAllocatedCount || 0));
 
     return `${scheme.schemeName} (Available: ${emptyCount})`;
   };
 
-  // Filter out schemes with no empty spots
+  // Filter schemes with available positions
   const availableSchemes = schemes.filter((scheme) => {
-    const emptyCount =
-      scheme.totalEmptyCount !== undefined
-        ? scheme.totalEmptyCount
-        : scheme.totalAllocation - (scheme.totalAllocatedCount || 0);
-    return emptyCount > 0;
+    const emptyCount = scheme.totalEmptyCount !== undefined
+      ? scheme.totalEmptyCount
+      : Math.max(0, (scheme.totalAllocation || 0) - (scheme.totalAllocatedCount || 0));
+    
+    return emptyCount > 0 && scheme.isActive !== false;
   });
+
+  // Get selected manager details for display
+  const getSelectedManagerDetails = () => {
+    if (!formData.managerId) return null;
+    return schemeManagers.find(m => m.id === formData.managerId);
+  };
+
+  const selectedManagerDetails = getSelectedManagerDetails();
 
   return (
     <Modal
@@ -205,52 +307,64 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
       backdrop="static"
       keyboard={false}
       centered
+      size="lg"
       contentClassName={darkMode ? "bg-dark text-white" : ""}
     >
       <Modal.Header 
         closeButton 
         className={darkMode ? "border-secondary" : ""}
       >
-        <Modal.Title>Assign Scheme</Modal.Title>
+        <Modal.Title>
+          {isBatch ? `Batch Assign Scheme (${selectedCount} candidates)` : "Assign Scheme"}
+        </Modal.Title>
       </Modal.Header>
+      
       <Modal.Body>
+        {/* Loading State */}
         {loading && (
           <div className="text-center p-4">
-            <Spinner animation="border" />
-            <p className="mt-3">Loading data...</p>
+            <Spinner animation="border" variant={darkMode ? "light" : "primary"} />
+            <p className="mt-3">Loading schemes...</p>
           </div>
         )}
 
+        {/* Messages */}
         {message.text && (
-          <Alert variant={message.variant} className="mt-3">
+          <Alert 
+            variant={message.variant} 
+            className="mt-3"
+            dismissible={message.variant === "danger"}
+            onClose={() => message.variant === "danger" && setMessage({ text: "", variant: "" })}
+          >
             {message.text}
           </Alert>
         )}
 
+        {/* Form */}
         {!loading && (
           <Form onSubmit={handleSubmit}>
+            {/* Candidate Reference */}
             <Form.Group className="mb-3">
-              <Form.Label>Candidate Reference</Form.Label>
+              <Form.Label>
+                {isBatch ? "Selected Candidates" : "Candidate Reference"}
+              </Form.Label>
               <Form.Control
                 type="text"
-                value={refNo || "Selected Candidate"}
+                value={refNo || (isBatch ? `${selectedCount} candidates selected` : "Selected Candidate")}
                 disabled
-                className={darkMode ? "bg-secondary text-white" : ""}
+                className={darkMode ? "bg-secondary text-white border-secondary" : ""}
               />
             </Form.Group>
 
+            {/* Scheme Selection */}
             <Form.Group className="mb-3">
               <Form.Label>
                 Select Scheme <span className="text-danger">*</span>
               </Form.Label>
               {availableSchemes.length === 0 ? (
-                <div
-                  className={`alert ${
-                    darkMode ? "alert-danger bg-dark" : "alert-danger"
-                  }`}
-                >
-                  No schemes with available positions found.
-                </div>
+                <Alert variant="warning" className={darkMode ? "bg-warning text-dark" : ""}>
+                  No schemes with available positions found. Please contact administrator.
+                </Alert>
               ) : (
                 <>
                   <Form.Select
@@ -258,7 +372,8 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
                     value={formData.schemeId}
                     onChange={handleChange}
                     required
-                    className={darkMode ? "bg-secondary text-white" : ""}
+                    className={darkMode ? "bg-secondary text-white border-secondary" : ""}
+                    disabled={submitting}
                   >
                     <option value="">Choose a scheme...</option>
                     {availableSchemes.map((scheme) => (
@@ -267,18 +382,25 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
                       </option>
                     ))}
                   </Form.Select>
-                  {formData.schemeId && (
-                    <Form.Text
-                      className={darkMode ? "text-light" : "text-muted"}
-                    >
-                      {schemes.find((s) => s._id === formData.schemeId)
-                        ?.description || ""}
+                  {selectedScheme?.description && (
+                    <Form.Text className={darkMode ? "text-light" : "text-muted"}>
+                      <strong>Description:</strong> {selectedScheme.description}
                     </Form.Text>
+                  )}
+                  {selectedScheme && (
+                    <div className="mt-2">
+                      <Form.Text className={darkMode ? "text-light" : "text-muted"}>
+                        <strong>Period:</strong> {selectedScheme.schemeStartDate} to {selectedScheme.schemeEndDate} | 
+                        <strong> Allowance:</strong> ${selectedScheme.perHeadAllowance} {selectedScheme.allowanceFrequency} | 
+                        <strong> Total Positions:</strong> {selectedScheme.totalAllocation}
+                      </Form.Text>
+                    </div>
                   )}
                 </>
               )}
             </Form.Group>
 
+            {/* Manager Selection */}
             <Form.Group className="mb-3">
               <Form.Label>
                 Select Manager <span className="text-danger">*</span>
@@ -288,29 +410,40 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
                 value={formData.managerId}
                 onChange={handleChange}
                 required
-                className={darkMode ? "bg-secondary text-white" : ""}
-                disabled={!selectedScheme || schemeManagers.length === 0}
+                className={darkMode ? "bg-secondary text-white border-secondary" : ""}
+                disabled={!selectedScheme || schemeManagers.length === 0 || submitting}
               >
                 <option value="">Choose a manager...</option>
                 {schemeManagers.map((manager) => (
                   <option key={manager.id} value={manager.id}>
-                    {manager.name} ({manager.role}) - Available:{" "}
-                    {manager.availableAllocation}
+                    {manager.name} - {manager.role} (Available: {manager.availableAllocation}/{manager.allocationCount})
                   </option>
                 ))}
               </Form.Select>
+              
               {selectedScheme && schemeManagers.length === 0 && (
-                <Form.Text className="text-danger">
-                  No managers with available allocation for this scheme. Please choose a different
-                  scheme or update manager allocations.
+                <Form.Text className="text-warning">
+                  No managers with available allocation found for this scheme.
                 </Form.Text>
+              )}
+              
+              {selectedManagerDetails && (
+                <div className="mt-2">
+                  <Form.Text className={darkMode ? "text-light" : "text-muted"}>
+                    <strong>Manager Details:</strong><br/>
+                    <strong>Employee ID:</strong> {selectedManagerDetails.employeeId}<br/>
+                    <strong>Department:</strong> {selectedManagerDetails.department}<br/>
+                    <strong>Position:</strong> {selectedManagerDetails.position}<br/>
+                    <strong>Allocation:</strong> {selectedManagerDetails.assignedCount}/{selectedManagerDetails.allocationCount} assigned
+                  </Form.Text>
+                </div>
               )}
             </Form.Group>
 
+            {/* Internship Period */}
             <Form.Group className="mb-3">
               <Form.Label>
-                Internship Period (Months){" "}
-                <span className="text-danger">*</span>
+                Internship Period (Months) <span className="text-danger">*</span>
               </Form.Label>
               <Form.Control
                 type="number"
@@ -320,11 +453,15 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
                 min="1"
                 max="24"
                 required
-                className={darkMode ? "bg-secondary text-white" : ""}
-                disabled={availableSchemes.length === 0}
+                className={darkMode ? "bg-secondary text-white border-secondary" : ""}
+                disabled={availableSchemes.length === 0 || submitting}
               />
+              <Form.Text className={darkMode ? "text-light" : "text-muted"}>
+                Enter a value between 1 and 24 months
+              </Form.Text>
             </Form.Group>
 
+            {/* Start Date */}
             <Form.Group className="mb-3">
               <Form.Label>
                 Internship Start Date <span className="text-danger">*</span>
@@ -334,28 +471,41 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
                 name="startDate"
                 value={formData.startDate}
                 onChange={handleChange}
+                min={getTodayFormatted()}
                 required
-                className={darkMode ? "bg-secondary text-white" : ""}
-                disabled={availableSchemes.length === 0}
+                className={darkMode ? "bg-secondary text-white border-secondary" : ""}
+                disabled={availableSchemes.length === 0 || submitting}
               />
+              <Form.Text className={darkMode ? "text-light" : "text-muted"}>
+                Start date cannot be in the past
+              </Form.Text>
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            {/* For Request */}
+            <Form.Group className="mb-4">
               <Form.Label>For Request</Form.Label>
               <Form.Select
                 name="forRequest"
                 value={formData.forRequest}
                 onChange={handleChange}
-                className={darkMode ? "bg-secondary text-white" : ""}
-                disabled={availableSchemes.length === 0}
+                className={darkMode ? "bg-secondary text-white border-secondary" : ""}
+                disabled={availableSchemes.length === 0 || submitting}
               >
                 <option value="no">No</option>
                 <option value="yes">Yes</option>
               </Form.Select>
+              <Form.Text className={darkMode ? "text-light" : "text-muted"}>
+                Specify if this assignment is for a specific request
+              </Form.Text>
             </Form.Group>
 
-            <div className="d-flex justify-content-end">
-              <Button variant="secondary" onClick={handleClose} className="me-2">
+            {/* Form Actions */}
+            <div className="d-flex justify-content-end gap-2">
+              <Button 
+                variant="secondary" 
+                onClick={handleClose} 
+                disabled={submitting}
+              >
                 Cancel
               </Button>
               <Button
@@ -363,11 +513,14 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
                 variant="primary"
                 disabled={
                   availableSchemes.length === 0 ||
+                  !formData.schemeId ||
                   !formData.managerId ||
-                  loading
+                  !formData.startDate ||
+                  submitting ||
+                  schemeManagers.length === 0
                 }
               >
-                {loading ? (
+                {submitting ? (
                   <>
                     <Spinner
                       as="span"
@@ -375,11 +528,14 @@ const AssignSchemeModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
                       size="sm"
                       role="status"
                       aria-hidden="true"
+                      className="me-2"
                     />
-                    <span className="ms-2">Processing...</span>
+                    {isBatch ? "Assigning..." : "Processing..."}
                   </>
                 ) : (
-                  "Confirm"
+                  <>
+                    {isBatch ? `Assign to ${selectedCount} Candidates` : "Confirm Assignment"}
+                  </>
                 )}
               </Button>
             </div>
