@@ -158,7 +158,6 @@ interview: {
 },
 
   // Induction Details
- // Updated Induction Details Schema
 induction: {
   inductionAssigned: { type: Boolean, default: false },
   status: {
@@ -215,39 +214,141 @@ induction: {
 },
 
     // Schema Assignment
-    schemaAssignment: {
-      schemaAssigned: { type: Boolean, default: false },
-      status: {
-        type: String,
-        enum: [
-          "schema-not-assigned",
-          "schema-assigned",
-          "schema-completed",
-          "terminated",
-        ],
-        default: "schema-not-assigned",
-      },
-      schemeId: { type: mongoose.Schema.Types.ObjectId, ref: "Scheme" },
-      schemeName: { type: String },
-      managerId: { type: String }, 
-      managerName: { type: String },
-      managerRole: { type: String },
-      internshipPeriod: { type: Number }, 
-      startDate: { type: Date },
-      endDate: { type: Date },
-      forRequest: { type: String, enum: ["yes", "no"], default: "no" },
-
-      evaluation: {
-        status: {
-          type: String,
-          enum: ["satisfactory", "unsatisfactory", "pending"],
-          default: "pending",
-        },
-        evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        evaluatedDate: { type: Date },
-        feedback: { type: String },
-      },
+   schemaAssignment: {
+  schemaAssigned: { type: Boolean, default: false },
+  status: {
+    type: String,
+    enum: [
+      "schema-not-assigned",
+      "schema-assigned",
+      "schema-completed",
+      "terminated",
+    ],
+    default: "schema-not-assigned",
+  },
+  schemeId: { type: mongoose.Schema.Types.ObjectId, ref: "Scheme" },
+  schemeName: { type: String, trim: true },
+  
+  // Manager Information
+  managerId: { type: String, trim: true }, 
+  managerName: { type: String, trim: true },
+  managerRole: { type: String, trim: true }, 
+  managerLevel: { type: Number, min: 1, max: 6 }, 
+  managerEmployeeCode: { type: String, trim: true },
+  managerEmail: { type: String, trim: true },
+  managerDepartment: { type: String, trim: true },
+  managerPosition: { type: String, trim: true },
+  
+  // Assignment Details
+  internshipPeriod: { type: Number, min: 1 }, 
+  startDate: { type: Date },
+  endDate: { type: Date },
+  forRequest: { type: String, enum: ["yes", "no"], default: "no" },
+  
+  // Assignment Metadata
+  assignedDate: { type: Date, default: Date.now },
+  assignedBy: { type: String, trim: true }, // Employee ID of who made the assignment
+  lastModified: { type: Date, default: Date.now },
+  modifiedBy: { type: String, trim: true },
+  
+  // Scheme Details (cached for performance)
+  schemeType: {
+    onRequest: { type: String, enum: ["yes", "no"] },
+    recurring: { type: String, enum: ["yes", "no"] },
+    rotational: { type: String, enum: ["yes", "no"] },
+  },
+  perHeadAllowance: { type: Number, min: 0 },
+  allowanceFrequency: {
+    type: String,
+    enum: ["daily", "weekly", "monthly"],
+  },
+  
+  // Progress Tracking
+  progressPercentage: { type: Number, default: 0, min: 0, max: 100 },
+  milestones: [{
+    name: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
+    dueDate: { type: Date },
+    completedDate: { type: Date },
+    status: { 
+      type: String, 
+      enum: ["pending", "in-progress", "completed", "overdue"],
+      default: "pending"
     },
+    completedBy: { type: String, trim: true }
+  }],
+  
+  // Evaluation System
+  evaluation: {
+    status: {
+      type: String,
+      enum: ["satisfactory", "unsatisfactory", "pending", "in-progress"],
+      default: "pending",
+    },
+    evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    evaluatedDate: { type: Date },
+    feedback: { type: String, trim: true },
+    rating: { type: Number, min: 1, max: 5 }, 
+    evaluationDetails: {
+      technicalSkills: { type: Number, min: 1, max: 5 },
+      communication: { type: Number, min: 1, max: 5 },
+      teamwork: { type: Number, min: 1, max: 5 },
+      punctuality: { type: Number, min: 1, max: 5 },
+      initiative: { type: Number, min: 1, max: 5 },
+      overallPerformance: { type: Number, min: 1, max: 5 }
+    },
+    recommendations: { type: String, trim: true },
+    improvementAreas: [{ type: String, trim: true }],
+    strengths: [{ type: String, trim: true }],
+  },
+  
+  // Extension/Termination Details
+  extensionRequests: [{
+    requestedBy: { type: String, trim: true },
+    requestDate: { type: Date, default: Date.now },
+    requestedPeriod: { type: Number, min: 1 }, // Additional months
+    reason: { type: String, required: true, trim: true },
+    status: { 
+      type: String, 
+      enum: ["pending", "approved", "rejected"],
+      default: "pending"
+    },
+    approvedBy: { type: String, trim: true },
+    approvalDate: { type: Date },
+    remarks: { type: String, trim: true }
+  }],
+  
+  terminationDetails: {
+    terminatedDate: { type: Date },
+    terminatedBy: { type: String, trim: true },
+    terminationReason: { 
+      type: String,
+      enum: [
+        "completion",
+        "early-termination-performance",
+        "early-termination-conduct",
+        "mutual-agreement",
+        "personal-reasons",
+        "other"
+      ]
+    },
+    terminationRemarks: { type: String, trim: true },
+    finalEvaluation: {
+      completed: { type: Boolean, default: false },
+      rating: { type: Number, min: 1, max: 5 },
+      feedback: { type: String, trim: true }
+    }
+  },
+  
+  // Completion Certificate
+  completionCertificate: {
+    issued: { type: Boolean, default: false },
+    issuedDate: { type: Date },
+    issuedBy: { type: String, trim: true },
+    certificateNumber: { type: String, trim: true },
+    remarks: { type: String, trim: true }
+  }
+},
 
     // Overall CV Status
     currentStatus: {

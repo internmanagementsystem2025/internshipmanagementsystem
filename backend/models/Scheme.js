@@ -8,7 +8,7 @@ const managerSchema = new mongoose.Schema({
   email: { type: String, required: true, trim: true },
   department: { type: String, required: true, trim: true },
   position: { type: String, required: true, trim: true },
-  hierarchyLevel: { type: Number, default: 1 },
+  hierarchyLevel: { type: Number, required: true, min: 1, max: 6 },
   divisionCode: { type: String, trim: true },
   costCenter: { type: String, trim: true },
   gradeLevel: { type: String, trim: true },
@@ -41,10 +41,13 @@ const schemeSchema = new mongoose.Schema(
     totalAllocatedCount: { type: Number, default: 0, min: 0 },
     totalEmptyCount: { type: Number, default: 0, min: 0 },
 
-    // Manager assignments with full employee details
-    generalManager: managerSchema,
-    deputyManager: managerSchema,
-    supervisor: managerSchema,
+    // 6-Level Manager hierarchy
+    level1Manager: managerSchema,  // Executive Level
+    level2Manager: managerSchema,  // Senior Management
+    level3Manager: managerSchema,  // Middle Management
+    level4Manager: managerSchema,  // Team Leadership
+    level5Manager: managerSchema,  // Supervisory Level
+    level6Manager: managerSchema,  // Operational Level
 
     // Metadata
     isActive: { type: Boolean, default: true },
@@ -63,20 +66,38 @@ schemeSchema.virtual('utilizationPercentage').get(function() {
   return Math.round((this.totalAllocatedCount / this.totalAllocation) * 100);
 });
 
-// Virtual for total manager allocation
+// Virtual for total manager allocation (6-level system)
 schemeSchema.virtual('totalManagerAllocation').get(function() {
-  return (this.generalManager?.allocationCount || 0) +
-         (this.deputyManager?.allocationCount || 0) +
-         (this.supervisor?.allocationCount || 0);
+  return (this.level1Manager?.allocationCount || 0) +
+         (this.level2Manager?.allocationCount || 0) +
+         (this.level3Manager?.allocationCount || 0) +
+         (this.level4Manager?.allocationCount || 0) +
+         (this.level5Manager?.allocationCount || 0) +
+         (this.level6Manager?.allocationCount || 0);
 });
 
-// Virtual for assigned managers count
+// Virtual for assigned managers count (6-level system)
 schemeSchema.virtual('assignedManagersCount').get(function() {
   let count = 0;
-  if (this.generalManager?.employeeId) count++;
-  if (this.deputyManager?.employeeId) count++;
-  if (this.supervisor?.employeeId) count++;
+  if (this.level1Manager?.employeeId) count++;
+  if (this.level2Manager?.employeeId) count++;
+  if (this.level3Manager?.employeeId) count++;
+  if (this.level4Manager?.employeeId) count++;
+  if (this.level5Manager?.employeeId) count++;
+  if (this.level6Manager?.employeeId) count++;
   return count;
+});
+
+// Virtual for managers by level
+schemeSchema.virtual('managersByLevel').get(function() {
+  const managers = {};
+  for (let i = 1; i <= 6; i++) {
+    const levelKey = `level${i}Manager`;
+    if (this[levelKey]?.employeeId) {
+      managers[i] = this[levelKey];
+    }
+  }
+  return managers;
 });
 
 // Pre-save middleware to calculate empty count and available allocations
@@ -84,26 +105,16 @@ schemeSchema.pre("save", function (next) {
   // Calculate total empty positions
   this.totalEmptyCount = Math.max(0, this.totalAllocation - this.totalAllocatedCount);
 
-  // Calculate available allocation for each manager
-  if (this.generalManager && this.generalManager.employeeId) {
-    this.generalManager.availableAllocation = Math.max(
-      0, 
-      this.generalManager.allocationCount - this.generalManager.assignedCount
-    );
-  }
-  
-  if (this.deputyManager && this.deputyManager.employeeId) {
-    this.deputyManager.availableAllocation = Math.max(
-      0,
-      this.deputyManager.allocationCount - this.deputyManager.assignedCount
-    );
-  }
-  
-  if (this.supervisor && this.supervisor.employeeId) {
-    this.supervisor.availableAllocation = Math.max(
-      0,
-      this.supervisor.allocationCount - this.supervisor.assignedCount
-    );
+  // Calculate available allocation for each level manager
+  for (let level = 1; level <= 6; level++) {
+    const levelKey = `level${level}Manager`;
+    
+    if (this[levelKey] && this[levelKey].employeeId) {
+      this[levelKey].availableAllocation = Math.max(
+        0, 
+        this[levelKey].allocationCount - this[levelKey].assignedCount
+      );
+    }
   }
 
   // Update last recalculated timestamp
@@ -137,6 +148,21 @@ schemeSchema.pre("save", function (next) {
     }
   }
 
+  // Validate hierarchy levels for managers
+  for (let level = 1; level <= 6; level++) {
+    const levelKey = `level${level}Manager`;
+    
+    if (this[levelKey] && this[levelKey].employeeId) {
+      if (this[levelKey].hierarchyLevel !== level) {
+        const error = new Error(
+          `Manager assigned to ${levelKey} must have hierarchyLevel ${level}, but has ${this[levelKey].hierarchyLevel}`
+        );
+        error.name = 'ValidationError';
+        return next(error);
+      }
+    }
+  }
+
   next();
 });
 
@@ -144,6 +170,7 @@ schemeSchema.pre("save", function (next) {
 schemeSchema.post('save', function(doc) {
   console.log(`Scheme ${doc.schemeName} (${doc._id}) saved successfully`);
   console.log(`Allocation status: ${doc.totalAllocatedCount}/${doc.totalAllocation} (${doc.utilizationPercentage}%)`);
+  console.log(`Assigned managers: ${doc.assignedManagersCount}/6 levels`);
 });
 
 // Static methods
@@ -154,11 +181,21 @@ schemeSchema.statics.findActive = function() {
 schemeSchema.statics.findByManager = function(employeeId) {
   return this.find({
     $or: [
-      { 'generalManager.employeeId': employeeId },
-      { 'deputyManager.employeeId': employeeId },
-      { 'supervisor.employeeId': employeeId }
+      { 'level1Manager.employeeId': employeeId },
+      { 'level2Manager.employeeId': employeeId },
+      { 'level3Manager.employeeId': employeeId },
+      { 'level4Manager.employeeId': employeeId },
+      { 'level5Manager.employeeId': employeeId },
+      { 'level6Manager.employeeId': employeeId }
     ]
   });
+};
+
+schemeSchema.statics.findByLevel = function(hierarchyLevel) {
+  const levelKey = `level${hierarchyLevel}Manager`;
+  const query = {};
+  query[`${levelKey}.employeeId`] = { $exists: true };
+  return this.find(query);
 };
 
 schemeSchema.statics.getSchemeStats = async function() {
@@ -180,6 +217,25 @@ schemeSchema.statics.getSchemeStats = async function() {
               100
             ]
           }
+        },
+        // Count managers by level
+        level1Managers: { 
+          $sum: { $cond: [{ $ne: ['$level1Manager.employeeId', null] }, 1, 0] } 
+        },
+        level2Managers: { 
+          $sum: { $cond: [{ $ne: ['$level2Manager.employeeId', null] }, 1, 0] } 
+        },
+        level3Managers: { 
+          $sum: { $cond: [{ $ne: ['$level3Manager.employeeId', null] }, 1, 0] } 
+        },
+        level4Managers: { 
+          $sum: { $cond: [{ $ne: ['$level4Manager.employeeId', null] }, 1, 0] } 
+        },
+        level5Managers: { 
+          $sum: { $cond: [{ $ne: ['$level5Manager.employeeId', null] }, 1, 0] } 
+        },
+        level6Managers: { 
+          $sum: { $cond: [{ $ne: ['$level6Manager.employeeId', null] }, 1, 0] } 
         }
       }
     }
@@ -191,47 +247,131 @@ schemeSchema.statics.getSchemeStats = async function() {
     totalPositions: 0,
     allocatedPositions: 0,
     availablePositions: 0,
-    averageUtilization: 0
+    averageUtilization: 0,
+    level1Managers: 0,
+    level2Managers: 0,
+    level3Managers: 0,
+    level4Managers: 0,
+    level5Managers: 0,
+    level6Managers: 0
   };
 };
 
 // Instance methods
-schemeSchema.methods.canAssignManager = function(managerType, allocationCount) {
+schemeSchema.methods.canAssignManager = function(managerLevel, allocationCount) {
+  const levelKey = `level${managerLevel}Manager`;
   const currentAllocation = this.totalManagerAllocation;
-  const managerCurrentAllocation = this[managerType]?.allocationCount || 0;
+  const managerCurrentAllocation = this[levelKey]?.allocationCount || 0;
   const newTotalAllocation = currentAllocation - managerCurrentAllocation + allocationCount;
   
   return newTotalAllocation <= this.totalAllocation;
 };
 
 schemeSchema.methods.getManagerByEmployeeId = function(employeeId) {
-  if (this.generalManager?.employeeId === employeeId) {
-    return { type: 'generalManager', data: this.generalManager };
-  }
-  if (this.deputyManager?.employeeId === employeeId) {
-    return { type: 'deputyManager', data: this.deputyManager };
-  }
-  if (this.supervisor?.employeeId === employeeId) {
-    return { type: 'supervisor', data: this.supervisor };
+  for (let level = 1; level <= 6; level++) {
+    const levelKey = `level${level}Manager`;
+    
+    if (this[levelKey]?.employeeId === employeeId) {
+      return { 
+        type: levelKey, 
+        level: level,
+        data: this[levelKey] 
+      };
+    }
   }
   return null;
 };
 
-schemeSchema.methods.isEmployeeAlreadyAssigned = function(employeeId) {
-  return !!(
-    this.generalManager?.employeeId === employeeId ||
-    this.deputyManager?.employeeId === employeeId ||
-    this.supervisor?.employeeId === employeeId
-  );
+schemeSchema.methods.getManagerByLevel = function(hierarchyLevel) {
+  const levelKey = `level${hierarchyLevel}Manager`;
+  return this[levelKey] || null;
 };
 
-// Indexes for better query performance
+schemeSchema.methods.isEmployeeAlreadyAssigned = function(employeeId) {
+  for (let level = 1; level <= 6; level++) {
+    const levelKey = `level${level}Manager`;
+    if (this[levelKey]?.employeeId === employeeId) {
+      return true;
+    }
+  }
+  return false;
+};
+
+schemeSchema.methods.getTotalManagerAllocation = function() {
+  return this.totalManagerAllocation;
+};
+
+schemeSchema.methods.getAssignedLevels = function() {
+  const assignedLevels = [];
+  for (let level = 1; level <= 6; level++) {
+    const levelKey = `level${level}Manager`;
+    if (this[levelKey]?.employeeId) {
+      assignedLevels.push({
+        level: level,
+        manager: this[levelKey]
+      });
+    }
+  }
+  return assignedLevels;
+};
+
+schemeSchema.methods.removeManagerByLevel = function(hierarchyLevel) {
+  const levelKey = `level${hierarchyLevel}Manager`;
+  this[levelKey] = undefined;
+  return this;
+};
+
+// Indexes for better query performance (6-level system)
 schemeSchema.index({ schemeName: 1 });
 schemeSchema.index({ isActive: 1 });
-schemeSchema.index({ 'generalManager.employeeId': 1 });
-schemeSchema.index({ 'deputyManager.employeeId': 1 });
-schemeSchema.index({ 'supervisor.employeeId': 1 });
 schemeSchema.index({ schemeStartDate: 1, schemeEndDate: 1 });
-schemeSchema.index({ totalAllocation: 1, totalAllocatedCount: 1 });
+schemeSchema.index({ createdAt: -1 });
+schemeSchema.index({ lastRecalculated: -1 });
 
+// Manager-specific indexes for efficient querying
+schemeSchema.index({ 'level1Manager.employeeId': 1 });
+schemeSchema.index({ 'level2Manager.employeeId': 1 });
+schemeSchema.index({ 'level3Manager.employeeId': 1 });
+schemeSchema.index({ 'level4Manager.employeeId': 1 });
+schemeSchema.index({ 'level5Manager.employeeId': 1 });
+schemeSchema.index({ 'level6Manager.employeeId': 1 });
+
+// Compound indexes for complex queries
+schemeSchema.index({ 
+  'level1Manager.employeeId': 1, 
+  'level1Manager.department': 1 
+});
+schemeSchema.index({ 
+  'level2Manager.employeeId': 1, 
+  'level2Manager.department': 1 
+});
+schemeSchema.index({ 
+  'level3Manager.employeeId': 1, 
+  'level3Manager.department': 1 
+});
+schemeSchema.index({ 
+  'level4Manager.employeeId': 1, 
+  'level4Manager.department': 1 
+});
+schemeSchema.index({ 
+  'level5Manager.employeeId': 1, 
+  'level5Manager.department': 1 
+});
+schemeSchema.index({ 
+  'level6Manager.employeeId': 1, 
+  'level6Manager.department': 1 
+});
+
+// Text search index for scheme names and descriptions
+schemeSchema.index({ 
+  schemeName: 'text', 
+  description: 'text',
+  minimumQualifications: 'text'
+});
+
+// Allocation tracking indexes
+schemeSchema.index({ totalAllocation: 1, totalAllocatedCount: 1 });
+schemeSchema.index({ totalEmptyCount: 1 });
+
+// Export the model
 module.exports = mongoose.model("Scheme", schemeSchema);

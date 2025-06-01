@@ -33,13 +33,15 @@ const AssignNewManagerModal = ({
   const buildHierarchyMap = () => {
     const hierarchy = {};
     
-    // Group employees by hierarchy level
+    // Group employees by hierarchy level (1-6)
     employees.forEach(emp => {
       const level = emp.hierarchyLevel || 1;
-      if (!hierarchy[level]) {
-        hierarchy[level] = [];
+      if (level >= 1 && level <= 6) { // Only include levels 1-6
+        if (!hierarchy[level]) {
+          hierarchy[level] = [];
+        }
+        hierarchy[level].push(emp);
       }
-      hierarchy[level].push(emp);
     });
 
     return hierarchy;
@@ -103,9 +105,11 @@ const AssignNewManagerModal = ({
     return getSubordinatesAtLevel(parentEmployee.id, level);
   };
 
-  // Get available levels based on current selections and employee data
+  // Get available levels (1-6)
   const getAvailableLevels = () => {
-    const levels = [...new Set(employees.map(emp => emp.hierarchyLevel || 1))].sort((a, b) => a - b);
+    const levels = [...new Set(employees.map(emp => emp.hierarchyLevel || 1))]
+      .filter(level => level >= 1 && level <= 6)
+      .sort((a, b) => a - b);
     return levels;
   };
 
@@ -132,7 +136,7 @@ const AssignNewManagerModal = ({
 
     // Auto-expand next level if there are potential subordinates
     const nextLevel = level + 1;
-    if (getAvailableLevels().includes(nextLevel)) {
+    if (getAvailableLevels().includes(nextLevel) && nextLevel <= 6) {
       setExpandedLevels(prev => new Set([...prev, nextLevel]));
     }
 
@@ -201,40 +205,28 @@ const AssignNewManagerModal = ({
 
     setLoading(true);
 
-    // Convert selected employees to the expected format based on hierarchy levels
+    // Convert selected employees to the new level-based format
     const managerData = {};
-    const levels = Object.keys(selectedEmployees).map(Number).sort((a, b) => a - b);
-
-    // Map hierarchy levels to manager roles (lowest level gets highest role)
-    levels.forEach((level, index) => {
-      const employee = selectedEmployees[level];
-      let roleKey;
-
-      // Assign roles based on hierarchy - lower level numbers get higher roles
-      if (index === 0) {
-        roleKey = 'generalManager'; 
-      } else if (index === 1) {
-        roleKey = 'deputyManager'; 
-      } else if (index === 2) {
-        roleKey = 'supervisor'; 
-      } else {
-        roleKey = `level${level}Manager`; 
-      }
-
-      managerData[roleKey] = {
-        id: employee.id,
-        name: employee.name,
-        employeeCode: employee.employeeCode,
-        email: employee.email,
-        department: employee.department,
-        position: employee.position,
-        hierarchyLevel: level,
-        allocationCount: employee.allocationCount || 0,
-        divisionCode: employee.divisionCode,
-        costCenter: employee.costCenter,
-        gradeLevel: employee.gradeLevel
-      };
-    });
+    
+    Object.entries(selectedEmployees)
+      .sort(([a], [b]) => parseInt(a) - parseInt(b))
+      .forEach(([level, employee]) => {
+        const levelKey = `level${level}Manager`;
+        
+        managerData[levelKey] = {
+          id: employee.id,
+          name: employee.name,
+          employeeCode: employee.employeeCode,
+          email: employee.email,
+          department: employee.department,
+          position: employee.position,
+          hierarchyLevel: parseInt(level),
+          allocationCount: employee.allocationCount || 0,
+          divisionCode: employee.divisionCode,
+          costCenter: employee.costCenter,
+          gradeLevel: employee.gradeLevel
+        };
+      });
 
     // Call the parent handler
     try {
@@ -255,6 +247,20 @@ const AssignNewManagerModal = ({
 
   const availableLevels = getAvailableLevels();
 
+  // Get level display name and color
+  const getLevelInfo = (level) => {
+    const levelNames = {
+      1: { name: 'Executive Level', color: 'danger' },
+      2: { name: 'Senior Management', color: 'warning' },
+      3: { name: 'Middle Management', color: 'primary' },
+      4: { name: 'Team Leadership', color: 'success' },
+      5: { name: 'Supervisory Level', color: 'info' },
+      6: { name: 'Operational Level', color: 'secondary' }
+    };
+    
+    return levelNames[level] || { name: `Level ${level}`, color: 'dark' };
+  };
+
   // Employee selection component for a specific level
   const LevelEmployeeSelector = ({ level }) => {
     const isExpanded = expandedLevels.has(level);
@@ -264,16 +270,8 @@ const AssignNewManagerModal = ({
     const levelEmployees = getAvailableEmployeesForLevel(level);
     const availableEmployees = filterEmployees(levelEmployees);
 
-    const levelColors = {
-      1: 'danger',
-      2: 'primary', 
-      3: 'success',
-      4: 'warning',
-      5: 'info'
-    };
+    const levelInfo = getLevelInfo(level);
     
-    const variant = levelColors[level] || 'secondary';
-
     // Determine if this level should be shown
     const shouldShowLevel = level === 1 || selectedEmployees[level - 1];
 
@@ -289,16 +287,16 @@ const AssignNewManagerModal = ({
     return (
       <Card className={`mb-3 ${darkMode ? 'bg-dark text-white border-secondary' : ''}`}>
         <Card.Header 
-          className={`bg-${variant} text-white d-flex justify-content-between align-items-center`}
+          className={`bg-${levelInfo.color} text-white d-flex justify-content-between align-items-center`}
           style={{ cursor: 'pointer' }}
           onClick={() => toggleLevel(level)}
         >
           <span>
             <Person className="me-2" />
-            Level {level} Employees
+            Level {level} - {levelInfo.name}
             {isFiltered && (
               <Badge bg="light" text="dark" className="ms-2">
-                Subordinates of {parentEmployee.name}
+                Reports to {parentEmployee.name}
               </Badge>
             )}
             {availableEmployees.length > 0 && (
@@ -400,7 +398,7 @@ const AssignNewManagerModal = ({
                     <div className="row align-items-center">
                       <div className="col-md-8">
                         <strong>Selected: </strong>
-                        <Badge bg={variant} className="me-2">{selectedEmployee.name}</Badge>
+                        <Badge bg={levelInfo.color} className="me-2">{selectedEmployee.name}</Badge>
                         <small className="text-muted">
                           <Building className="me-1" />{selectedEmployee.department} | 
                           Code: {selectedEmployee.employeeCode} | 
@@ -423,7 +421,7 @@ const AssignNewManagerModal = ({
                     </div>
                     
                     {/* Preview subordinates at next level */}
-                    {availableLevels.includes(level + 1) && (
+                    {availableLevels.includes(level + 1) && level < 6 && (
                       <div className="mt-2">
                         <small className="text-muted">
                           <strong>Will show subordinates at Level {level + 1}:</strong> {
@@ -456,7 +454,7 @@ const AssignNewManagerModal = ({
       <Modal.Header closeButton className={darkMode ? "bg-dark text-white" : ""}>
         <Modal.Title>
           <Diagram3 className="me-2" />
-          Hierarchy-Based Manager Assignment
+          6-Level Hierarchy Manager Assignment
         </Modal.Title>
       </Modal.Header>
       
@@ -490,7 +488,7 @@ const AssignNewManagerModal = ({
         <Alert variant={employees.length > 0 ? "success" : "warning"} className="mb-4">
           <Building className="me-2" />
           Employee System Status: {employees.length > 0 ? 
-            `Connected - ${employees.length} employees loaded across ${availableLevels.length} levels` : 
+            `Connected - ${employees.length} employees loaded across ${availableLevels.length} levels (L1-L6)` : 
             "No employee data available"
           }
           {employees.length > 0 && (
@@ -523,8 +521,8 @@ const AssignNewManagerModal = ({
           </Alert>
         ) : (
           <>
-            {/* Hierarchy Level Selectors */}
-            {availableLevels.map((level) => (
+            {/* Hierarchy Level Selectors (1-6) */}
+            {[1, 2, 3, 4, 5, 6].filter(level => availableLevels.includes(level)).map((level) => (
               <LevelEmployeeSelector key={level} level={level} />
             ))}
 
@@ -538,20 +536,22 @@ const AssignNewManagerModal = ({
                   <div className="row mb-3">
                     {Object.entries(selectedEmployees)
                       .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                      .map(([level, employee]) => (
-                      <div key={level} className="col-md-6 col-lg-4 mb-3">
-                        <div className="text-center">
-                          <div className="h5 text-primary">{employee.allocationCount || 0}</div>
-                          <small>Level {level}: {employee.name}</small>
-                          <br />
-                          <Badge bg="secondary" className="mt-1">{employee.employeeCode}</Badge>
-                          <br />
-                          <small className="text-muted">
-                            {getDirectSubordinates(employee.id).length} direct subordinates
-                          </small>
+                      .map(([level, employee]) => {
+                        const levelInfo = getLevelInfo(parseInt(level));
+                        return (
+                        <div key={level} className="col-md-6 col-lg-4 mb-3">
+                          <div className="text-center">
+                            <div className="h5 text-primary">{employee.allocationCount || 0}</div>
+                            <small>Level {level}: {employee.name}</small>
+                            <br />
+                            <Badge bg={levelInfo.color} className="mt-1">{employee.employeeCode}</Badge>
+                            <br />
+                            <small className="text-muted">
+                              {levelInfo.name} | {getDirectSubordinates(employee.id).length} subordinates
+                            </small>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )})}
                     <div className="col-md-6 col-lg-4 mb-3">
                       <div className="text-center">
                         <div className={`h4 ${
@@ -595,7 +595,7 @@ const AssignNewManagerModal = ({
       <Modal.Footer className={darkMode ? "bg-dark text-white" : ""}>
         <div className="d-flex justify-content-between w-100 align-items-center">
           <small className="text-muted">
-            <i>Employee System Integration Active</i>
+            <i>6-Level Hierarchy System Active</i>
           </small>
           <div>
             <Button 

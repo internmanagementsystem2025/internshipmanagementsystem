@@ -2118,11 +2118,23 @@ const getCVsForSchemeAssignment = async (req, res) => {
 const assignSchemeToCV = async (req, res) => {
   try {
     const { id } = req.params;
-    const { schemeId, managerId, internshipPeriod, startDate, forRequest } = req.body;
+    const { 
+      schemeId, 
+      managerLevel, 
+      internshipPeriod, 
+      startDate, 
+      forRequest,
+      milestones // Optional milestones array
+    } = req.body;
 
     // Validate input
-    if (!schemeId || !managerId || !internshipPeriod || !startDate) {
+    if (!schemeId || !managerLevel || !internshipPeriod || !startDate) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Validate manager level (1-6)
+    if (managerLevel < 1 || managerLevel > 6) {
+      return res.status(400).json({ message: "Manager level must be between 1 and 6" });
     }
 
     // Get scheme details
@@ -2131,55 +2143,90 @@ const assignSchemeToCV = async (req, res) => {
       return res.status(404).json({ message: "Scheme not found" });
     }
 
+    // Check if scheme is active
+    if (!scheme.isActive) {
+      return res.status(400).json({ message: "Scheme is not active" });
+    }
+
     // Check if scheme has available slots
     if (scheme.totalEmptyCount <= 0) {
       return res.status(400).json({ message: "No available slots in this scheme" });
     }
 
-    // Get manager details from scheme
-    let managerDetails;
-    switch (managerId) {
-      case "generalManager":
-        managerDetails = scheme.generalManager;
-        break;
-      case "deputyManager":
-        managerDetails = scheme.deputyManager;
-        break;
-      case "supervisor":
-        managerDetails = scheme.supervisor;
-        break;
-      default:
-        return res.status(400).json({ message: "Invalid manager ID" });
+    // Get manager details from scheme based on level
+    const levelKey = `level${managerLevel}Manager`;
+    const managerDetails = scheme[levelKey];
+
+    if (!managerDetails || !managerDetails.employeeId) {
+      return res.status(400).json({ 
+        message: `No manager assigned at level ${managerLevel} for this scheme` 
+      });
     }
 
     // Check if manager has available allocation
     if (managerDetails.availableAllocation <= 0) {
-      return res.status(400).json({ message: "Manager has no available allocation" });
+      return res.status(400).json({ 
+        message: `Manager at level ${managerLevel} has no available allocation` 
+      });
     }
 
     // Calculate end date based on start date and internship period
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + parseInt(internshipPeriod));
 
-    // Prepare update data
+    // Prepare comprehensive update data
     const updateData = {
       $set: {
+        // Basic Assignment Info
         "schemaAssignment.schemaAssigned": true,
         "schemaAssignment.status": "schema-assigned",
         "schemaAssignment.schemeId": schemeId,
         "schemaAssignment.schemeName": scheme.schemeName,
-        "schemaAssignment.managerId": managerId,
+        
+        // Manager Information
+        "schemaAssignment.managerId": managerDetails.employeeId,
         "schemaAssignment.managerName": managerDetails.name,
-        "schemaAssignment.managerRole": managerId
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (str) => str.toUpperCase()),
+        "schemaAssignment.managerRole": `Level ${managerLevel} Manager - ${managerDetails.position}`,
+        "schemaAssignment.managerLevel": managerLevel,
+        "schemaAssignment.managerEmployeeCode": managerDetails.employeeCode,
+        "schemaAssignment.managerEmail": managerDetails.email,
+        "schemaAssignment.managerDepartment": managerDetails.department,
+        "schemaAssignment.managerPosition": managerDetails.position,
+        
+        // Assignment Details
         "schemaAssignment.internshipPeriod": internshipPeriod,
         "schemaAssignment.startDate": startDate,
         "schemaAssignment.endDate": endDate,
         "schemaAssignment.forRequest": forRequest || "no",
+        
+        // Assignment Metadata
+        "schemaAssignment.assignedDate": new Date(),
+        "schemaAssignment.assignedBy": req.user?.employeeId || "system",
+        "schemaAssignment.lastModified": new Date(),
+        "schemaAssignment.modifiedBy": req.user?.employeeId || "system",
+        
+        // Scheme Details (cached)
+        "schemaAssignment.schemeType.onRequest": scheme.onRequest,
+        "schemaAssignment.schemeType.recurring": scheme.recurring,
+        "schemaAssignment.schemeType.rotational": scheme.rotational,
+        "schemaAssignment.perHeadAllowance": scheme.perHeadAllowance,
+        "schemaAssignment.allowanceFrequency": scheme.allowanceFrequency,
+        
+        // Progress Tracking
+        "schemaAssignment.progressPercentage": 0,
+        
+        // Update main status
         currentStatus: "schema-assigned",
       },
     };
+
+    // Add milestones if provided
+    if (milestones && Array.isArray(milestones) && milestones.length > 0) {
+      updateData.$set["schemaAssignment.milestones"] = milestones.map(milestone => ({
+        ...milestone,
+        status: milestone.status || "pending"
+      }));
+    }
 
     // If scheme is rotational, set isRotational to true
     if (scheme.rotational === "yes") {
@@ -2197,59 +2244,84 @@ const assignSchemeToCV = async (req, res) => {
     scheme.totalAllocatedCount += 1;
     scheme.totalEmptyCount = scheme.totalAllocation - scheme.totalAllocatedCount;
 
-    // Update manager's assigned count
-    switch (managerId) {
-      case "generalManager":
-        scheme.generalManager.assignedCount += 1;
-        scheme.generalManager.availableAllocation =
-          scheme.generalManager.allocationCount - scheme.generalManager.assignedCount;
-        break;
-      case "deputyManager":
-        scheme.deputyManager.assignedCount += 1;
-        scheme.deputyManager.availableAllocation =
-          scheme.deputyManager.allocationCount - scheme.deputyManager.assignedCount;
-        break;
-      case "supervisor":
-        scheme.supervisor.assignedCount += 1;
-        scheme.supervisor.availableAllocation =
-          scheme.supervisor.allocationCount - scheme.supervisor.assignedCount;
-        break;
+    // Update manager's assigned count and available allocation
+    scheme[levelKey].assignedCount += 1;
+    scheme[levelKey].availableAllocation = 
+      scheme[levelKey].allocationCount - scheme[levelKey].assignedCount;
+
+    // Update assignedBy and assignedDate
+    scheme[levelKey].assignedDate = new Date();
+    if (req.user && req.user.employeeId) {
+      scheme[levelKey].assignedBy = req.user.employeeId;
     }
 
     await scheme.save();
 
-    res.status(200).json(updatedCV);
+    // Return updated CV with populated scheme details
+    const responseCV = await CV.findById(id).populate('schemaAssignment.schemeId');
+
+    res.status(200).json({
+      success: true,
+      message: "Scheme assigned successfully",
+      data: responseCV,
+      schemeInfo: {
+        totalAllocatedCount: scheme.totalAllocatedCount,
+        totalEmptyCount: scheme.totalEmptyCount,
+        utilizationPercentage: scheme.utilizationPercentage,
+        managerInfo: {
+          level: managerLevel,
+          name: managerDetails.name,
+          position: managerDetails.position,
+          availableAllocation: scheme[levelKey].availableAllocation,
+          assignedCount: scheme[levelKey].assignedCount
+        }
+      }
+    });
   } catch (error) {
     console.error('Error assigning scheme:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to assign scheme",
+      error: error.message 
+    });
   }
 };
 
-
-// Batch assign scheme to multiple CVs
+// Batch assign scheme to multiple CVs - Updated for enhanced schema
 const batchAssignScheme = async (req, res) => {
   try {
     const {
       cvIds,
       schemeId,
-      managerId,
+      managerLevel,
       internshipPeriod,
       startDate,
       forRequest,
+      milestones // Optional milestones array for all CVs
     } = req.body;
 
     // Validate input
-    if (!cvIds || !Array.isArray(cvIds)) {
-      return res.status(400).json({ message: "Invalid CV IDs" });
+    if (!cvIds || !Array.isArray(cvIds) || cvIds.length === 0) {
+      return res.status(400).json({ message: "Invalid or empty CV IDs array" });
     }
-    if (!schemeId || !managerId || !internshipPeriod || !startDate) {
+    if (!schemeId || !managerLevel || !internshipPeriod || !startDate) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Validate manager level (1-6)
+    if (managerLevel < 1 || managerLevel > 6) {
+      return res.status(400).json({ message: "Manager level must be between 1 and 6" });
     }
 
     // Get scheme details
     const scheme = await Scheme.findById(schemeId);
     if (!scheme) {
       return res.status(404).json({ message: "Scheme not found" });
+    }
+
+    // Check if scheme is active
+    if (!scheme.isActive) {
+      return res.status(400).json({ message: "Scheme is not active" });
     }
 
     // Check if scheme has enough available slots
@@ -2259,26 +2331,34 @@ const batchAssignScheme = async (req, res) => {
       });
     }
 
-    // Get manager details from scheme
-    let managerDetails;
-    switch (managerId) {
-      case "generalManager":
-        managerDetails = scheme.generalManager;
-        break;
-      case "deputyManager":
-        managerDetails = scheme.deputyManager;
-        break;
-      case "supervisor":
-        managerDetails = scheme.supervisor;
-        break;
-      default:
-        return res.status(400).json({ message: "Invalid manager ID" });
+    // Get manager details from scheme based on level
+    const levelKey = `level${managerLevel}Manager`;
+    const managerDetails = scheme[levelKey];
+
+    if (!managerDetails || !managerDetails.employeeId) {
+      return res.status(400).json({ 
+        message: `No manager assigned at level ${managerLevel} for this scheme` 
+      });
     }
 
     // Check if manager has enough available allocation
     if (managerDetails.availableAllocation < cvIds.length) {
       return res.status(400).json({
-        message: `Manager doesn't have enough available allocation. Available: ${managerDetails.availableAllocation}, Requested: ${cvIds.length}`,
+        message: `Manager at level ${managerLevel} doesn't have enough available allocation. Available: ${managerDetails.availableAllocation}, Requested: ${cvIds.length}`,
+      });
+    }
+
+    // Check if all CVs exist and are not already assigned
+    const existingCVs = await CV.find({ 
+      _id: { $in: cvIds },
+      'schemaAssignment.schemaAssigned': false 
+    });
+
+    if (existingCVs.length !== cvIds.length) {
+      const foundIds = existingCVs.map(cv => cv._id.toString());
+      const missingOrAssigned = cvIds.filter(id => !foundIds.includes(id));
+      return res.status(400).json({
+        message: `Some CVs not found or already assigned: ${missingOrAssigned.join(', ')}`
       });
     }
 
@@ -2286,71 +2366,223 @@ const batchAssignScheme = async (req, res) => {
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + parseInt(internshipPeriod));
 
-    // Prepare base update data
+    // Prepare comprehensive base update data
     const baseUpdateData = {
       $set: {
+        // Basic Assignment Info
         "schemaAssignment.schemaAssigned": true,
         "schemaAssignment.status": "schema-assigned",
         "schemaAssignment.schemeId": schemeId,
         "schemaAssignment.schemeName": scheme.schemeName,
-        "schemaAssignment.managerId": managerId,
+        
+        // Manager Information
+        "schemaAssignment.managerId": managerDetails.employeeId,
         "schemaAssignment.managerName": managerDetails.name,
-        "schemaAssignment.managerRole": managerId
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (str) => str.toUpperCase()),
+        "schemaAssignment.managerRole": `Level ${managerLevel} Manager - ${managerDetails.position}`,
+        "schemaAssignment.managerLevel": managerLevel,
+        "schemaAssignment.managerEmployeeCode": managerDetails.employeeCode,
+        "schemaAssignment.managerEmail": managerDetails.email,
+        "schemaAssignment.managerDepartment": managerDetails.department,
+        "schemaAssignment.managerPosition": managerDetails.position,
+        
+        // Assignment Details
         "schemaAssignment.internshipPeriod": internshipPeriod,
         "schemaAssignment.startDate": startDate,
         "schemaAssignment.endDate": endDate,
         "schemaAssignment.forRequest": forRequest || "no",
+        
+        // Assignment Metadata
+        "schemaAssignment.assignedDate": new Date(),
+        "schemaAssignment.assignedBy": req.user?.employeeId || "system",
+        "schemaAssignment.lastModified": new Date(),
+        "schemaAssignment.modifiedBy": req.user?.employeeId || "system",
+        
+        // Scheme Details (cached)
+        "schemaAssignment.schemeType.onRequest": scheme.onRequest,
+        "schemaAssignment.schemeType.recurring": scheme.recurring,
+        "schemaAssignment.schemeType.rotational": scheme.rotational,
+        "schemaAssignment.perHeadAllowance": scheme.perHeadAllowance,
+        "schemaAssignment.allowanceFrequency": scheme.allowanceFrequency,
+        
+        // Progress Tracking
+        "schemaAssignment.progressPercentage": 0,
+        
+        // Update main status
         currentStatus: "schema-assigned",
       },
     };
+
+    // Add milestones if provided
+    if (milestones && Array.isArray(milestones) && milestones.length > 0) {
+      baseUpdateData.$set["schemaAssignment.milestones"] = milestones.map(milestone => ({
+        ...milestone,
+        status: milestone.status || "pending"
+      }));
+    }
 
     // If scheme is rotational, add isRotational to the update
     if (scheme.rotational === "yes") {
       baseUpdateData.$set["rotationalAssignment.isRotational"] = true;
     }
 
-    // Update all CVs
-    const updatePromises = cvIds.map(async (cvId) => {
-      return CV.findByIdAndUpdate(cvId, baseUpdateData, { new: true });
-    });
+    // Start a transaction for batch update
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const updatedCVs = await Promise.all(updatePromises);
+    try {
+      // Update all CVs in batch
+      const bulkOps = cvIds.map(cvId => ({
+        updateOne: {
+          filter: { _id: cvId },
+          update: baseUpdateData
+        }
+      }));
 
-    // Update scheme allocation counts
-    scheme.totalAllocatedCount += cvIds.length;
-    scheme.totalEmptyCount =
-      scheme.totalAllocation - scheme.totalAllocatedCount;
+      const bulkResult = await CV.bulkWrite(bulkOps, { session });
 
-    // Update manager's assigned count
-    switch (managerId) {
-      case "generalManager":
-        scheme.generalManager.assignedCount += cvIds.length;
-        scheme.generalManager.availableAllocation =
-          scheme.generalManager.allocationCount -
-          scheme.generalManager.assignedCount;
-        break;
-      case "deputyManager":
-        scheme.deputyManager.assignedCount += cvIds.length;
-        scheme.deputyManager.availableAllocation =
-          scheme.deputyManager.allocationCount -
-          scheme.deputyManager.assignedCount;
-        break;
-      case "supervisor":
-        scheme.supervisor.assignedCount += cvIds.length;
-        scheme.supervisor.availableAllocation =
-          scheme.supervisor.allocationCount - scheme.supervisor.assignedCount;
-        break;
+      if (bulkResult.modifiedCount !== cvIds.length) {
+        throw new Error(`Expected to update ${cvIds.length} CVs, but only updated ${bulkResult.modifiedCount}`);
+      }
+
+      // Update scheme allocation counts
+      scheme.totalAllocatedCount += cvIds.length;
+      scheme.totalEmptyCount = scheme.totalAllocation - scheme.totalAllocatedCount;
+
+      // Update manager's assigned count and available allocation
+      scheme[levelKey].assignedCount += cvIds.length;
+      scheme[levelKey].availableAllocation = 
+        scheme[levelKey].allocationCount - scheme[levelKey].assignedCount;
+
+      // Update assignedBy and assignedDate
+      scheme[levelKey].assignedDate = new Date();
+      if (req.user && req.user.employeeId) {
+        scheme[levelKey].assignedBy = req.user.employeeId;
+      }
+
+      await scheme.save({ session });
+
+      // Commit the transaction
+      await session.commitTransaction();
+
+      // Get updated CVs for response
+      const updatedCVs = await CV.find({ _id: { $in: cvIds } })
+        .populate('schemaAssignment.schemeId');
+
+      res.status(200).json({
+        success: true,
+        message: `Successfully assigned scheme to ${cvIds.length} CVs`,
+        data: updatedCVs,
+        batchInfo: {
+          totalAssigned: cvIds.length,
+          schemeInfo: {
+            schemeName: scheme.schemeName,
+            totalAllocatedCount: scheme.totalAllocatedCount,
+            totalEmptyCount: scheme.totalEmptyCount,
+            utilizationPercentage: scheme.utilizationPercentage,
+            managerInfo: {
+              level: managerLevel,
+              name: managerDetails.name,
+              position: managerDetails.position,
+              availableAllocation: scheme[levelKey].availableAllocation,
+              assignedCount: scheme[levelKey].assignedCount
+            }
+          }
+        }
+      });
+
+    } catch (transactionError) {
+      // Rollback the transaction on error
+      await session.abortTransaction();
+      throw transactionError;
+    } finally {
+      // End the session
+      session.endSession();
     }
 
-    await scheme.save();
-
-    res.status(200).json(updatedCVs);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error in batch assign scheme:', error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to batch assign scheme",
+      error: error.message 
+    });
   }
 };
+
+// Function to update assignment progress and milestones
+const updateAssignmentProgress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      progressPercentage, 
+      milestoneUpdates, // Array of milestone updates
+      remarks 
+    } = req.body;
+
+    // Get current CV details
+    const cv = await CV.findById(id);
+    if (!cv) {
+      return res.status(404).json({ message: "CV not found" });
+    }
+
+    if (!cv.schemaAssignment.schemaAssigned) {
+      return res.status(400).json({ message: "CV is not assigned to any scheme" });
+    }
+
+    const updateData = {
+      $set: {
+        "schemaAssignment.lastModified": new Date(),
+        "schemaAssignment.modifiedBy": req.user?.employeeId || "system"
+      }
+    };
+
+    // Update progress percentage if provided
+    if (progressPercentage !== undefined) {
+      if (progressPercentage < 0 || progressPercentage > 100) {
+        return res.status(400).json({ message: "Progress percentage must be between 0 and 100" });
+      }
+      updateData.$set["schemaAssignment.progressPercentage"] = progressPercentage;
+    }
+
+    // Update milestones if provided
+    if (milestoneUpdates && Array.isArray(milestoneUpdates)) {
+      // Get current milestones
+      const currentMilestones = cv.schemaAssignment.milestones || [];
+      
+      // Apply updates
+      milestoneUpdates.forEach(update => {
+        const milestoneIndex = currentMilestones.findIndex(m => m._id.toString() === update.milestoneId);
+        if (milestoneIndex !== -1) {
+          Object.assign(currentMilestones[milestoneIndex], {
+            ...update,
+            completedBy: update.status === 'completed' ? (req.user?.employeeId || "system") : currentMilestones[milestoneIndex].completedBy,
+            completedDate: update.status === 'completed' ? new Date() : currentMilestones[milestoneIndex].completedDate
+          });
+        }
+      });
+      
+      updateData.$set["schemaAssignment.milestones"] = currentMilestones;
+    }
+
+    const updatedCV = await CV.findByIdAndUpdate(id, updateData, { new: true });
+
+    res.status(200).json({
+      success: true,
+      message: "Assignment progress updated successfully",
+      data: updatedCV.schemaAssignment
+    });
+
+  } catch (error) {
+    console.error('Error updating assignment progress:', error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to update assignment progress",
+      error: error.message 
+    });
+  }
+};
+
+
 
 //----------------------------------- Controllers for admin-institute section --------------------------------------------------------------------
 
@@ -2674,6 +2906,7 @@ module.exports = {
   getInterviewPassedCVs,
   getCVsForSchemeAssignment,
   assignSchemeToCV,
+  updateAssignmentProgress,
   batchAssignScheme,
   rescheduleInterview,
   rescheduleInduction,

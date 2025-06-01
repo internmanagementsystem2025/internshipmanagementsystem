@@ -37,6 +37,7 @@ const {
   batchAssignScheme,
   rescheduleInterview,
   rescheduleInduction,
+  
 } = require("../controllers/cvController");
 const router = express.Router();
 const { verifyToken } = require("../middleware/verifyToken");
