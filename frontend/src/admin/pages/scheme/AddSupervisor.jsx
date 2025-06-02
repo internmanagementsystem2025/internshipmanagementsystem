@@ -3,12 +3,20 @@ import axios from 'axios';
 
 const AddSupervisor = () => {
   const [formData, setFormData] = useState({
-    EMPLOYEE_NUMBER: '',
-    EMPLOYEE_TITLE: '',
-    EMPLOYEE_FIRST_NAME: '',
-    EMPLOYEE_SURNAME: '',
-    EMPLOYEE_DESIGNATION: '',
+    SUPERVISOR_NUMBER: '',
+    SUPERVISOR_TITLE: '',
+    SUPERVISOR_INITIALS: '',
+    SUPERVISOR_FIRST_NAME: '',
+    SUPERVISOR_SURNAME: '',
+    SUPERVISOR_DESIGNATION: '',
+    SUPERVISOR_OFFICE_PHONE: '',
+    SUPERVISOR_MOBILE_PHONE: '',
     email: '',
+    SUPERVISOR_SECTION: '',
+    SUPERVISOR_DIVISION: '',
+    SUPERVISOR_COST_CENTRE_CODE: '',
+    SUPERVISOR_GROUP_NAME: '',
+    SUPERVISOR_SALARY_GRADE: '',
   });
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState('');
@@ -37,32 +45,59 @@ const AddSupervisor = () => {
     setError('');
 
     const trimmedData = {
-      EMPLOYEE_NUMBER: formData.EMPLOYEE_NUMBER.trim(),
-      EMPLOYEE_TITLE: formData.EMPLOYEE_TITLE.trim(),
-      EMPLOYEE_FIRST_NAME: formData.EMPLOYEE_FIRST_NAME.trim(),
-      EMPLOYEE_SURNAME: formData.EMPLOYEE_SURNAME.trim(),
-      EMPLOYEE_DESIGNATION: formData.EMPLOYEE_DESIGNATION.trim(),
+      SUPERVISOR_NUMBER: formData.SUPERVISOR_NUMBER.trim(),
+      SUPERVISOR_TITLE: formData.SUPERVISOR_TITLE.trim(),
+      SUPERVISOR_INITIALS: formData.SUPERVISOR_INITIALS.trim(),
+      SUPERVISOR_FIRST_NAME: formData.SUPERVISOR_FIRST_NAME.trim(),
+      SUPERVISOR_SURNAME: formData.SUPERVISOR_SURNAME.trim(),
+      SUPERVISOR_DESIGNATION: formData.SUPERVISOR_DESIGNATION.trim(),
+      SUPERVISOR_OFFICE_PHONE: formData.SUPERVISOR_OFFICE_PHONE.trim(),
+      SUPERVISOR_MOBILE_PHONE: formData.SUPERVISOR_MOBILE_PHONE.trim(),
       email: formData.email.trim(),
+      SUPERVISOR_SECTION: formData.SUPERVISOR_SECTION.trim(),
+      SUPERVISOR_DIVISION: formData.SUPERVISOR_DIVISION.trim(),
+      SUPERVISOR_COST_CENTRE_CODE: formData.SUPERVISOR_COST_CENTRE_CODE.trim(),
+      SUPERVISOR_GROUP_NAME: formData.SUPERVISOR_GROUP_NAME.trim(),
+      SUPERVISOR_SALARY_GRADE: formData.SUPERVISOR_SALARY_GRADE.trim(),
     };
+    
 
     // Validation
-    if (!trimmedData.EMPLOYEE_NUMBER) return setError('Employee Number is required');
-    if (!trimmedData.EMPLOYEE_TITLE) return setError('Employee Title is required');
-    if (!trimmedData.EMPLOYEE_FIRST_NAME) return setError('First Name is required');
-    if (!trimmedData.EMPLOYEE_SURNAME) return setError('Surname is required');
-    if (!trimmedData.EMPLOYEE_DESIGNATION) return setError('Designation is required');
+    if (!trimmedData.SUPERVISOR_NUMBER) return setError('Employee Number is required');
+    if (!trimmedData.SUPERVISOR_TITLE) return setError('Employee Title is required');
+    if (!trimmedData.SUPERVISOR_INITIALS) return setError('Initials are required');
+    if (!trimmedData.SUPERVISOR_FIRST_NAME) return setError('First Name is required');
+    if (!trimmedData.SUPERVISOR_SURNAME) return setError('Surname is required');
+    if (!trimmedData.SUPERVISOR_DESIGNATION) return setError('Designation is required');
+    if (!trimmedData.SUPERVISOR_OFFICE_PHONE) return setError('Office Phone is required');
+    if (!trimmedData.SUPERVISOR_MOBILE_PHONE) return setError('Mobile Phone is required');
     if (!trimmedData.email) return setError('Email is required');
+    if (!trimmedData.SUPERVISOR_SECTION) return setError('Section is required');
+    if (!trimmedData.SUPERVISOR_DIVISION) return setError('Division is required');
+    if (!trimmedData.SUPERVISOR_COST_CENTRE_CODE) return setError('Cost Centre Code is required');
+    if (!trimmedData.SUPERVISOR_GROUP_NAME) return setError('Group Name is required');
+    if (!trimmedData.SUPERVISOR_SALARY_GRADE) return setError('Salary Grade is required');
+
 
     try {
-      const res = await axios.post('http://localhost:5000/api/employees/add', trimmedData);
+      const res = await axios.post('http://localhost:5000/api/supervisors/add', trimmedData);
       setMessage(res.data.message || 'Supervisor added successfully');
       setFormData({
-        EMPLOYEE_NUMBER: '',
-        EMPLOYEE_TITLE: '',
-        EMPLOYEE_FIRST_NAME: '',
-        EMPLOYEE_SURNAME: '',
-        EMPLOYEE_DESIGNATION: '',
+        SUPERVISOR_NUMBER: '',
+        SUPERVISOR_TITLE: '',
+        SUPERVISOR_INITIALS: '',
+        SUPERVISOR_FIRST_NAME: '',
+        SUPERVISOR_SURNAME: '',
+        SUPERVISOR_DESIGNATION: '',
+        SUPERVISOR_OFFICE_PHONE: '',
+        SUPERVISOR_MOBILE_PHONE: '',
         email: '',
+        SUPERVISOR_SECTION: '',
+        SUPERVISOR_DIVISION: '',
+        SUPERVISOR_COST_CENTRE_CODE: '',
+        SUPERVISOR_GROUP_NAME: '',
+        SUPERVISOR_SALARY_GRADE: '',
+
       });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add supervisor');
@@ -83,7 +118,7 @@ const AddSupervisor = () => {
       const data = new FormData();
       data.append('file', file);
 
-      const res = await axios.post('http://localhost:5000/api/employees/upload', data, {
+      const res = await axios.post('http://localhost:5000/api/supervisors/upload', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -111,8 +146,8 @@ const AddSupervisor = () => {
           <input
             type="text"
             className="form-control"
-            name="EMPLOYEE_NUMBER"
-            value={formData.EMPLOYEE_NUMBER}
+            name="SUPERVISOR_NUMBER"
+            value={formData.SUPERVISOR_NUMBER}
             onChange={handleChange}
             required
           />
@@ -122,8 +157,19 @@ const AddSupervisor = () => {
           <input
             type="text"
             className="form-control"
-            name="EMPLOYEE_TITLE"
-            value={formData.EMPLOYEE_TITLE}
+            name="SUPERVISOR_TITLE"
+            value={formData.SUPERVISOR_TITLE}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
+          <label>Employee Initials</label>
+          <input
+            type="text"
+            className="form-control"
+            name="SUPERVISOR_INITIALS"
+            value={formData.SUPERVISOR_INITIALS}
             onChange={handleChange}
             required
           />
@@ -133,8 +179,8 @@ const AddSupervisor = () => {
           <input
             type="text"
             className="form-control"
-            name="EMPLOYEE_FIRST_NAME"
-            value={formData.EMPLOYEE_FIRST_NAME}
+            name="SUPERVISOR_FIRST_NAME"
+            value={formData.SUPERVISOR_FIRST_NAME}
             onChange={handleChange}
             required
           />
@@ -144,8 +190,8 @@ const AddSupervisor = () => {
           <input
             type="text"
             className="form-control"
-            name="EMPLOYEE_SURNAME"
-            value={formData.EMPLOYEE_SURNAME}
+            name="SUPERVISOR_SURNAME"
+            value={formData.SUPERVISOR_SURNAME}
             onChange={handleChange}
             required
           />
@@ -155,8 +201,30 @@ const AddSupervisor = () => {
           <input
             type="text"
             className="form-control"
-            name="EMPLOYEE_DESIGNATION"
-            value={formData.EMPLOYEE_DESIGNATION}
+            name="SUPERVISOR_DESIGNATION"
+            value={formData.SUPERVISOR_DESIGNATION}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
+          <label>Office Phone</label>
+          <input
+            type="int"
+            className="form-control"
+            name="SUPERVISOR_OFFICE_PHONE"
+            value={formData.SUPERVISOR_OFFICE_PHONE}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
+          <label>Mobile Phone</label>
+          <input
+            type="int"
+            className="form-control"
+            name="SUPERVISOR_MOBILE_PHONE"
+            value={formData.SUPERVISOR_MOBILE_PHONE}
             onChange={handleChange}
             required
           />
@@ -172,6 +240,62 @@ const AddSupervisor = () => {
             required
           />
         </div>
+        <div className="mb-3">
+          <label>Section</label>
+          <input
+            type="text"
+            className="form-control"
+            name="SUPERVISOR_SECTION"
+            value={formData.SUPERVISOR_SECTION}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
+          <label>Division</label>
+          <input
+            type="text"
+            className="form-control"
+            name="SUPERVISOR_DIVISION"
+            value={formData.SUPERVISOR_DIVISION}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
+          <label>Cost Centre Code</label>
+          <input
+            type="text"
+            className="form-control"
+            name="SUPERVISOR_COST_CENTRE_CODE"
+            value={formData.SUPERVISOR_COST_CENTRE_CODE}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
+          <label>Group Name</label>
+          <input
+            type="text"
+            className="form-control"
+            name="SUPERVISOR_GROUP_NAME"
+            value={formData.SUPERVISOR_GROUP_NAME}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="mb-3">
+          <label>Salary Grade</label>
+          <input
+            type="text"
+            className="form-control"
+            name="SUPERVISOR_SALARY_GRADE"
+            value={formData.SUPERVISOR_SALARY_GRADE}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
         <button type="submit" className="btn btn-primary">Add Supervisor</button>
       </form>
 
