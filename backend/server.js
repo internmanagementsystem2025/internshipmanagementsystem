@@ -33,7 +33,7 @@ const rotationalRoutes = require("./routes/rotationalRoutes");
 const userActivityRoutes = require("./routes/userActivityRoutes");
 const certificateLetterRoutes = require("./routes/certificateLetterRoutes");
 const { passport } = require('./config/oauthStrategies');
-const employeeRoutes = require('./routes/employeeRoutes');
+const supervisorRoutes = require('./routes/supervisorRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -75,7 +75,7 @@ app.use("/api/stations", stationRoutes);
 app.use("/api/rotational", rotationalRoutes);
 app.use("/api/user-activity", userActivityRoutes);
 app.use("/api/certificate-letters", certificateLetterRoutes);
-app.use('/api/employees', employeeRoutes);
+app.use('/api/supervisors', supervisorRoutes);
 
 
 app.use(errorHandler);
