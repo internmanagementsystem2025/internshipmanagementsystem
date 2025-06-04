@@ -440,6 +440,7 @@ const ViewAllCVs = ({ darkMode = false }) => {
   const handleDelete = async (deletionData) => {
     if (!cvToDelete) return;
 
+    // Validate ID format
     if (!isValidMongoId(cvToDelete._id)) {
       alert("Invalid CV ID format");
       setShowDeleteModal(false);
@@ -455,26 +456,29 @@ const ViewAllCVs = ({ darkMode = false }) => {
         return;
       }
 
+      // Use the soft delete endpoint with the form data
       const response = await axios.delete(`${API_BASE_URL}/cvs/${cvToDelete._id}`, {
         headers: { Authorization: `Bearer ${token}` },
         data: {
           adminName: deletionData.adminName,
           employeeId: deletionData.employeeId,
           deletionReason: deletionData.deletionReason,
-          deletionComments: deletionData.deletionComments,
-        },
+          deletionComments: deletionData.deletionComments
+        }
       });
 
       if (response.status === 200) {
-        setCvData((prevData) => prevData.filter((cv) => cv._id !== cvToDelete._id));
-        setFilteredData((prevData) => prevData.filter((cv) => cv._id !== cvToDelete._id));
-        
+        // Remove the CV from the current data
+        setCvData(prevData => prevData.filter((cv) => cv._id !== cvToDelete._id));
+        setFilteredData(prevData => prevData.filter((cv) => cv._id !== cvToDelete._id));
+
+        // Show success message
         alert(`CV deleted successfully! 
         
 Deletion Details:
-- Ref No: ${response.data.deletionInfo?.refNo || cvToDelete.refNo || "N/A"}  
-- Deleted by: ${response.data.deletionInfo?.deletedBy || deletionData.adminName || "N/A"}
-- Reason: ${deletionData.deletionReason.replace(/_/g, " ").toUpperCase()}
+- Ref No: ${response.data.deletionInfo?.refNo || cvToDelete.refNo || 'N/A'}  
+- Deleted by: ${response.data.deletionInfo?.deletedBy || deletionData.adminName || 'N/A'}
+- Reason: ${deletionData.deletionReason.replace(/_/g, ' ').toUpperCase()}
 
 The CV has been moved to deleted items and can be restored by administrators if needed.`);
       } else {
@@ -482,9 +486,9 @@ The CV has been moved to deleted items and can be restored by administrators if 
       }
     } catch (error) {
       console.error("Error deleting CV:", error);
-      
+
       let errorMessage = "Failed to delete CV. Please try again.";
-      
+
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.status === 400) {
@@ -497,7 +501,7 @@ The CV has been moved to deleted items and can be restored by administrators if 
         navigate("/login");
         return;
       }
-      
+
       alert(errorMessage);
     } finally {
       setDeleteLoading(false);
@@ -506,21 +510,24 @@ The CV has been moved to deleted items and can be restored by administrators if 
     }
   };
 
+  // Handle opening delete modal
   const handleDeleteClick = (cvId) => {
     const cvToDeleteData = cvData.find((cv) => cv._id === cvId);
     if (cvToDeleteData) {
-      setCvToDelete(cvToDeleteData);
+      setCvToDelete(cvToDeleteData); 
       setShowDeleteModal(true);
     } else {
       alert("CV not found");
     }
   };
 
+  // Handle closing delete modal
   const handleCloseDeleteModal = () => {
     setShowDeleteModal(false);
     setCvToDelete(null);
     setDeleteLoading(false);
   };
+
 
   // Table columns and pagination
   const getColumns = () => {

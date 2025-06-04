@@ -6,7 +6,7 @@ import {
   useNavigationType,
 } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Row, Col, Navbar, Container } from "react-bootstrap";
+import { Row, Col} from "react-bootstrap";
 import NavbarComp from "./components/pages/NavbarComp";
 import IndividualSidebar from "./individual/components/IndividualSidebar";
 import InstituteSidebar from "./institute/components/InstituteSidebar";
@@ -108,6 +108,7 @@ import InternCertificateRequest  from "./admin/pages/certificaterequest/InternCe
 import ViewCertificateRequest  from "./components/pages/ViewCertificateRequest";
 import DownloadCertificate  from "./individual/pages/certificaterequest/DownloadCertificate";
 import AdminReports  from "./admin/pages/reports/AdminReports";
+import LearnMorePage from "./components/login/LearnMorePage";
 
 
 function App() {
@@ -263,7 +264,8 @@ function App() {
     "/register",
     "/forgot-password/email-confirm",
     "/forgot-password/verify-otp",
-    "/email-verification"
+    "/email-verification",
+    "/learn-more",
   ].includes(location.pathname);
   const hideFooter = hideNavAndSidebar;
 
@@ -314,6 +316,7 @@ function App() {
     <Route path="/forgot-password/email-confirm" element={<EmailConfirmPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
     <Route path="/forgot-password/verify-otp" element={<VerifyOTPPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
     <Route path="/email-verification" element={<EmailVerification darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/learn-more" element={<LearnMorePage darkMode={darkMode} toggleTheme={toggleTheme} />} />
 
   {/* Protected Routes */}
   <Route element={<ProtectedRoute />}>
