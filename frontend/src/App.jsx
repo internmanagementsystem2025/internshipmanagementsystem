@@ -55,6 +55,8 @@ import ViewAllSchemes from "./admin/pages/scheme/ViewAllSchemes";
 import ViewInductionDetails from "./admin/pages/induction/ViewInductionDetails";
 import EditInduction from "./admin/pages/induction/EditInduction";
 import AddNewScheme from "./admin/pages/scheme/AddNewScheme";
+import AddEmployee from './admin/pages/scheme/AddEmployee';
+import ViewEmployees from './admin/pages/scheme/ViewEmployee';
 import ViewScheme from "./admin/pages/scheme/ViewScheme";
 import AddStaff from "./admin/pages/scheme/AddStaff";
 import EditScheme from "./admin/pages/scheme/EditScheme";
@@ -230,6 +232,8 @@ function App() {
     "/view-rotational-stations/:id",
     "/edit-rotational-stations/:id",
     "/admin-reports" ,
+    "/add-employees",
+    "/view-employees"
   ];
 
   const staffRoutes = [
@@ -357,6 +361,8 @@ function App() {
     <Route path="/edit-induction/:id" element={<EditInduction darkMode={darkMode} />} />
     <Route path="/induction-results" element={<InductionResults darkMode={darkMode} />} />
     <Route path="/view-all-scheme" element={<ViewAllSchemes darkMode={darkMode} />} />
+    <Route path="/add-employees" element={<AddEmployee darkMode={darkMode} />} />
+    <Route path="/view-employees" element={<ViewEmployees darkMode={darkMode} />} />
     <Route path="/add-new-scheme" element={<AddNewScheme darkMode={darkMode} />} />
     <Route path="/view-scheme/:schemeId" element={<ViewScheme darkMode={darkMode} />} />
     <Route path="/add-staff" element={<AddStaff darkMode={darkMode} />} />
