@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Logo from "../../assets/logo.png";
@@ -79,27 +80,17 @@ const AwardIcon = () => (
   </svg>
 );
 
-// Company Logo Component
-const CompanyLogo = ({ size = "32" }) => (
-  <svg width={size} height={size} viewBox="0 0 100 100" fill="currentColor">
-    <defs>
-      <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#00aaff" />
-        <stop offset="100%" stopColor="#0066ff" />
-      </linearGradient>
-    </defs>
-    <circle cx="50" cy="50" r="45" fill="url(#logoGradient)" />
-    <path d="M30 35 L70 35 L70 45 L40 45 L40 55 L65 55 L65 65 L30 65 Z" fill="white" />
-    <circle cx="75" cy="25" r="8" fill="#00ff88" />
-    <rect x="20" y="70" width="60" height="4" rx="2" fill="white" opacity="0.8" />
-  </svg>
-);
-
-const LearnMorePage = () => {
-  const [darkMode, setDarkMode] = useState(false);
+const LearnMorePage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => {
+  const [internalDarkMode, setInternalDarkMode] = useState(() => {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+  
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+
+  // Use prop darkMode if provided, otherwise use internal state
+  const darkMode = propDarkMode !== undefined ? propDarkMode : internalDarkMode;
 
   const darkTheme = {
     backgroundColor: "#0a192f",
@@ -131,13 +122,20 @@ const LearnMorePage = () => {
     handleResize();
     window.addEventListener('resize', handleResize);
     
-    // Trigger animations after component mounts
     setTimeout(() => setIsVisible(true), 100);
     
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const toggleTheme = () => setDarkMode(!darkMode);
+  // Theme toggle function
+  const toggleTheme = () => {
+    if (propToggleTheme) {
+      propToggleTheme();
+    } else {
+      const newDarkMode = !internalDarkMode;
+      setInternalDarkMode(newDarkMode);
+    }
+  };
 
   
   const handleApplyNow = () => {
