@@ -57,7 +57,7 @@ function AddEmployee() {
     formData.append('file', file);
 
     try {
-      await axios.post('http://localhost:5000/api/employees/upload', formData, {
+      await axios.post('${import.meta.env.VITE_BASE_URL}/employees/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }
