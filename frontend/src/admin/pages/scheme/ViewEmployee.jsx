@@ -3,7 +3,7 @@ import axios from 'axios';
 import Select from 'react-select';
 import { FaSortAlphaDown, FaSortAlphaUp } from 'react-icons/fa';
 
-const API_URL = 'http://localhost:5000/api/employees';
+const API_URL = '${import.meta.env.VITE_BASE_URL}/api/employees';
 
 const ViewEmployees = () => {
   const [employees, setEmployees] = useState([]);
