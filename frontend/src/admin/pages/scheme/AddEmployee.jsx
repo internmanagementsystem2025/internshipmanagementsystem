@@ -26,7 +26,7 @@ function AddEmployee() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/employees/add', employee);
+      await axios.post('${import.meta.env.VITE_BASE_URL}/employees/add', employee);
       alert('✅ Employee added successfully');
       setEmployee({
         employee_code: '',
