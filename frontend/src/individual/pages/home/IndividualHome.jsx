@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, Row, Col, Container, Form, Button } from "react-bootstrap";
-import { FiFileText, FiUserCheck, FiAward } from "react-icons/fi";
+import { FiFileText, FiUserCheck, FiAward, FiMail, FiSend } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import TableComponent from "../home/TableComponent";
 import logo from "../../../assets/logo.png";
 import axios from "axios";
@@ -18,6 +19,23 @@ const IndividualHome = ({ darkMode }) => {
   const navigate = useNavigate();
   const [notification, setNotification] = useState({ show: false, message: "", variant: "success" });
 
+const theme = {
+  backgroundColor: darkMode ? "#000000" : "#f8fafc",
+  cardBackground: darkMode ? "#1E1E1E" : "rgba(255, 255, 255, 0.4)",
+  accentColor: darkMode ? "#2563eb" : "#10b981", 
+  textPrimary: darkMode ? "#E1E1E1" : "#1e293b",
+  textSecondary: darkMode ? "#A0A0A0" : "#64748b",
+  border: darkMode ? "#333333" : "rgba(0, 0, 0, 0.1)",
+  gradientStart: darkMode ? "#2563eb" : "#10b981",
+  gradientEnd: darkMode ? "#1e40af" : "#059669", 
+  buttonHover: darkMode ? "#1d4ed8" : "#047857", 
+  statusApproved: darkMode ? "#03DAC6" : "#10b981",
+  statusRejected: darkMode ? "#CF6679" : "#ef4444",
+  statusPending: darkMode ? "#FFB74D" : "#f59e0b",
+  statusDefault: darkMode ? "#757575" : "#6b7280"
+};
+
+
   const handleView = (cvId) => {
     navigate(`/view-cv/${cvId}`);
   };
@@ -26,12 +44,8 @@ const IndividualHome = ({ darkMode }) => {
     navigate(`/edit-cv/${cvId}`);
   };
 
-  // Handle permanent delete from DeletedCVNotification component
   const handlePermanentDeleteFromNotification = (deletedCV) => {
-    // Remove the CV from deletedCVs state
     setDeletedCVs(prevData => prevData.filter(cv => cv._id !== deletedCV._id));
-    
-    // Refresh active CVs in case status changed
     fetchUserCVs();
   };
 
@@ -39,7 +53,6 @@ const IndividualHome = ({ darkMode }) => {
     setDeletedCVs([]);
   };
 
-  // Map CV approval status to display status
   const getStatusDisplay = (cv) => {
     if (!cv.cvApproval) return "Pending";
     
@@ -59,7 +72,6 @@ const IndividualHome = ({ darkMode }) => {
     }
   };
 
-  // Check if user can edit this CV
   const canEdit = (cv) => {
     return !cv.cvApproval || 
            cv.cvApproval.status === "cv-submitted" || 
@@ -73,7 +85,20 @@ const IndividualHome = ({ darkMode }) => {
     { header: "Intern Type", accessor: "selectedRole" },
     { 
       header: "CV Status", 
-      render: (cv) => getStatusDisplay(cv)
+      render: (cv) => (
+        <span style={{
+          padding: "0.25rem 0.75rem",
+          borderRadius: "12px",
+          fontSize: "0.875rem",
+          fontWeight: "500",
+          background: getStatusDisplay(cv) === "Approved" ? theme.statusApproved : 
+                     getStatusDisplay(cv) === "Rejected" ? theme.statusRejected :
+                     getStatusDisplay(cv) === "Under Review" ? theme.statusPending : theme.statusDefault,
+          color: "white"
+        }}>
+          {getStatusDisplay(cv)}
+        </span>
+      )
     },
     { 
       header: "Actions", 
@@ -84,6 +109,14 @@ const IndividualHome = ({ darkMode }) => {
             variant="outline-primary" 
             onClick={() => handleView(cv._id)} 
             className="fw-semibold"
+            style={{
+              borderColor: theme.accentColor,
+              color: theme.accentColor,
+              background: "transparent",
+              '&:hover': {
+                backgroundColor: `${theme.accentColor}20`
+              }
+            }}
           >
             View
           </Button>
@@ -94,6 +127,14 @@ const IndividualHome = ({ darkMode }) => {
               variant="outline-success" 
               onClick={() => handleEdit(cv._id)} 
               className="fw-semibold"
+              style={{
+                borderColor: theme.gradientEnd,
+                color: theme.gradientEnd,
+                background: "transparent",
+                '&:hover': {
+                  backgroundColor: `${theme.gradientEnd}20`
+                }
+              }}
             >
               Edit
             </Button>
@@ -144,22 +185,16 @@ const IndividualHome = ({ darkMode }) => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      console.log('Fetching deleted CVs...'); // Debug log
-
       const response = await axios.get("http://localhost:5000/api/cvs/deleted/mycvs", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      console.log('Deleted CVs response:', response.data); // Debug log
 
       if (response.data.deletedCVs && response.data.deletedCVs.length > 0) {
         setDeletedCVs(response.data.deletedCVs);
       }
     } catch (error) {
       console.error("Error fetching deleted CVs:", error);
-      console.error("Error response:", error.response?.data); // Debug log
       
-      // Only show error if it's not a 404 (no deleted CVs found)
       if (error.response?.status !== 404) {
         console.error("Failed to fetch deleted CVs:", error.response?.data?.message);
       }
@@ -167,7 +202,6 @@ const IndividualHome = ({ darkMode }) => {
   };
 
   const handleEmailSubmit = async () => {
-    // Email validation logic
     if (!email.trim()) {
       setNotification({ 
         show: true, 
@@ -344,20 +378,6 @@ const IndividualHome = ({ darkMode }) => {
     }
   };
 
-  const cardStyle = (darkMode, isHovered) => ({
-    cursor: "pointer",
-    border: "none",
-    borderRadius: "8px",
-    boxShadow: isHovered ? "0 6px 15px rgba(0, 0, 0, 0.2)" : "0 4px 8px rgba(0, 0, 0, 0.1)",
-    background: darkMode
-      ? "linear-gradient(135deg, #3b4e76, #2f3b57)"
-      : "linear-gradient(135deg, #66c466, #4d8f4d)",
-    color: "white",
-    height: "160px",
-    transition: "transform 0.3s ease, box-shadow 0.3s ease",
-    transform: isHovered ? "scale(1.05)" : "scale(1)",
-  });
-
   useEffect(() => {
     fetchUserCVs();
     fetchDeletedCVs();
@@ -377,158 +397,455 @@ const IndividualHome = ({ darkMode }) => {
   return (
     <div
       style={{
-        backgroundColor: darkMode ? "#1a1a1a" : "#f4f4f4",
+        backgroundColor: theme.backgroundColor,
+        color: theme.textPrimary,
         minHeight: "100vh",
-        padding: "30px 0",
+        position: "relative",
+        overflow: "hidden",
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        transition: 'background-color 0.3s ease'
       }}
     >
-      <Container>
-        <div className="d-flex justify-content-center mt-4 mb-5">
-          <img src={logo} alt="Company Logo" className="w-25 h-auto" />
-        </div>
+      {/* Background Effects */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+        opacity: darkMode ? 0.05 : 0.1,
+        pointerEvents: 'none',
+        background: darkMode 
+          ? 'radial-gradient(circle at 20% 50%, #0ea5e9 0%, transparent 50%), radial-gradient(circle at 80% 20%, #1d4ed8 0%, transparent 50%)'
+          : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
+      }} />
 
-        <h2 className="text-center mb-5 mt-4">CLICK YOUR INTERNSHIP STATUS</h2>
-        <Row className="justify-content-center g-4">
-          <Col md={4}>
-            <Card
-              onClick={() => navigate("/individual-add-cv")}
-              onMouseEnter={() => setHoveredCard("request-internship")}
-              onMouseLeave={() => setHoveredCard(null)}
-              style={cardStyle(darkMode, hoveredCard === "request-internship")}
-            >
-              <Card.Body className="d-flex flex-column align-items-center justify-content-between">
-                <Card.Title className="text-center">Request an Internship</Card.Title>
-                <FiFileText size={40} />
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4}>
-            <Card
-              onClick={() => navigate("/request-certificate")}
-              onMouseEnter={() => setHoveredCard("request-certificate")}
-              onMouseLeave={() => setHoveredCard(null)}
-              style={cardStyle(darkMode, hoveredCard === "request-certificate")}
-            >
-              <Card.Body className="d-flex flex-column align-items-center justify-content-between">
-                <Card.Title className="text-center">Request Certificate</Card.Title>
-                <FiAward size={40} />
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col md={4}>
-            <Card
-              onClick={() => navigate("/download-certificate")}
-              onMouseEnter={() => setHoveredCard("download-certificate")}
-              onMouseLeave={() => setHoveredCard(null)}
-              style={cardStyle(darkMode, hoveredCard === "download-certificate")}
-            >
-              <Card.Body className="d-flex flex-column align-items-center justify-content-between">
-                <Card.Title className="text-center">Download certificate</Card.Title>
-                <FiUserCheck size={40} />
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+      {/* Main Content */}
+      <div style={{ position: 'relative', zIndex: 1, padding: "2rem 0" }}>
+        <Container>
+          {/* Logo Section */}
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-5"
+          >
+            <img 
+              src={logo} 
+              alt="Company Logo" 
+              style={{ 
+                height: '80px', 
+                width: 'auto',
+                filter: darkMode ? 'brightness(1.2) contrast(0.9)' : 'brightness(1)'
+              }} 
+            />
+          </motion.div>
 
-        <h2 className="text-center mb-4" style={{ marginTop: "80px" }}>
-          ABOUT SLT TRAINING PROGRAM
-        </h2>
-        <p className="text-justify mb-5" style={{ textAlign: "justify" }}>
-          The SLT Training Program is a comprehensive initiative designed to empower individuals with the skills and knowledge required to excel in the telecommunications industry. This program focuses on developing technical expertise, problem-solving abilities, and customer service skills through hands-on training and real-world scenarios. Participants will gain insights into cutting-edge technologies, network infrastructure, and incident management processes. With a blend of theoretical knowledge and practical experience, the program equips trainees to handle challenges effectively while fostering innovation and teamwork. By completing the SLT Training Program, individuals can unlock opportunities for professional growth and contribute significantly to the organization's success.
-        </p>
+          {/* Hero Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="text-center mb-5"
+          >
+        <h1 style={{ 
+                  fontSize: '3rem', 
+                  fontWeight: 800,
+                  backgroundImage: `linear-gradient(135deg, ${theme.accentColor}, ${theme.gradientEnd})`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  color: 'transparent',
+                  WebkitTextFillColor: 'transparent',
+                  marginBottom: '1rem',
+                  textShadow: darkMode 
+                  ? `0 0 20px ${theme.accentColor}60` 
+                  : `0 0 30px ${theme.accentColor}40`
+                }}>
+                MANAGE YOUR INTERNSHIP
+             </h1>
 
-        <h4 className="text-center mb-4" style={{ marginTop: "80px" }}>
-          Please Enter your Email to get more information about your Internship!
-        </h4>
-        <div className="d-flex justify-content-center">
-          <div className="position-relative" style={{ width: "100%", maxWidth: "400px" }}>
-            <Form onSubmit={(e) => { e.preventDefault(); handleEmailSubmit(); }}>
-              <div className="d-flex" style={{
-                border: darkMode ? "2px solid #007bff" : "2px solid #28a745",
-                borderRadius: "30px",
-                overflow: "hidden",
-                padding: "3px",
-                backgroundColor: "white"
-              }}>
-                <Form.Control
-                  type="email"
-                  placeholder="Enter your email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="p-2"
-                  style={{
-                    border: "none",
-                    boxShadow: "none",
-                    outline: "none",
-                    fontSize: "14px",
-                    height: "35px",
-                    borderRadius: "30px 0 0 30px",
-                  }}
-                />
-                <Button
-                  type="submit"
-                  className="px-3 py-2"
-                  style={{
-                    background: darkMode ? "linear-gradient(135deg, #007bff, #004d99)" : "linear-gradient(135deg, #28a745, #004d00)",
-                    border: "none",
-                    color: "white",
-                    fontSize: "14px",
-                    height: "35px",
-                    borderRadius: "30px",
-                  }}
-                >
-                  Send
-                </Button>
+            <p style={{ 
+              fontSize: '1.2rem',
+              color: theme.textSecondary,
+              maxWidth: '600px',
+              margin: '0 auto',
+              lineHeight: 1.6
+            }}>
+              Track your application status, request certificates, and manage your internship journey with our modern portal
+            </p>
+          </motion.div>
+
+          {/* Action Cards */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            <Row className="justify-content-center g-4 mb-5">
+              {[
+                { 
+                  title: "Request an Internship", 
+                  icon: FiFileText, 
+                  route: "/individual-add-cv", 
+                  key: "request-internship",
+                  description: "Submit your application and start your journey"
+                },
+                { 
+                  title: "Request Certificate", 
+                  icon: FiAward, 
+                  route: "/request-certificate", 
+                  key: "request-certificate",
+                  description: "Apply for your completion certificate"
+                },
+                { 
+                  title: "Download Certificate", 
+                  icon: FiUserCheck, 
+                  route: "/download-certificate", 
+                  key: "download-certificate",
+                  description: "Get your verified certificates"
+                }
+              ].map((card, index) => (
+                <Col md={4} key={card.key}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.6 + index * 0.1 }}
+                    whileHover={{ y: -8, scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Card
+                      onClick={() => navigate(card.route)}
+                      onMouseEnter={() => setHoveredCard(card.key)}
+                      onMouseLeave={() => setHoveredCard(null)}
+                      style={{
+                        cursor: "pointer",
+                        border: "none",
+                        borderRadius: "20px",
+                        height: "200px",
+                        background: theme.cardBackground,
+                        backdropFilter: 'blur(20px)',
+                        boxShadow: hoveredCard === card.key 
+                          ? `0 20px 40px ${darkMode ? 'rgba(14, 165, 233, 0.2)' : 'rgba(0, 204, 102, 0.2)'}, 0 0 0 1px ${theme.accentColor}40`
+                          : `0 10px 30px ${darkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: hoveredCard === card.key 
+                          ? `linear-gradient(135deg, ${theme.accentColor}10, ${theme.gradientEnd}10)`
+                          : 'transparent',
+                        transition: 'all 0.3s ease'
+                      }} />
+                      
+                      <Card.Body className="d-flex flex-column align-items-center justify-content-center text-center h-100 position-relative">
+                        <motion.div
+                          whileHover={{ scale: 1.1, rotate: 5 }}
+                          transition={{ type: "spring", stiffness: 300 }}
+                          style={{
+                            width: '70px',
+                            height: '70px',
+                            borderRadius: '50%',
+                            background: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: '1rem',
+                            boxShadow: `0 10px 25px ${darkMode ? 'rgba(14, 165, 233, 0.4)' : 'rgba(0, 204, 102, 0.4)'}`
+                          }}
+                        >
+                          <card.icon size={32} color="white" />
+                        </motion.div>
+                        
+                        <Card.Title style={{ 
+                          color: theme.textPrimary,
+                          fontSize: '1.25rem',
+                          fontWeight: '700',
+                          marginBottom: '0.5rem'
+                        }}>
+                          {card.title}
+                        </Card.Title>
+                        
+                        <p style={{ 
+                          color: theme.textSecondary,
+                          fontSize: '0.9rem',
+                          margin: 0,
+                          lineHeight: 1.4
+                        }}>
+                          {card.description}
+                        </p>
+                      </Card.Body>
+                    </Card>
+                  </motion.div>
+                </Col>
+              ))}
+            </Row>
+          </motion.div>
+
+          {/* About Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+            style={{
+              background: theme.cardBackground,
+              backdropFilter: 'blur(20px)',
+              borderRadius: '24px',
+              padding: '3rem',
+              marginBottom: '4rem',
+              border: `1px solid ${theme.border}`,
+              boxShadow: `0 20px 40px ${darkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`
+            }}
+          >
+            <h2 style={{ 
+  textAlign: 'center',
+  marginBottom: '2rem',
+  color: theme.textPrimary,
+  fontSize: '2.5rem',
+  fontWeight: '700'
+}}>
+  ABOUT{" "}
+  <span style={{ 
+    backgroundImage: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
+    backgroundClip: 'text',
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    WebkitTextFillColor: 'transparent'
+  }}>
+    SLT TRAINING PROGRAM
+  </span>
+</h2>
+
+            <p style={{ 
+              textAlign: "justify",
+              color: theme.textSecondary,
+              fontSize: '1.1rem',
+              lineHeight: 1.8,
+              maxWidth: '900px',
+              margin: '0 auto'
+            }}>
+              The SLT Training Program is a comprehensive initiative designed to empower individuals with the skills and knowledge required to excel in the telecommunications industry. This program focuses on developing technical expertise, problem-solving abilities, and customer service skills through hands-on training and real-world scenarios. Participants will gain insights into cutting-edge technologies, network infrastructure, and incident management processes. With a blend of theoretical knowledge and practical experience, the program equips trainees to handle challenges effectively while fostering innovation and teamwork. By completing the SLT Training Program, individuals can unlock opportunities for professional growth and contribute significantly to the organization's success.
+            </p>
+          </motion.div>
+
+          {/* Email Subscription - Updated to match About section width */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 1.0 }}
+            className="mb-5"
+          >
+            <div style={{
+              marginBottom: '6rem',
+            }}>
+              <div className="text-center">
+                <FiMail size={48} color={theme.accentColor} style={{ marginBottom: '1.5rem' }} />
+                
+                <h4 style={{ 
+                  color: theme.textPrimary,
+                  marginBottom: '1rem',
+                  fontSize: '1.75rem',
+                  fontWeight: '600'
+                }}>
+                  Stay Updated on Your Internship
+                </h4>
+                
+                <p style={{ 
+                  color: theme.textSecondary,
+                  marginBottom: '2rem',
+                  fontSize: '1.1rem',
+                  maxWidth: '600px',
+                  marginLeft: 'auto',
+                  marginRight: 'auto'
+                }}>
+                  Get the latest information and updates about your internship journey
+                </p>
               </div>
-            </Form>
-          </div>
-        </div>
+              
+              <Form onSubmit={(e) => { e.preventDefault(); handleEmailSubmit(); }}>
+                <div style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  padding: '0.5rem',
+                  background: darkMode ? 'rgba(23, 42, 69, 0.7)' : 'white',
+                  border: `2px solid ${theme.accentColor}`,
+                  borderRadius: '16px',
+                  backdropFilter: 'blur(10px)',
+                  maxWidth: '600px',
+                  margin: '0 auto'
+                }}>
+                  <Form.Control
+                    type="email"
+                    placeholder="Enter your email address"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      boxShadow: "none",
+                      outline: "none",
+                      fontSize: "1rem",
+                      color: theme.textPrimary,
+                      flex: 1,
+                      '&::placeholder': {
+                        color: theme.textSecondary
+                      }
+                    }}
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.05, backgroundColor: theme.buttonHover }}
+                    whileTap={{ scale: 0.95 }}
+                    type="submit"
+                    style={{
+                      background: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
+                      border: "none",
+                      color: "white",
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '12px',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: `0 8px 25px ${darkMode ? 'rgba(14, 165, 233, 0.4)' : 'rgba(0, 204, 102, 0.4)'}`,
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <FiSend size={16} />
+                    Send
+                  </motion.button>
+                </div>
+              </Form>
+            </div>
+          </motion.div>
 
-        <h2 className="text-center mb-4" style={{ marginTop: "80px" }}>
-          INTERNSHIP STATUS
-        </h2>
+          {/* CV Status Section */}
+          <motion.div
+  initial={{ opacity: 0, y: 30 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.8, delay: 1.2 }}
+>
+<h2 style={{ 
+  textAlign: 'center',
+  marginBottom: '3rem',
+  color: theme.textPrimary,
+  fontSize: '2.5rem',
+  fontWeight: 700
+}}>
+  INTERNSHIP{" "}
+  <span style={{ 
+    backgroundImage: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
+    backgroundClip: 'text',
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    WebkitTextFillColor: 'transparent'
+  }}>
+    STATUS
+  </span>
+</h2>
 
-        {/* Deleted CV Notification - Pass the correct callback */}
-        <DeletedCVNotification
-          deletedCVs={deletedCVs}
-          onPermanentDelete={handlePermanentDeleteFromNotification}
-          onDismiss={handleDismissDeletedNotification}
-          darkMode={darkMode}
-          setNotification={setNotification}
+
+  {/* Conditionally render DeletedCVNotification only when there are deleted CVs */}
+  {deletedCVs.length > 0 && (
+    <DeletedCVNotification
+      deletedCVs={deletedCVs}
+      onPermanentDelete={handlePermanentDeleteFromNotification}
+      onDismiss={handleDismissDeletedNotification}
+      darkMode={darkMode}
+      setNotification={setNotification}
+    />
+  )}
+
+  {/* CV Table or Empty State - Hide "No Applications Found" when there are deleted CVs */}
+  {cvData.length > 0 ? (
+    <div >
+      <TableComponent
+        tableData={cvData}
+        columns={columns}
+        footerText={`${cvData.length} application(s) in total`}
+        className="mb-10"
+        darkMode={darkMode}
+      />
+    </div>
+  ) : (
+    // Only show "No Applications Found" when there are no CVs AND no deleted CVs
+    deletedCVs.length === 0 && (
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.4, duration: 0.6 }}
+        style={{
+          background: theme.cardBackground,
+          backdropFilter: 'blur(20px)',
+          borderRadius: '20px',
+          padding: '4rem 2rem',
+          textAlign: 'center',
+          border: `1px solid ${theme.border}`,
+          boxShadow: `0 15px 35px ${darkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`
+        }}
+      >
+        <FiFileText size={64} color={theme.accentColor} style={{ marginBottom: '1.5rem', opacity: 0.7 }} />
+        <h3 style={{ 
+          color: theme.textPrimary,
+          marginBottom: '1rem',
+          fontSize: '1.5rem',
+          fontWeight: '600'
+        }}>
+          No Applications Found
+        </h3>
+        <p style={{ 
+          color: theme.textSecondary,
+          fontSize: '1.1rem',
+          marginBottom: '2rem'
+        }}>
+          You haven't submitted any internship applications yet.
+        </p>
+        <Button 
+          variant="primary" 
+          onClick={() => navigate("/individual-add-cv")}
+          style={{
+            background: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
+            border: "none",
+            color: "white",
+            padding: '0.75rem 1.5rem',
+            borderRadius: '12px',
+            fontSize: '1rem',
+            fontWeight: '600',
+            boxShadow: `0 8px 25px ${theme.accentColor}40`,
+            transition: 'all 0.3s ease'
+          }}
+        >
+          Apply Now
+        </Button>
+      </motion.div>
+    )
+  )}
+</motion.div>
+        </Container>
+
+        <RecommendationPopup 
+          show={showPopup} 
+          onClose={() => setShowPopup(false)} 
+          darkMode={darkMode} 
+          onSaveRating={saveUserRating} 
         />
 
-        {/* Only show TableComponent when there are CVs */}
-        {cvData.length > 0 ? (
-          <TableComponent
-            tableData={cvData}
-            columns={columns}
-            footerText={`${cvData.length} application(s) in total`}
-            className="mb-10"
-            darkMode={darkMode}
-          />
-        ) : (
-          <div className="text-center p-4">
-            <p style={{ color: darkMode ? '#cccccc' : '#666666' }}>
-              No applications found. Click "Request an Internship" to submit a new application.
-            </p>
-          </div>
-        )}
-      </Container>
-
-      <RecommendationPopup 
-        show={showPopup} 
-        onClose={() => setShowPopup(false)} 
-        darkMode={darkMode} 
-        onSaveRating={saveUserRating} 
-      />
-
-      <Notification 
-        show={notification.show} 
-        onClose={() => setNotification({ ...notification, show: false })} 
-        message={notification.message} 
-        variant={notification.variant} 
-      />
+        <Notification 
+          show={notification.show} 
+          onClose={() => setNotification({ ...notification, show: false })} 
+          message={notification.message} 
+          variant={notification.variant} 
+        />
+      </div>
     </div>
   );
 };
