@@ -667,6 +667,43 @@ const AdminSidebar = ({ darkMode }) => {
                     <FiFilePlus size={18} className="me-2" />
                     New scheme
                   </Nav.Link>
+
+                  <Nav.Link
+                    as={Link}
+                    to="/add-employees"
+                    onClick={() => setShow(false)}
+                    onMouseEnter={() => setHovered("add-employees")}
+                    onMouseLeave={() => setHovered(null)}
+                    style={{
+                      color: hovered === "add-employees" ? "#fff" : darkMode ? "#fff" : "#000",
+                      backgroundColor: hovered === "add-employees" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
+                      borderRadius: "5px",
+                      padding: "8px",
+                      margin: "3px 0",
+                    }}
+                  >
+                    <FiUsers size={18} className="me-2" />
+                    Add Employees
+                  </Nav.Link>
+
+                  <Nav.Link
+                    as={Link}
+                    to="/view-employees"
+                    onClick={() => setShow(false)}
+                    onMouseEnter={() => setHovered("view-employees")}
+                    onMouseLeave={() => setHovered(null)}
+                    style={{
+                      color: hovered === "view-employees" ? "#fff" : darkMode ? "#fff" : "#000",
+                      backgroundColor: hovered === "view-employees" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
+                      borderRadius: "5px",
+                      padding: "8px",
+                      margin: "3px 0",
+                    }}
+                  >
+                    <FiUsers size={18} className="me-2" />
+                    View Employees
+                  </Nav.Link>
+
                 </div>
               )}
               

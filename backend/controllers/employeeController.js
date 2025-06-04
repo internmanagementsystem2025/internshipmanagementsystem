@@ -1,4 +1,7 @@
 const Employee = require("../models/Employee");
+const xlsx = require('xlsx');
+const fs = require('fs');
+
 
 // Get all employees with optional filtering and sorting (no pagination)
 exports.getAllEmployees = async (req, res) => {
@@ -392,3 +395,90 @@ function buildHierarchyTree(employees, maxLevel = null) {
   
   return roots;
 }
+
+
+// Add single employee
+exports.addEmployee = async (req, res) => {
+  try {
+    const employee = new Employee(req.body);
+    await employee.save();
+    res.status(201).json({ message: 'Employee added successfully', employee });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// Upload employees via Excel
+exports.uploadEmployees = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const workbook = xlsx.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+    const validatedData = data.map((emp, index) => {
+      // Validate required fields
+      const requiredFields = ['employee_code', 'full_name', 'email', 'department', 'job_title', 'hierarchy_level', 'division_code', 'cost_center', 'grade_level', 'joining_date'];
+      const missingFields = requiredFields.filter(field => !emp[field]);
+
+      if (missingFields.length > 0) {
+        throw new Error(`Row ${index + 2} is missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      return {
+        employee_code: emp.employee_code,
+        full_name: emp.full_name,
+        email: emp.email,
+        department: emp.department,
+        job_title: emp.job_title,
+        hierarchy_level: emp.hierarchy_level,
+        division_code: emp.division_code,
+        cost_center: emp.cost_center,
+        grade_level: emp.grade_level,
+        joining_date: new Date(emp.joining_date), // Ensure valid date
+        status: emp.status || 'active'
+      };
+    });
+
+    const employees = await Employee.insertMany(validatedData);
+    fs.unlinkSync(req.file.path);
+
+    res.status(201).json({ message: 'Employees uploaded successfully', employees });
+  } catch (err) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// Get all employees
+exports.getAllEmployees = async (req, res) => {
+  try {
+    const employees = await Employee.find();
+    res.status(200).json(employees);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Update employee
+exports.updateEmployee = async (req, res) => {
+  try {
+    const updated = await Employee.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!updated) return res.status(404).json({ error: 'Employee not found' });
+    res.status(200).json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// Delete employee
+exports.deleteEmployee = async (req, res) => {
+  try {
+    const deleted = await Employee.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'Employee not found' });
+    res.status(200).json({ message: 'Employee deleted successfully' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
