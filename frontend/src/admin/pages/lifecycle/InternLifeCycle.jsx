@@ -1,9 +1,6 @@
 import React, { useState, useCallback } from "react";
 import axios from "axios";
-import { 
-  Container, Row, Col, Card, Form, Button, Spinner, Alert,
-  Badge, Accordion, Tab, Tabs, ListGroup
-} from "react-bootstrap";
+import { Container, Row, Col, Card, Form, Button, Spinner, Badge} from "react-bootstrap";
 import { 
   BookOpen, School, MapPin, Award, Users, Target,
   Search, User, Calendar, Phone, Mail, FileText, 
