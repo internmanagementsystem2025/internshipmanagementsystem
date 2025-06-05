@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Table, Button, Container, Spinner, Alert, Form, InputGroup } from "react-bootstrap";
-import { FaChevronLeft, FaChevronRight, FaMoneyBillWave, FaSearch } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaMoneyBillWave } from "react-icons/fa";
 import axios from "axios";
 import logo from "../../../assets/logo.png";
 import ConfirmDeleteModal from "../../../components/notifications/ConfirmDeleteModal";
-
-const API_BASE_URL = "http://localhost:5000/api/bankDetails";
 
 const InternBankDetails = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -23,7 +21,7 @@ const InternBankDetails = ({ darkMode }) => {
     try {
       setLoading(true);
       setError("");
-      const response = await axios.get(API_BASE_URL);
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/bankDetails`);
       setBankDetails(response.data);
     } catch (error) {
       console.error("Error fetching bank details:", error);
@@ -52,8 +50,8 @@ const InternBankDetails = ({ darkMode }) => {
     
     try {
       setLoading(true);
-      await axios.delete(`${API_BASE_URL}/id/${bankDetailsToDelete}`);
-      
+      await axios.delete(`${import.meta.env.VITE_BASE_URL}/api/bankDetails/id/${bankDetailsToDelete}`);
+
       setBankDetails(bankDetails.filter((bd) => bd._id !== bankDetailsToDelete));
       setShowDeleteModal(false);
       setBankDetailsToDelete(null);

@@ -6,7 +6,6 @@ import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import Notification from "../../../components/notifications/Notification"; 
 
-const API_BASE_URL = "http://localhost:5000/api/inductions"; 
 
 const EditInduction = ({ darkMode }) => {
   const { id } = useParams(); 
@@ -28,7 +27,7 @@ const EditInduction = ({ darkMode }) => {
   useEffect(() => {
     const fetchInduction = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/${id}`);
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/inductions/${id}`);
         setInductionData(response.data);
       } catch (err) {
         setError(err.response?.data?.error || "Failed to load induction details.");
@@ -55,7 +54,7 @@ const EditInduction = ({ darkMode }) => {
     setIsSaving(true);
 
     try {
-      await axios.put(`${API_BASE_URL}/${id}`, inductionData);
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/api/inductions/${id}`, inductionData);
       setIsSaving(false);
 
       // Show success notification

@@ -18,7 +18,7 @@ const EditInstitute = ({ darkMode }) => {
     const fetchInstituteDetails = async () => {
       setLoading(true);
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/universities/${id}`, {
+        const { data } = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/universities/${id}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         setInstitute(data);
@@ -40,7 +40,7 @@ const EditInstitute = ({ darkMode }) => {
 
   const handleSave = async () => {
     try {
-      await axios.put(`http://localhost:5000/api/universities/${id}`, formData, {
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/api/universities/${id}`, formData, {
         headers: { 
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "Content-Type": "application/json"

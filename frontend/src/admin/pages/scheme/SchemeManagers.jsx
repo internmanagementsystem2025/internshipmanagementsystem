@@ -25,8 +25,8 @@ export const SchemeManagers = ({ darkMode = false }) => {
   // Fetch scheme details from your system
   const fetchSchemeDetails = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/schemes/${schemeId}`);
-      
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/schemes/${schemeId}`);
+
       if (response.data && response.data.success) {
         setScheme(response.data.data);
       } else if (response.data) {
@@ -46,16 +46,15 @@ export const SchemeManagers = ({ darkMode = false }) => {
   const fetchEmployees = async () => {
     try {
       console.log('Starting to fetch employees and hierarchy data...');
-      
       const [employeesResponse, hierarchyResponse] = await Promise.all([
-        axios.get("http://localhost:5000/api/employees", {
+        axios.get(`${import.meta.env.VITE_BASE_URL}/api/employees`, {
           params: {
             status: 'active',
             sort_by: 'hierarchy_level',
             sort_order: 'asc'
           }
         }),
-        axios.get("http://localhost:5000/api/employees/hierarchy")
+        axios.get(`${import.meta.env.VITE_BASE_URL}/api/employees/hierarchy`)
       ]);
       
       console.log('Raw employees response:', employeesResponse.data);
@@ -213,7 +212,7 @@ export const SchemeManagers = ({ darkMode = false }) => {
   // Get employee details by ID
   const getEmployeeDetails = async (employeeId) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/employees/${employeeId}`);
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/employees/${employeeId}`);
       if (response.data && response.data.success) {
         const employee = response.data.data;
         return {
@@ -336,7 +335,7 @@ export const SchemeManagers = ({ darkMode = false }) => {
 
       // Update your scheme system
       const assignResponse = await axios.put(
-        `http://localhost:5000/api/schemes/${schemeId}/assign-managers`,
+        `${import.meta.env.VITE_BASE_URL}/api/schemes/${schemeId}/assign-managers`,
         assignManagerData
       );
 

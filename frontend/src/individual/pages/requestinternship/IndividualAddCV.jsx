@@ -87,7 +87,7 @@ const IndividualAddCVs = ({ darkMode }) => {
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/districts");
+        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/districts`);
         if (!response.ok) throw new Error("Failed to fetch districts");
         const data = await response.json();
         setDistricts(data);
@@ -103,7 +103,7 @@ const IndividualAddCVs = ({ darkMode }) => {
 
     const fetchInstitutes = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/institutes");
+        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/institutes`);
         if (!response.ok) throw new Error("Failed to fetch institutes");
         const data = await response.json();
         setInstitutes(data.institutes);
@@ -179,7 +179,6 @@ const IndividualAddCVs = ({ darkMode }) => {
           current = current[parts[i]];
         }
         
-        // Set the value at the last part
         const lastPart = parts[parts.length - 1];
         
         // Handle numeric values for proficiency
@@ -420,7 +419,7 @@ const IndividualAddCVs = ({ darkMode }) => {
         isLoading: true,
       });
 
-      const response = await fetch("http://localhost:5000/api/cvs/addcv", {
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/cvs/addcv`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

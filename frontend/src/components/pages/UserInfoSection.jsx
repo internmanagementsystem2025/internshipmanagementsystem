@@ -37,9 +37,7 @@ const UserInfoSection = ({
 
   // Handle NIC validation when either NIC or birthday changes
   useEffect(() => {
-    // Only validate when NIC is provided (regardless of birthday)
     if (cvData.nic) {
-      // First check if the NIC format is valid
       const nicFormatValid = 
         (cvData.nic.length === 10 && /^[0-9]{9}[VvXx]$/.test(cvData.nic)) || 
         (cvData.nic.length === 12 && /^[0-9]{12}$/.test(cvData.nic));

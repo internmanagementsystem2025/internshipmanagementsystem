@@ -8,7 +8,7 @@ export const Footer = ({ darkMode }) => {
       }`}
     >
       Copyright © {new Date().getFullYear()}{' '}
-      <span className="text-primary">Mobitel (Pvt) Ltd.</span> All rights reserved.
+      <span className="text-primary">Sri Lanka Telecom PLC</span> All rights reserved.
     </footer>
   );
 };

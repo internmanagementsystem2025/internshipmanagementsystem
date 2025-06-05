@@ -2,7 +2,7 @@ import React from "react";
 import { Table } from "react-bootstrap";
 
 const TableComponent = ({ tableData, columns, footerText, darkMode, className = "" }) => {
-  // Using the same theme structure as parent component
+
   const theme = {
     backgroundColor: darkMode ? "#000000" : "#f8fafc",
     cardBackground: darkMode ? "#1E1E1E" : "rgba(255, 255, 255, 0.4)",

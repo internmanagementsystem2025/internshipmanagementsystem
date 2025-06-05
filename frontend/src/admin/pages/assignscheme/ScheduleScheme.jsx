@@ -41,7 +41,7 @@ const ScheduleScheme = ({ darkMode }) => {
 
   // Create axios instance with proper configuration
   const api = axios.create({
-    baseURL: "http://localhost:5000/api",
+    baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
   });
 
   // Add request interceptor to always include current token
@@ -119,10 +119,10 @@ const ScheduleScheme = ({ darkMode }) => {
       // FIXED: Prepare the request data with correct field mapping
       const requestData = {
         schemeId: schemeData.schemeId,
-        managerLevel: parseInt(schemeData.managerLevel), // Use managerLevel directly
+        managerLevel: parseInt(schemeData.managerLevel), 
         internshipPeriod: parseInt(schemeData.internshipPeriod),
         startDate: schemeData.startDate,
-        forRequest: schemeData.forRequest === "yes" ? "yes" : "no", // Keep as string
+        forRequest: schemeData.forRequest === "yes" ? "yes" : "no", 
         milestones: schemeData.milestones || []
       };
 
@@ -140,10 +140,8 @@ const ScheduleScheme = ({ darkMode }) => {
         const assignedCount = response.data?.data?.assignedCount || selectedRows.length;
         setSuccessMessage(`Successfully assigned scheme to ${assignedCount} candidate(s)`);
         
-        // Clear selections after successful batch assignment
         setSelectedRows([]);
       } else {
-        // FIXED: Single assignment endpoint
         response = await api.post(
           `/cvs/${internToAssign._id}/assign-scheme`,
           requestData
@@ -151,15 +149,13 @@ const ScheduleScheme = ({ darkMode }) => {
         
         setSuccessMessage(`Successfully assigned scheme to ${internToAssign.fullName}`);
       }
-      
-      // Refresh data to reflect assignments
+
       await fetchInterns();
       
       return response.data;
     } catch (error) {
       console.error("Error assigning scheme:", error);
       
-      // FIXED: Better error handling with detailed messages
       let errorMessage = "Failed to assign scheme";
       
       if (error.response?.data?.message) {
@@ -176,7 +172,6 @@ const ScheduleScheme = ({ darkMode }) => {
           errorMessage = "Please fill in all required fields before assigning the scheme.";
         } else if (error.response.data?.message?.includes("already assigned")) {
           errorMessage = "One or more selected candidates are already assigned to a scheme.";
-          // Refresh data to update the UI
           await fetchInterns();
         }
       } else if (error.response?.status === 404) {
@@ -257,8 +252,6 @@ const ScheduleScheme = ({ darkMode }) => {
     setBatchAssign(false);
     setInternToAssign(null);
     setSelectedCvId(null);
-    // Don't clear selectedRows here to maintain selection after modal close
-    // Only clear them after successful assignment
   };
 
   const handleBatchAssign = () => {
@@ -279,7 +272,6 @@ const ScheduleScheme = ({ darkMode }) => {
     setShowAssignModal(true);
   };
 
-  // Auto-hide success message after 5 seconds
   useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => {
@@ -289,7 +281,6 @@ const ScheduleScheme = ({ darkMode }) => {
     }
   }, [successMessage]);
 
-  // Auto-hide error message after 10 seconds
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
@@ -299,7 +290,6 @@ const ScheduleScheme = ({ darkMode }) => {
     }
   }, [error]);
 
-  // Don't render anything if token is not available
   if (!token) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">

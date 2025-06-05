@@ -44,7 +44,7 @@ const ScheduleInterviews = ({ darkMode }) => {
   const token = localStorage.getItem("token");
 
   const api = axios.create({
-    baseURL: `${API_BASE_URL}/cvs`,
+    baseURL: `${API_BASE_URL}/api/cvs`,
     headers: { Authorization: `Bearer ${token}` },
   });
 

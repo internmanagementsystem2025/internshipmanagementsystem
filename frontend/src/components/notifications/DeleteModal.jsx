@@ -39,7 +39,7 @@ const DeleteModal = ({ show, onClose, onDelete, itemName, darkMode }) => {
           animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
           transition={{ duration: 0.6, repeat: Infinity, repeatType: "loop" }}
         >
-          <FaTrashAlt size={45} className="text-danger" /> {/* Delete icon */}
+          <FaTrashAlt size={45} className="text-danger" /> 
         </motion.div>
         <p style={{ fontSize: "0.95rem", marginBottom: "10px" }}>
           Are you sure you want to <strong>delete</strong>{" "}
@@ -60,7 +60,6 @@ const DeleteModal = ({ show, onClose, onDelete, itemName, darkMode }) => {
         </Button>
         <Button variant="danger" onClick={onDelete} size="sm">
           {" "}
-          {/* Delete button */}
           Delete
         </Button>
       </Modal.Footer>

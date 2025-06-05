@@ -27,7 +27,7 @@ const AssignSchemeModal = ({
 
   // Create axios instance
   const api = axios.create({
-    baseURL: "http://localhost:5000/api",
+    baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
   });
 
   // Add request interceptor to include auth token

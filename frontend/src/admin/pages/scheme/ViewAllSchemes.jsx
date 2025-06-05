@@ -24,35 +24,29 @@ const ViewAllSchemes = ({ darkMode }) => {
       try {
         setLoading(true);
         setError(null);
-        
-        const response = await axios.get("http://localhost:5000/api/schemes");
+
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/schemes`);
         console.log("API Response:", response.data);
         
         // Handle the API response structure based on your backend
         if (response.data && response.data.success) {
-          // If the response has success flag and data array
           setSchemes(response.data.data || []);
         } else if (Array.isArray(response.data)) {
-          // If response is directly an array
           setSchemes(response.data);
         } else {
-          // If response has a different structure
           setSchemes([]);
           console.warn("Unexpected API response structure:", response.data);
         }
       } catch (error) {
         console.error("Error fetching schemes:", error);
         
-        // More detailed error handling
         if (error.response) {
           // Server responded with an error status
           const errorMessage = error.response.data?.message || error.response.data?.error || "Server error occurred";
           setError(`Failed to load schemes: ${errorMessage}`);
         } else if (error.request) {
-          // Network error
           setError("Network error: Unable to connect to server. Please check your connection.");
         } else {
-          // Other error
           setError("An unexpected error occurred. Please try again.");
         }
         
@@ -72,15 +66,12 @@ const ViewAllSchemes = ({ darkMode }) => {
     try {
       setDeleting(true);
       setError(null);
-      
-      const response = await axios.delete(`http://localhost:5000/api/schemes/${schemeToDelete}`);
+
+      const response = await axios.delete(`${import.meta.env.VITE_BASE_URL}/api/schemes/${schemeToDelete}`);
       console.log("Delete response:", response.data);
-      
-      // Remove the deleted scheme from the state
+    
       setSchemes(prevSchemes => prevSchemes.filter((scheme) => scheme._id !== schemeToDelete));
       
-      // Show success message (optional)
-      // You can add a success state if needed
       
     } catch (error) {
       console.error("Error deleting scheme:", error);

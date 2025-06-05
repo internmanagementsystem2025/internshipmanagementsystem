@@ -91,7 +91,7 @@ const BulkCVUpload = ({ darkMode }) => {
       }
 
       const response = await axios.post(
-        "http://localhost:5000/api/cvs/bulk-upload",
+        `${import.meta.env.VITE_BASE_URL}/api/cvs/bulk-upload`,
         formData,
         {
           headers: {
@@ -159,7 +159,7 @@ const BulkCVUpload = ({ darkMode }) => {
         {/* Download Templates */}
         <div className="mb-4">
   <h5>Download Templates:</h5>
-  <div className="d-flex flex-wrap gap-3"> {/* This adds consistent spacing between items */}
+  <div className="d-flex flex-wrap gap-3"> 
     <Button
       variant="primary"
       href="/templates/Data_Entry_Operator_Template.xlsx"

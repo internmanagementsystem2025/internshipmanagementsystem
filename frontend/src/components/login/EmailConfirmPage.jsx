@@ -7,7 +7,6 @@ import axios from "axios";
 import logo from "../../assets/logo.png";
 import Notification from "../notifications/Notification";
 
-// Modern Email Input Component
 const EmailInput = React.memo(React.forwardRef(({ 
   type, 
   name, 
@@ -109,9 +108,8 @@ const EmailConfirmPage = ({ darkMode }) => {
   const [notificationVariant, setNotificationVariant] = useState("success");
 
   const emailRef = useRef(null);
-  const backendUrl = "http://localhost:5000";
 
-  // Theme configuration matching UserProfile
+
   const theme = {
     backgroundColor: darkMode ? "#000000" : "#f8fafc",
     cardBackground: darkMode ? "#1E1E1E" : "rgba(255, 255, 255, 0.4)",
@@ -160,7 +158,7 @@ const EmailConfirmPage = ({ darkMode }) => {
     setLoading(true);
 
     try {
-      await axios.post(`${backendUrl}/api/auth/request-password-reset-otp`, { email });
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/request-password-reset-otp`, { email });
       
       triggerNotification("Verification code sent to your email!", "success");
       

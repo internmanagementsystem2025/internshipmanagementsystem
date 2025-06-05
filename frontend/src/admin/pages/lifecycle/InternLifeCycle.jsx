@@ -34,7 +34,7 @@ const InternLifeCycle = ({ darkMode }) => {
     setUserData(null);
   
     try {
-      const { data } = await axios.get(`http://localhost:5000/api/cvs/nic/${nic}`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/cvs/nic/${nic}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
   

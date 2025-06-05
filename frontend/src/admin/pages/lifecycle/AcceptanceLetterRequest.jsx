@@ -47,10 +47,9 @@ const AcceptanceLetterRequest = ({ darkMode }) => {
         }
 
         const headers = { Authorization: `Bearer ${token}` };
-        const response = await axios.get(`http://localhost:5000/api/interns/details/${nic}`, { headers });
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/interns/details/${nic}`, { headers });
         
         if (response.data) {
-          // Calculate end date based on start date and internship period
           let startDate = new Date();
           let endDate = new Date();
           
@@ -138,7 +137,6 @@ const AcceptanceLetterRequest = ({ darkMode }) => {
   };
 
   const handleViewLetter = () => {
-    // Store the current formData with the consistent letterRef
     localStorage.setItem('acceptanceLetterData', JSON.stringify({
       ...formData,
       nic: nic 
@@ -150,10 +148,9 @@ const AcceptanceLetterRequest = ({ darkMode }) => {
     try {
       setLoading(true);
       
-      // Ensure we're using the same letterRef that's stored in both localStorage and formData
       const dataToSend = {
         ...formData,
-        letterRef: formData.letterRef // Use the consistent reference
+        letterRef: formData.letterRef 
       };
       
       console.log('Form Data:', dataToSend); 
@@ -161,7 +158,7 @@ const AcceptanceLetterRequest = ({ darkMode }) => {
       
       // First generate the letter
       const response = await axios.post(
-        'http://localhost:5000/api/letters/generate-acceptance',
+        `${import.meta.env.VITE_BASE_URL}/api/letters/generate-acceptance`,
         dataToSend,
         { 
           headers: { 
@@ -174,7 +171,7 @@ const AcceptanceLetterRequest = ({ darkMode }) => {
       console.log('Generation response:', response.data);
       
       // Then download the file
-      window.open(`http://localhost:5000/api/letters/download/${formData.nic}`, '_blank');
+      window.open(`${import.meta.env.VITE_BASE_URL}/api/letters/download/${formData.nic}`, '_blank');
       
       setSuccess('Acceptance letter generated successfully!');
     } catch (error) {

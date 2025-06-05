@@ -11,7 +11,7 @@ const AssignNewManagerModal = ({
   hierarchyData = [],
   darkMode = false 
 }) => {
-  // State for selected employees by level
+
   const [selectedEmployees, setSelectedEmployees] = useState({});
   const [employeeHierarchy, setEmployeeHierarchy] = useState({});
   const [expandedLevels, setExpandedLevels] = useState(new Set([1])); 
@@ -19,7 +19,7 @@ const AssignNewManagerModal = ({
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Reset state when modal opens/closes
+  
   useEffect(() => {
     if (show) {
       setSelectedEmployees({});
@@ -36,7 +36,7 @@ const AssignNewManagerModal = ({
     // Group employees by hierarchy level (1-6)
     employees.forEach(emp => {
       const level = emp.hierarchyLevel || 1;
-      if (level >= 1 && level <= 6) { // Only include levels 1-6
+      if (level >= 1 && level <= 6) { 
         if (!hierarchy[level]) {
           hierarchy[level] = [];
         }
@@ -77,7 +77,6 @@ const AssignNewManagerModal = ({
       if (sub.hierarchyLevel === targetLevel) {
         result.push(sub);
       } else if (sub.hierarchyLevel < targetLevel) {
-        // Continue searching deeper in the hierarchy
         result = result.concat(getSubordinatesAtLevel(sub.id, targetLevel));
       }
     }
@@ -87,7 +86,6 @@ const AssignNewManagerModal = ({
 
   // Get available employees for a specific level based on parent selection
   const getAvailableEmployeesForLevel = (level) => {
-    // For level 1, show all level 1 employees
     if (level === 1) {
       return employeeHierarchy[1] || [];
     }

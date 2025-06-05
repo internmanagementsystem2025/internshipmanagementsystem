@@ -44,7 +44,7 @@ const InstituteApproveModal = ({ show, onClose, onApprove, itemName, darkMode })
 
       <Modal.Footer 
         style={{
-          backgroundColor: darkMode ? "#343a40" : "#ffffff", // Fix footer background
+          backgroundColor: darkMode ? "#343a40" : "#ffffff", 
           borderTop: darkMode ? "1px solid #454d55" : "1px solid #ced4da",
           padding: "12px",
           justifyContent: "center"

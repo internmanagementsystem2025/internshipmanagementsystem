@@ -7,7 +7,6 @@ import axios from "axios";
 import logo from "../../assets/logo.png";
 import Notification from "../notifications/Notification";
 
-// Modern Password Input Component
 const PasswordInput = React.memo(React.forwardRef(({ 
   type, 
   name,
@@ -132,13 +131,13 @@ const ForgotPasswordPage = ({ darkMode }) => {
 
   const passwordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
-  const backendUrl = "http://localhost:5000";
+
 
   // Extract token from URL
   const queryParams = new URLSearchParams(location.search);
   const token = queryParams.get("token");
 
-  // Theme configuration matching EmailConfirmPage
+  
   const theme = {
     backgroundColor: darkMode ? "#000000" : "#f8fafc",
     cardBackground: darkMode ? "#1E1E1E" : "rgba(255, 255, 255, 0.4)",
@@ -218,7 +217,7 @@ const ForgotPasswordPage = ({ darkMode }) => {
     setLoading(true);
 
     try {
-      await axios.post(`${backendUrl}/api/auth/reset-password`, {
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/reset-password`, {
         token,
         newPassword: password,
       });

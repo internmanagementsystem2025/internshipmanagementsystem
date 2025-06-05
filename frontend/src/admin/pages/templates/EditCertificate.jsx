@@ -33,7 +33,7 @@ const Notification = ({ show, onClose, message, variant = "success" }) => {
   );
 };
 
-const API_BASE_URL = "http://localhost:5000/api/interncertificates";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/interncertificates`;
 
 const EditCertificate = ({ darkMode }) => {
   const { id } = useParams();

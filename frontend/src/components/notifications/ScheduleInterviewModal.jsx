@@ -20,10 +20,8 @@ const ScheduleInterviewModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState("");
   const [localSuccess, setLocalSuccess] = useState("");
-  const API_BASE_URL = import.meta.env.VITE_BASE_URL;
   const token = localStorage.getItem("token");
 
-  // Clear messages when modal closes or when parent clears them
   useEffect(() => {
     if (!show) {
       setLocalError("");
@@ -31,7 +29,6 @@ const ScheduleInterviewModal = ({
     }
   }, [show]);
 
-  // Sync with parent component messages
   useEffect(() => {
     if (errorMessage) {
       setLocalError(errorMessage);
@@ -39,13 +36,12 @@ const ScheduleInterviewModal = ({
     if (successMessage) {
       setLocalSuccess(successMessage);
       
-      // Auto-close the modal after success with a brief delay
       if (successMessage) {
         const timer = setTimeout(() => {
           handleClose();
         }, 1000); 
         
-        return () => clearTimeout(timer); // Clean up timer if component unmounts
+        return () => clearTimeout(timer);
       }
     }
   }, [errorMessage, successMessage]);
@@ -58,14 +54,13 @@ const ScheduleInterviewModal = ({
     setLocalSuccess("");
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/interviews`, {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/interviews`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.data && Array.isArray(response.data)) {
-        // Filter out past interviews, keep only current and future ones
         const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0); // Set to beginning of today
+        currentDate.setHours(0, 0, 0, 0); 
         
         const futureInterviews = response.data.filter(interview => {
           const interviewDate = new Date(interview.interviewDate || interview.date);
@@ -100,11 +95,10 @@ const ScheduleInterviewModal = ({
 
     setSubmitting(true);
     setLocalError("");
-    onClearMessages(); // Clear any existing messages before new submission
+    onClearMessages(); 
 
     try {
       await onConfirm(selectedInterview);
-      // The success message will come from the parent via props
     } catch (err) {
       setLocalError(err.message || "Failed to schedule interview");
     } finally {

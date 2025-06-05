@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, Button, Badge, Modal, Form } from 'react-bootstrap';
+import { Button, Badge, Modal, Form } from 'react-bootstrap';
 import { FiAlertTriangle, FiTrash2, FiX, FiAlertCircle, FiRefreshCw, FiClock } from 'react-icons/fi';
 import axios from 'axios';
 
@@ -63,7 +63,7 @@ const DeletedCVNotification = ({
       console.log('Attempting to permanently delete CV:', selectedCV._id);
 
       const response = await axios.delete(
-        `http://localhost:5000/api/cvs/deleted/${selectedCV._id}/permanent`, 
+        `${import.meta.env.VITE_BASE_URL}/api/cvs/deleted/${selectedCV._id}/permanent`, 
         {
           headers: { 
             Authorization: `Bearer ${token}`,
@@ -77,7 +77,6 @@ const DeletedCVNotification = ({
       
       console.log('Permanent delete response:', response.data);
       
-      // Call the parent component's callback to update the deletedCVs state
       onPermanentDelete(selectedCV);
       
       setNotification({ 

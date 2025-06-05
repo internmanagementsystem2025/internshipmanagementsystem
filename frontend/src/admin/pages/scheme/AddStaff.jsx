@@ -6,7 +6,7 @@ import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import Notification from "../../../components/notifications/Notification";
 
-const API_BASE_URL = "http://localhost:5000/api/staff"; 
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/staff`;
 
 const AddStaff = ({ darkMode }) => {
   const [staffData, setStaffData] = useState({

@@ -23,7 +23,6 @@ const RescheduleInterviewModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState("");
   const [localSuccess, setLocalSuccess] = useState("");
-  const API_BASE_URL = import.meta.env.VITE_BASE_URL;
   const token = localStorage.getItem("token");
 
   // Clear messages when modal closes or when parent clears them
@@ -54,17 +53,15 @@ const RescheduleInterviewModal = ({
     setLocalSuccess("");
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/interviews`, {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/interviews`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       if (response.data && Array.isArray(response.data)) {
-        // Filter out past interviews and the current interview being rescheduled
         const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0); // Set to beginning of today
+        currentDate.setHours(0, 0, 0, 0);
         
         const availableInterviews = response.data.filter(interview => {
-          // Handle both possible date formats
           const interviewDate = new Date(interview.interviewDate || interview.date);
           return interviewDate >= currentDate && interview._id !== currentInterviewId;
         });
@@ -102,12 +99,10 @@ const RescheduleInterviewModal = ({
 
     setSubmitting(true);
     setLocalError("");
-    onClearMessages(); // Clear any existing messages before new submission
+    onClearMessages();
 
     try {
-      // Pass the current interview ID and the new interview ID along with reason
       await onConfirm(selectedInterview, currentInterviewId, rescheduleReason);
-      // Success message will come from the parent component
     } catch (err) {
       setLocalError(err.message || "Failed to reschedule interview");
     } finally {
@@ -155,7 +150,6 @@ const RescheduleInterviewModal = ({
           </p>
         </div>
 
-        {/* Show success/error messages from either local state or props */}
         {localSuccess && (
           <Alert
             variant="success"

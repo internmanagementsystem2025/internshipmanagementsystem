@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Offcanvas, Button, Nav } from "react-bootstrap";
 import { List } from "react-bootstrap-icons";
-import { FiCreditCard, FiHelpCircle, FiHome, FiFileText } from "react-icons/fi"; // Added FiFileText
+import { FiCreditCard, FiHelpCircle, FiHome, FiFileText } from "react-icons/fi"; 
 import logo from "../../assets/logo.png";
 
 const Sidebar = ({ darkMode }) => {

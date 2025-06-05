@@ -17,7 +17,7 @@ const ViewCertificateLetter = ({ darkMode }) => {
   useEffect(() => {
     const fetchLetter = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/certificate-letters/${id}`);
+        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/certificate-letters/${id}`);
         if (!response.ok) {
           throw new Error("Failed to fetch letter details");
         }

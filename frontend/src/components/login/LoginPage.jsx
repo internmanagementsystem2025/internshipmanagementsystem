@@ -334,7 +334,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     setError("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/auth/login", {
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -366,7 +366,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   const handleAzureLogin = () => {
     setIsOAuthLoading(true);
     console.log('Redirecting to Azure auth for:', userType);
-    window.location.href = `http://localhost:5000/api/auth/azure/login?userType=${userType}`;
+    window.location.href = `${import.meta.env.VITE_BASE_URL}/api/auth/azure/login?userType=${userType}`;
   };
 
   const toggleStaffNotification = () => {

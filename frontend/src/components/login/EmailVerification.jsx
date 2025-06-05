@@ -271,7 +271,7 @@ const EmailVerification = ({ darkMode: propDarkMode, toggleTheme: propToggleThem
 
     try {
       // Simulate API call - replace with your actual API endpoint
-      const response = await fetch("http://localhost:5000/api/auth/verify-email", {
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/verify-email`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -308,7 +308,7 @@ const EmailVerification = ({ darkMode: propDarkMode, toggleTheme: propToggleThem
     
     try {
       // Simulate API call - replace with your actual resend endpoint
-      const response = await fetch("http://localhost:5000/api/auth/resend-verification", {
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/resend-verification`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -376,7 +376,7 @@ const EmailVerification = ({ darkMode: propDarkMode, toggleTheme: propToggleThem
                     maxWidth: "1200px",
                     margin: "0 auto"
                   }}>
-                    <div >
+                    <div>
                       <img 
                         src={Logo} 
                         alt="Logo" 

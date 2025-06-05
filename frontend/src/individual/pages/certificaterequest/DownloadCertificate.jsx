@@ -54,7 +54,7 @@ const DownloadCertificate = ({ darkMode }) => {
   const fetchCertificates = async (token) => {
     try {
       setIsLoading(true);
-      const response = await axios.get("http://localhost:5000/api/certificates", {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/certificates`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -86,7 +86,7 @@ const DownloadCertificate = ({ darkMode }) => {
   const handleDownload = async (certificateId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get(`http://localhost:5000/api/certificates/download/${certificateId}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/certificates/download/${certificateId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         },

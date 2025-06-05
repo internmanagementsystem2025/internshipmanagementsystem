@@ -23,7 +23,7 @@ const ApproveInstitute = ({ darkMode }) => {
     const fetchInstitutes = async () => {
       setLoading(true);
       try {
-        const { data } = await axios.get("http://localhost:5000/api/universities", {
+        const { data } = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/universities`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         const pendingInstitutes = data.filter(institute => !institute.approveRequest);
@@ -56,7 +56,7 @@ const ApproveInstitute = ({ darkMode }) => {
     if (!selectedInstitute) return;
 
     try {
-      await axios.put(`http://localhost:5000/api/universities/${selectedInstitute._id}/approve`, {}, {
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/api/universities/${selectedInstitute._id}/approve`, {}, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setInstituteData(prevData => prevData.filter(institute => institute._id !== selectedInstitute._id));
@@ -76,7 +76,7 @@ const ApproveInstitute = ({ darkMode }) => {
     if (!selectedInstitute) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/universities/${selectedInstitute._id}`, {
+      await axios.delete(`${import.meta.env.VITE_BASE_URL}/api/universities/${selectedInstitute._id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setInstituteData(prevData => prevData.filter(institute => institute._id !== selectedInstitute._id));

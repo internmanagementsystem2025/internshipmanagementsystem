@@ -2,7 +2,7 @@ import React from "react";
 import { Card, Row, Col, Badge, ListGroup, Button, ProgressBar } from "react-bootstrap";
 import { CgFileDocument } from "react-icons/cg";
 
-const CV_DOCUMENT_BASE_URL = "http://localhost:5000";
+const CV_DOCUMENT_BASE_URL = `${import.meta.env.VITE_BASE_URL}`;
 
 const CVDetails = ({ cvData, darkMode }) => {
   if (!cvData) {

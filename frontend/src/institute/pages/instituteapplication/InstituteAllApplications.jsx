@@ -46,7 +46,7 @@ const InstituteAllApplications = ({ darkMode }) => {
       }
       const currentUserId = decodedToken.id;
       const response = await axios.get(
-        `http://localhost:5000/api/cvs/user/${currentUserId}/all`,
+        `${import.meta.env.VITE_BASE_URL}/api/cvs/user/${currentUserId}/all`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (response.status === 200) {
@@ -97,7 +97,6 @@ const InstituteAllApplications = ({ darkMode }) => {
 
   // Helper function to check if CV can be edited
   const canEditCV = (status) => {
-    // Only allow editing for "cv-submitted" status
     return status === "cv-submitted";
   };
 

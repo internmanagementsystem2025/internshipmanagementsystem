@@ -32,7 +32,7 @@ const Notification = ({ show, onClose, message, variant = "success" }) => {
   );
 };
 
-const API_BASE_URL = "http://localhost:5000/api/letters"; 
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/letters`;
 
 const EditPlacementLetter = ({ darkMode }) => {
   const { id } = useParams(); 
