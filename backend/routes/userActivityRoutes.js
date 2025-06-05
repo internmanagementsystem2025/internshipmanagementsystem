@@ -1,4 +1,4 @@
-const express = require("express");
+/* const express = require("express");
 const router = express.Router();
 const {
   getLoginHistory,
@@ -16,4 +16,4 @@ router.get("/login-devices", getLoginDevices);
 router.get("/password-history", getPasswordHistory);
 router.post("/revoke-device/:deviceId", revokeDeviceAccess);
 
-module.exports = router;
+module.exports = router; */

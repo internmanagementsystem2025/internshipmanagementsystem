@@ -30,9 +30,9 @@ const certificate = require("./routes/Certificate");
 const letter = require("./routes/letter");
 const stationRoutes = require("./routes/stationRoutes");
 const rotationalRoutes = require("./routes/rotationalRoutes");
-const userActivityRoutes = require("./routes/userActivityRoutes");
+// const userActivityRoutes = require("./routes/userActivityRoutes");
 const certificateLetterRoutes = require("./routes/certificateLetterRoutes");
-const { passport } = require('./config/oauthStrategies');
+// const { passport } = require('./config/oauthStrategies');
 const employeeRoutes = require("./routes/employeeRoutes");
 
 const app = express();
@@ -40,7 +40,7 @@ const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
 
 // Initialize passport
-app.use(passport.initialize());
+// app.use(passport.initialize());
 
 // Middleware
 app.use(cors());
@@ -74,7 +74,7 @@ app.use("/api/interncertificates", certificate);
 app.use("/api/letters", letter);
 app.use("/api/stations", stationRoutes);
 app.use("/api/rotational", rotationalRoutes);
-app.use("/api/user-activity", userActivityRoutes);
+// app.use("/api/user-activity", userActivityRoutes);
 app.use("/api/certificate-letters", certificateLetterRoutes);
 app.use("/api/employees", employeeRoutes);
 // MongoDB Connection
