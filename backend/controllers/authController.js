@@ -7,9 +7,6 @@ const { updateStats } = require("../controllers/statsController");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const crypto = require("crypto");
-const { trackLogin, trackPasswordChange } = require("../controllers/userActivityController");
-
 
 // Temporary storage for pending registrations (use Redis in production)
 const pendingRegistrations = new Map();
@@ -188,21 +185,13 @@ const loginUser = async (req, res) => {
     });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      // Track failed login attempt
-      if (user) {
-        await trackLogin(user._id, req, "Failed");
-      }
       return res.status(400).json({ message: "Invalid credentials or user type" });
     }
 
     // Check if user is an institute and if their request is approved
     if (user.userType === "institute" && !user.approveRequest) {
-      await trackLogin(user._id, req, "Failed");
       return res.status(403).json({ message: "Your account has not been approved yet." });
     }
-
-    // Track successful login
-    await trackLogin(user._id, req);
 
     const token = generateToken(user._id, user.username, user.email, user.userType, user.currentStatus);
 
@@ -343,9 +332,6 @@ const changePassword = async (req, res) => {
     user.password = await bcrypt.hash(newPassword, salt);
     await user.save();
 
-    // Track password change
-    await trackPasswordChange(user._id, req, "direct");
-
     res.json({ message: "Password updated successfully" });
   } catch (error) {
     console.error("Error changing password:", error.message);
@@ -413,9 +399,6 @@ const verifyOTPAndResetPassword = async (req, res) => {
     
     await user.save();
 
-    // Track password change (using OTP method)
-    await trackPasswordChange(user._id, req, "otp");
-
     try {
       await EmailService.sendPasswordResetConfirmation(email, user.username);
     } catch (emailError) {
@@ -446,39 +429,6 @@ const getUserProfileByNic = async (req, res) => {
   }
 };
 
-
-const getGoogleProfile = async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized access" });
-    }
-
-    const user = await User.findById(req.user.id).select("googleId profileImage");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (!user.googleId) {
-      return res.status(404).json({ message: "Not a Google user" });
-    }
-
-    if (user.profileImage) {
-      let profilePicture = user.profileImage;
-      if (!profilePicture.includes('=s') && !profilePicture.endsWith('.jpg') && !profilePicture.endsWith('.png')) {
-        profilePicture = `${profilePicture}=s400-c`;
-      }
-      return res.json({ picture: profilePicture });
-    }
-    
-    res.status(404).json({ message: "Profile picture not found" });
-  } catch (error) {
-    console.error("Error fetching Google profile:", error.message);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-
 module.exports = { 
   registerUser, 
   loginUser, 
@@ -490,6 +440,5 @@ module.exports = {
   verifyOTPAndResetPassword,
   getUserProfileByNic,
   verifyEmail,
-  getGoogleProfile,
   upload 
 };

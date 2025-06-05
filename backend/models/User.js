@@ -29,8 +29,7 @@ const UserSchema = new mongoose.Schema(
     resetPasswordOTPExpiry: Date,
     emailVerificationToken: String,
     emailVerificationTokenExpiry: Date,
-    isEmailVerified: { type: Boolean, default: false },
-    googleId: String,
+    isEmailVerified: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

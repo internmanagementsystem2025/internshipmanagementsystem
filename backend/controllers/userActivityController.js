@@ -1,4 +1,4 @@
-const UserActivity = require("../models/UserActivity");
+/* const UserActivity = require("../models/UserActivity");
 const User = require("../models/User");
 const axios = require('axios');
 
@@ -311,4 +311,4 @@ module.exports = {
   getLoginDevices,
   getPasswordHistory,
   revokeDeviceAccess
-};
+}; */

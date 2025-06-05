@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+/* const mongoose = require("mongoose");
 
 const UserActivitySchema = new mongoose.Schema(
   {
@@ -36,4 +36,4 @@ const UserActivitySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("UserActivity", UserActivitySchema);
+module.exports = mongoose.model("UserActivity", UserActivitySchema); ) */

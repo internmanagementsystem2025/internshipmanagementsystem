@@ -88,7 +88,7 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
 
               <Dropdown.Item onClick={() => navigate(`/user-profile/${user.id}`)} style={dropdownItemStyle(darkMode)}>
                 <FiUser size={16} style={{ marginRight: "8px" }} />
-                Profile
+                Change Password
               </Dropdown.Item>
 
               <Dropdown.Item onClick={handleLogout} style={dropdownItemStyle(darkMode)}>
@@ -141,7 +141,7 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
 
                   <Dropdown.Item onClick={() => navigate(`/user-profile/${user.id}`)} style={dropdownItemStyle(darkMode)}>
                     <FiUser size={16} style={{ marginRight: "8px" }} />
-                    Profile
+                    Change Password
                   </Dropdown.Item>
 
                   <Dropdown.Item onClick={handleLogout} style={dropdownItemStyle(darkMode)}>

@@ -1,4 +1,4 @@
-const passport = require('passport');
+/* const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
 const { generateToken } = require('./jwt');
@@ -90,4 +90,4 @@ const generateTokenAndRedirect = (req, res) => {
 module.exports = {
   passport,
   generateTokenAndRedirect
-};
+}; */

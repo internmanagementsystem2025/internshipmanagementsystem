@@ -20,7 +20,7 @@ const EmailConfirmPage = ({ darkMode }) => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const backendUrl = "http://localhost:5000"; // Update with actual backend URL
+  const backendUrl = "http://localhost:5000"; 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
