@@ -34,7 +34,7 @@ const Notification = ({ show, onClose, message, variant = "success" }) => {
 };
 
 
-const API_BASE_URL = "http://localhost:5000/api/certificate-letters"; 
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/certificate-letters`;
 
 const EditCertificateLetter = ({ darkMode }) => {
   const { id } = useParams(); 

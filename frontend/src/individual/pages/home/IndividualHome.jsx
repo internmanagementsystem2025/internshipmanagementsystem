@@ -155,8 +155,8 @@ const theme = {
         });
         return;
       }
-  
-      const response = await axios.get("http://localhost:5000/api/cvs/mycvs", {
+
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/cvs/mycvs`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -185,7 +185,7 @@ const theme = {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await axios.get("http://localhost:5000/api/cvs/deleted/mycvs", {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/cvs/deleted/mycvs`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -304,7 +304,7 @@ const theme = {
     }
     
     try {
-      const response = await axios.post("http://localhost:5000/api/emails/register", { email });
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/emails/register`, { email });
       setNotification({ 
         show: true, 
         message: response.data.message, 
@@ -365,7 +365,7 @@ const theme = {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/recommendations",
+        `${import.meta.env.VITE_BASE_URL}/api/recommendations`,
         { userId: "YOUR_USER_ID_HERE", rating },
         {
           headers: { Authorization: `Bearer ${token}` },

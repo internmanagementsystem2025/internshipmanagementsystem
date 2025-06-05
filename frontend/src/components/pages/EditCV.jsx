@@ -8,7 +8,6 @@ import PreviousTrainingSection from "../pages/PreviousTrainingSection";
 import InternshipTypeSection from "../pages/InternshipTypeSection";
 import UploadDocumentSection from "../pages/UploadDocumentSection";
 
-const API_BASE_URL = "http://localhost:5000";
 
 const EditCV = ({ darkMode }) => {
   const { cvId } = useParams();
@@ -91,9 +90,9 @@ const EditCV = ({ darkMode }) => {
         }
 
         const [districtsRes, institutesRes, cvRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/districts`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_BASE_URL}/api/institutes`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_BASE_URL}/api/cvs/${cvId}`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${import.meta.env.VITE_BASE_URL}/api/districts`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${import.meta.env.VITE_BASE_URL}/api/institutes`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${import.meta.env.VITE_BASE_URL}/api/cvs/${cvId}`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         setDistricts(districtsRes.data || []);
@@ -153,12 +152,10 @@ const EditCV = ({ darkMode }) => {
     const { name, value } = e.target;
   
     setCvData((prevData) => {
-      // Handle nested roleData fields (e.g., roleData.dataEntry.language)
       if (name.includes('roleData.')) {
         const parts = name.split('.');
         
         if (parts.length === 3) {
-          // Handle roleData.dataEntry.field or roleData.internship.field
           const [, roleType, fieldName] = parts;
           
           return {
@@ -314,7 +311,7 @@ const EditCV = ({ darkMode }) => {
       });
 
       // Send update request
-      const response = await axios.put(`${API_BASE_URL}/api/cvs/${cvId}`, formData, {
+      const response = await axios.put(`${import.meta.env.VITE_BASE_URL}/api/cvs/${cvId}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",

@@ -19,7 +19,7 @@ const DeleteConfirmationModal = ({
     deletionComments: "",
   });
   const [errors, setErrors] = useState({});
-  const [step, setStep] = useState(1); // 1: Form, 2: Confirmation
+  const [step, setStep] = useState(1); 
 
   // Reset form when modal opens/closes
   React.useEffect(() => {
@@ -42,7 +42,6 @@ const DeleteConfirmationModal = ({
       [name]: value
     }));
     
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -126,7 +125,6 @@ const DeleteConfirmationModal = ({
         }}
       >
         {step === 1 ? (
-          // Step 1: Admin Form
           <div>
             <motion.div
               className="d-flex justify-content-center mb-3"
@@ -251,7 +249,7 @@ const DeleteConfirmationModal = ({
             </Form>
           </div>
         ) : (
-          // Step 2: Final Confirmation
+
           <div className="text-center">
             <motion.div
               className="d-flex justify-content-center mb-4"

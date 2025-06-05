@@ -7,7 +7,6 @@ import axios from "axios";
 import logo from "../../assets/logo.png";
 import Notification from "../notifications/Notification";
 
-// Modern OTP Input Component
 const OTPInput = React.memo(React.forwardRef(({ 
   value, 
   onChange, 
@@ -23,7 +22,7 @@ const OTPInput = React.memo(React.forwardRef(({
     inputRefs.current = inputRefs.current.slice(0, 6);
   }, []);
 
-  // Update parent value when OTP changes
+
   useEffect(() => {
     const otpString = otpValues.join('');
     onChange({ target: { value: otpString } });
@@ -41,7 +40,6 @@ const OTPInput = React.memo(React.forwardRef(({
   }, []);
 
   const handleInputChange = (index, inputValue) => {
-    // Only allow digits
     const digit = inputValue.replace(/\D/g, '');
     if (digit.length > 1) return;
 
@@ -262,7 +260,7 @@ const VerifyOTPPage = ({ darkMode }) => {
   const otpRef = useRef(null);
   const passwordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
-  const backendUrl = "http://localhost:5000";
+
 
   // Extract email from URL
   const queryParams = new URLSearchParams(location.search);
@@ -361,7 +359,7 @@ const VerifyOTPPage = ({ darkMode }) => {
     setLoading(true);
 
     try {
-      await axios.post(`${backendUrl}/api/auth/verify-otp-reset-password`, {
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/verify-otp-reset-password`, {
         email,
         otp,
         newPassword: password,
@@ -389,9 +387,9 @@ const VerifyOTPPage = ({ darkMode }) => {
     setError("");
 
     try {
-      await axios.post(`${backendUrl}/api/auth/request-password-reset-otp`, { email });
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/request-password-reset-otp`, { email });
       triggerNotification("New verification code sent to your email!", "success");
-      setCountdown(60); // 60 second countdown
+      setCountdown(60); 
     } catch (err) {
       console.error("Resend OTP error:", err);
       const errorMessage = err.response?.data?.message || "Error sending verification code";

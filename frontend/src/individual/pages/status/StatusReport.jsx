@@ -6,7 +6,6 @@ import {
 } from "react-bootstrap";
 import logo from "../../../assets/logo.png";
 
-// Fixed circular progress component with better text positioning
 const CircleProgress = ({ percentage, color, size = 100, darkMode, title }) => {
   const radius = size / 2 - 10;
   const circumference = radius * 2 * Math.PI;
@@ -96,7 +95,7 @@ const ApplicationProgress = ({ userData, darkMode }) => {
       "draft": 0,
       "cv-submitted": 1,
       "cv-approved": 2,
-      "cv-rejected": -1, // Special case
+      "cv-rejected": -1, 
       "interview-scheduled": 3,
       "interview-passed": 4,
       "interview-failed": -1,
@@ -114,8 +113,8 @@ const ApplicationProgress = ({ userData, darkMode }) => {
   
   // Calculate progress percentage based on currentStep
   const getProgressPercentage = () => {
-    if (currentStep < 0) return 0; // Failed/rejected
-    const totalSteps = 8; // From draft to schema-completed
+    if (currentStep < 0) return 0; 
+    const totalSteps = 8; 
     return Math.round((currentStep / totalSteps) * 100);
   };
 
@@ -360,7 +359,7 @@ const StatusReport = ({ darkMode }) => {
     setUserData(null);
   
     try {
-      const { data } = await axios.get(`http://localhost:5000/api/cvs/nic/${nic}`, {
+      const { data } = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/cvs/nic/${nic}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
   

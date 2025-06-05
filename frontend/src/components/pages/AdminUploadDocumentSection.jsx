@@ -21,7 +21,7 @@ const AdminUploadDocumentSection = ({
   const toggleCvApproval = async () => {
     try {
       const newStatus = !cvApproved;
-      await axios.put(`/api/cv/${cvData._id}/approve`, {
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/api/cv/${cvData._id}/approve`, {
         cvApproved: newStatus,
       });
 

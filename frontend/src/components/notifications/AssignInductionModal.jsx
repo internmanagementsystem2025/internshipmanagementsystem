@@ -42,7 +42,7 @@ const AssignInductionModal = ({
     setLocalError("");
 
     try {
-      const response = await axios.get("http://localhost:5000/api/inductions");
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/inductions`);
       const validInductions = response.data.filter(
         (induction) =>
           induction.induction &&
@@ -81,15 +81,11 @@ const handleConfirm = async () => {
     const induction = inductions.find((i) => i._id === selectedInduction);
     if (!induction) throw new Error("Selected induction not found");
 
-    // Build email list safely - FIXED
     let recipientEmail;
     
     if (isBatch && Array.isArray(cvData)) {
-      // For batch operations, we'll need to handle this differently
-      // The backend will need to handle each CV individually anyway
-      recipientEmail = null; // Let backend use populated user emails
+      recipientEmail = null; 
     } else if (cvData) {
-      // For single CV assignment
       recipientEmail = cvData.email || 
                       (cvData.userId && cvData.userId.email) || 
                       null;

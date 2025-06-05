@@ -81,7 +81,7 @@ const TrainingCertificateRequest = ({ darkMode }) => {
   // Fetch staff list from backend
   const fetchStaffList = async (token) => {
     try {
-      const response = await axios.get("http://localhost:5000/api/staff", {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/staff`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -155,7 +155,7 @@ const TrainingCertificateRequest = ({ darkMode }) => {
       setErrorMessage("");
 
       const token = localStorage.getItem("token");
-      const response = await axios.post("http://localhost:5000/api/certificates/create", formData, {
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/certificates/create`, formData, {
         headers: { 
           "Content-Type": "multipart/form-data",
           "Authorization": `Bearer ${token}`

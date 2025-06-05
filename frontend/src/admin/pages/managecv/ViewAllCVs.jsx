@@ -39,7 +39,7 @@ import {
 import logo from "../../../assets/logo.png";
 import DeleteConfirmationModal from "../../../components/notifications/DeleteConfirmationModal";
 
-const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000/api";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
 const ViewAllCVs = ({ darkMode = false }) => {
   // State for analytics

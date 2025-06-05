@@ -14,7 +14,7 @@ import axios from "axios";
 import logo from "../../../assets/logo.png";
 import Notification from "../../../components/notifications/Notification";
 
-const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
 const EditStation = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ const EditStation = ({ darkMode }) => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showErrorNotification, setShowErrorNotification] = useState(false);
-  const { id } = useParams(); // Get station ID from URL
+  const { id } = useParams(); 
 
   // Fetch station data by ID
   useEffect(() => {
@@ -82,7 +82,7 @@ const EditStation = ({ darkMode }) => {
         stationData
       );
 
-      console.log("Station ID from URL:", id); // Debugging: Log the ID
+      console.log("Station ID from URL:", id);
       setSuccessMessage("Station updated successfully!");
       setShowSuccessNotification(true);
 

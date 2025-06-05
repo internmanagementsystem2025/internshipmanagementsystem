@@ -13,7 +13,7 @@ const AdminHome = ({ darkMode }) => {
   const textColor = darkMode ? "white" : "#333";
   const subTextColor = darkMode ? "lightgray" : "#666";
 
-  // Function to define card styles dynamically
+
   const cardStyle = (isHovered, bgColor) => ({
     cursor: "pointer",
     border: "none",

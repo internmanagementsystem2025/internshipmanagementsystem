@@ -14,7 +14,7 @@ import axios from "axios";
 import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 
-const API_BASE_URL = "http://localhost:5000/api/inductions";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/inductions`;
 
 const ViewInductionDetails = ({ darkMode }) => {
   const { id } = useParams();

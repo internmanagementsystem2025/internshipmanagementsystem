@@ -14,7 +14,7 @@ import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import Notification from "../../../components/notifications/Notification";
 
-const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
 const AddNewStation = ({ darkMode }) => {
   const [stationData, setStationData] = useState({
@@ -22,7 +22,7 @@ const AddNewStation = ({ darkMode }) => {
     displayName: "",
     priority: "",
     maxStudents: "",
-    timePeriod: "", // New field for time period
+    timePeriod: "", 
     activeStatus: "",
   });
 

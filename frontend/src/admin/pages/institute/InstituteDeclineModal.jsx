@@ -3,7 +3,7 @@ import React from "react";
 import PropTypes from "prop-types";
 import { Modal, Button } from "react-bootstrap";
 import { motion } from "framer-motion";
-import { FaTimesCircle } from "react-icons/fa"; // Use a decline icon
+import { FaTimesCircle } from "react-icons/fa"; 
 
 const InstituteDeclineModal = ({ show, onClose, onDecline, itemName, darkMode }) => {
   return (
@@ -36,7 +36,7 @@ const InstituteDeclineModal = ({ show, onClose, onDecline, itemName, darkMode })
           animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }} 
           transition={{ duration: 0.6, repeat: Infinity, repeatType: "loop" }}
         >
-          <FaTimesCircle size={45} className="text-danger" /> {/* Changed to decline icon */}
+          <FaTimesCircle size={45} className="text-danger" /> 
         </motion.div>
         <p style={{ fontSize: "0.95rem", marginBottom: "10px" }}>
           Are you sure you want to decline <strong>{itemName}</strong>? This action cannot be undone.
@@ -54,7 +54,7 @@ const InstituteDeclineModal = ({ show, onClose, onDecline, itemName, darkMode })
         <Button variant="secondary" onClick={onClose} size="sm">
           Cancel
         </Button>
-        <Button variant="danger" onClick={onDecline} size="sm"> {/* Changed variant to 'danger' */}
+        <Button variant="danger" onClick={onDecline} size="sm"> 
           Decline
         </Button>
       </Modal.Footer>

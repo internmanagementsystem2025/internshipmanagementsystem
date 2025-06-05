@@ -11,6 +11,11 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+// Create axios instance for API calls
+const api = axios.create({
+  baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
+});
+
 const InductionResults = ({ darkMode }) => {
   const navigate = useNavigate();
   const [cvData, setCvData] = useState([]);
@@ -22,7 +27,7 @@ const InductionResults = ({ darkMode }) => {
   const [itemsPerPage] = useState(10);
   const [inductionSearchTerm, setInductionSearchTerm] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [assignmentTypeFilter, setAssignmentTypeFilter] = useState("all"); // New filter state
+  const [assignmentTypeFilter, setAssignmentTypeFilter] = useState("all");
 
   const [showPassModal, setShowPassModal] = useState(false);
   const [showFailModal, setShowFailModal] = useState(false);
@@ -33,69 +38,75 @@ const InductionResults = ({ darkMode }) => {
   const [selectedInductionName, setSelectedInductionName] = useState("");
   const [isBulkAction, setIsBulkAction] = useState(false);
 
-  const token = localStorage.getItem("token");
-
-  const api = axios.create({
-    baseURL: "http://localhost:5000/api/cvs",
-  });
-
-  api.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
-    }
-  );
-
-  api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-
-      if (error.response?.status === 401 && !originalRequest._retry) {
-        originalRequest._retry = true;
-
-        try {
-          const refreshToken = localStorage.getItem("refreshToken");
-          const response = await axios.post("/api/auth/refresh", {
-            refreshToken,
-          });
-
-          const { token } = response.data;
-          localStorage.setItem("token", token);
-
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return api(originalRequest);
-        } catch (err) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
-          window.location.href = "/login";
-          return Promise.reject(err);
+  // Set up axios interceptors
+  useEffect(() => {
+    // Request interceptor
+    const requestInterceptor = api.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem("token");
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
       }
+    );
 
-      return Promise.reject(error);
-    }
-  );
+    // Response interceptor
+    const responseInterceptor = api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          try {
+            const refreshToken = localStorage.getItem("refreshToken");
+            const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/refresh`, {
+              refreshToken,
+            });
+
+            const { token } = response.data;
+            localStorage.setItem("token", token);
+
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          } catch (err) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken");
+            navigate("/login");
+            return Promise.reject(err);
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+
+    // Cleanup interceptors on unmount
+    return () => {
+      api.interceptors.request.eject(requestInterceptor);
+      api.interceptors.response.eject(responseInterceptor);
+    };
+  }, [navigate]);
 
   const fetchCVs = async () => {
     setLoading(true);
     setError("");
 
     try {
+      const token = localStorage.getItem("token");
       if (!token) {
         navigate("/login");
         return;
       }
 
-      const response = await api.get("/assigned-to-induction");
-      const inductionData = response.data || []; 
-      
+      const response = await api.get("/cvs/assigned-to-induction");
+      const inductionData = response.data || [];
+
       // Include all CVs with induction-assigned and induction-re-scheduled status
       const filteredData = inductionData.filter(cv => 
         cv.induction?.status === "induction-assigned" || 
@@ -156,7 +167,7 @@ const InductionResults = ({ darkMode }) => {
     } else if (cv.interview?.interviewScheduled === true) {
       return "Interview Assigned";
     }
-    return "Direct"; // Default fallback
+    return "Direct"; 
   };
 
   const openPassModal = (id, refNo, bulk = false) => {
@@ -202,19 +213,20 @@ const InductionResults = ({ darkMode }) => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
+        navigate("/login");
         return;
       }
 
       if (isBulkAction) {
         const results = await Promise.all(
           selectedRows.map((id) =>
-            api.patch(`/${id}/pass-induction`, {
+            api.patch(`/cvs/${id}/pass-induction`, {
               status: "induction-passed",
             })
           )
         );
       } else {
-        await api.patch(`/${selectedCvId}/pass-induction`, {
+        await api.patch(`/cvs/${selectedCvId}/pass-induction`, {
           status: "induction-passed",
         });
       }
@@ -228,10 +240,12 @@ const InductionResults = ({ darkMode }) => {
       setTimeout(() => {
         setShowPassModal(false);
         fetchCVs();
+        setSuccessMessage("");
       }, 1500);
     } catch (error) {
       if (error.response?.status === 401) {
         localStorage.removeItem("token");
+        navigate("/login");
       } else {
         setError(
           error.response?.data?.message || "Failed to update induction status"
@@ -245,10 +259,10 @@ const InductionResults = ({ darkMode }) => {
     try {
       if (isBulkAction) {
         for (const id of selectedRows) {
-          await api.patch(`/${id}/fail-induction`);
+          await api.patch(`/cvs/${id}/fail-induction`);
         }
       } else {
-        await api.patch(`/${selectedCvId}/fail-induction`);
+        await api.patch(`/cvs/${selectedCvId}/fail-induction`);
       }
       setShowFailModal(false);
       fetchCVs();
@@ -257,6 +271,10 @@ const InductionResults = ({ darkMode }) => {
           ? "Bulk fail successful!"
           : `CV ${selectedCvRef} failed successfully!`
       );
+      
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 3000);
     } catch (error) {
       console.error("Error failing induction:", error.message);
       setError(
@@ -270,7 +288,7 @@ const InductionResults = ({ darkMode }) => {
   const handleRescheduleInduction = async (newInductionId, currentInductionId, reason) => {
     setError("");
     try {
-      await api.patch(`/${selectedCvId}/reschedule-induction`, {
+      await api.patch(`/cvs/${selectedCvId}/reschedule-induction`, {
         newInductionId: newInductionId,
         currentInductionId: currentInductionId,
         reason: reason
@@ -280,6 +298,7 @@ const InductionResults = ({ darkMode }) => {
       setTimeout(() => {
         setShowRescheduleModal(false);
         fetchCVs();
+        setSuccessMessage("");
       }, 1500);
     } catch (error) {
       console.error("Error rescheduling induction:", error);
@@ -304,7 +323,7 @@ const InductionResults = ({ darkMode }) => {
     return cv.currentStatus || "Pending";
   };
 
-  // Export to Excel - Updated to include Assignment Type
+  // Export to Excel 
   const exportToExcel = () => {
     try {
       let dataToExport =

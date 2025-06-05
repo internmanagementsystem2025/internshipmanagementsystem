@@ -6,7 +6,7 @@ import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import Notification from "../../../components/notifications/Notification";
 
-const API_BASE_URL = "http://localhost:5000/api/schemes";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/schemes`;
 
 const AddNewScheme = ({ darkMode }) => {
   const [schemeData, setSchemeData] = useState({
@@ -21,7 +21,6 @@ const AddNewScheme = ({ darkMode }) => {
     minimumQualifications: "",
     schemeStartDate: "",
     schemeEndDate: "",
-    // Initialize these fields even though they'll be calculated
     totalAllocatedCount: 0,
     totalEmptyCount: 0
   });
@@ -37,7 +36,6 @@ const AddNewScheme = ({ darkMode }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
-    // If totalAllocation is being changed, update totalEmptyCount as well
     if (name === "totalAllocation") {
       setSchemeData(prevData => ({
         ...prevData,
@@ -60,7 +58,6 @@ const AddNewScheme = ({ darkMode }) => {
     setSuccessMessage("");
 
     try {
-      // Convert number fields and set calculated fields
       const totalAllocation = Number(schemeData.totalAllocation);
       
       const response = await axios.post(API_BASE_URL, {

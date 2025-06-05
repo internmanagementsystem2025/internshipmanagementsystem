@@ -50,11 +50,10 @@ const InternsStatus = ({ darkMode }) => {
           return;
         }
 
-        // Reset to first page when filters change
         setCurrentPage(1);
 
         const response = await axios.get(
-          `${API_BASE_URL}/cvs/get-all-with-filtering`,
+          `${API_BASE_URL}/api/cvs/get-all-with-filtering`,
           {
             headers: { Authorization: `Bearer ${token}` },
             params: {
@@ -79,7 +78,6 @@ const InternsStatus = ({ darkMode }) => {
     fetchInternsStatus();
   }, [navigate, statusFilter]);
 
-  // No search filtering, only using status filter from API
   const filteredStatus = status;
 
   // Pagination logic
@@ -88,7 +86,6 @@ const InternsStatus = ({ darkMode }) => {
   const indexOfFirstStatus = indexOfLastStatus - itemsPerPage;
   const currentStatus = filteredStatus.slice(indexOfFirstStatus, indexOfLastStatus);
 
-  // Helper function to display status badge with appropriate color
   const getStatusBadgeClass = (status) => {
     if (!status) return "bg-secondary";
     
@@ -114,7 +111,7 @@ const InternsStatus = ({ darkMode }) => {
   // Handle status filter change
   const handleStatusChange = (e) => {
     setStatusFilter(e.target.value);
-    setCurrentPage(1); // Reset to first page when filter changes
+    setCurrentPage(1); 
   };
 
   // Generate and download status count report

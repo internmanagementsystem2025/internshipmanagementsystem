@@ -15,7 +15,7 @@ import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import Notification from "../../../components//notifications/Notification";
 
-const API_BASE_URL = "http://localhost:5000/api/interviews";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/interviews`;
 
 const EditInterview = ({ darkMode }) => {
   const { id } = useParams(); // Get interview ID from URL
@@ -74,7 +74,6 @@ const EditInterview = ({ darkMode }) => {
       setNotificationVariant("success");
       setShowNotification(true);
 
-      // Redirect after 2 seconds to view all interviews
       setTimeout(() => {
         setShowNotification(false);
         navigate("/view-all-interviews");

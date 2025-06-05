@@ -4,6 +4,57 @@ import axios from "axios";
 import { FaCalendarAlt } from "react-icons/fa";
 import { motion } from "framer-motion";
 
+// Create axios instance
+const api = axios.create({
+  baseURL: import.meta.env.VITE_BASE_URL || '',
+});
+
+// Add request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/refresh`, {
+          refreshToken,
+        });
+
+        const { token } = response.data;
+        localStorage.setItem("token", token);
+
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return api(originalRequest);
+      } catch (err) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/login";
+        return Promise.reject(err);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 const RescheduleInductionModal = ({
   show,
   onClose,
@@ -23,59 +74,6 @@ const RescheduleInductionModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState("");
   const [localSuccess, setLocalSuccess] = useState("");
-
-  // Updated API base URL to match parent component
-  const API_BASE_URL = "http://localhost:5000/api";
-  const token = localStorage.getItem("token");
-
-  // Create axios instance with interceptors like parent component
-  const api = axios.create({
-    baseURL: API_BASE_URL,
-  });
-
-  api.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
-    }
-  );
-
-  api.interceptors.response.use(
-    (response) => response,
-    async (error) => {
-      const originalRequest = error.config;
-
-      if (error.response?.status === 401 && !originalRequest._retry) {
-        originalRequest._retry = true;
-
-        try {
-          const refreshToken = localStorage.getItem("refreshToken");
-          const response = await axios.post("/api/auth/refresh", {
-            refreshToken,
-          });
-
-          const { token } = response.data;
-          localStorage.setItem("token", token);
-
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return api(originalRequest);
-        } catch (err) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("refreshToken");
-          window.location.href = "/login";
-          return Promise.reject(err);
-        }
-      }
-
-      return Promise.reject(error);
-    }
-  );
 
   // Clear messages when modal closes or when parent clears them
   useEffect(() => {
@@ -105,16 +103,13 @@ const RescheduleInductionModal = ({
     setLocalSuccess("");
 
     try {
-      // Updated endpoint to match the inductions API
-      const response = await api.get("/inductions");
-      
+      const response = await api.get("/api/inductions");
+
       if (response.data && Array.isArray(response.data)) {
-        // Filter out past inductions and the current induction being rescheduled
         const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0); // Set to beginning of today
+        currentDate.setHours(0, 0, 0, 0); 
         
         const availableInductions = response.data.filter(induction => {
-          // Handle multiple possible date field names
           const inductionStartDate = new Date(
             induction.inductionStartDate || 
             induction.startDate || 
@@ -162,12 +157,10 @@ const RescheduleInductionModal = ({
 
     setSubmitting(true);
     setLocalError("");
-    onClearMessages(); // Clear any existing messages before new submission
+    onClearMessages(); 
 
     try {
-      // Pass the current induction ID and the new induction ID along with reason
       await onConfirm(selectedInduction, currentInductionId, rescheduleReason);
-      // Success message will come from the parent component
     } catch (err) {
       console.error("Reschedule error:", err);
       setLocalError(err.message || "Failed to reschedule induction");
@@ -183,7 +176,6 @@ const RescheduleInductionModal = ({
     onClose();
   };
 
-  // Helper function to format induction display text
   const formatInductionDisplay = (induction) => {
     const name = induction.induction || 
                  induction.inductionName || 

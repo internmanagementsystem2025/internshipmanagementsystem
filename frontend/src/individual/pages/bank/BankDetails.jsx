@@ -85,7 +85,7 @@ const BankDetails = ({ darkMode }) => {
     const formattedData = { ...bankData, accountNumber: bankData.accountNumber.replace(/\s/g, "") };
 
     try {
-      const response = await axios.post("http://localhost:5000/api/bankDetails", formattedData, {
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/bankDetails`, formattedData, {
         headers: { "Content-Type": "application/json" },
       });
       console.log("Bank Details Saved:", response.data);
@@ -100,7 +100,6 @@ const BankDetails = ({ darkMode }) => {
       // Reset form data
       setBankData(defaultBankData);
       
-      // Navigate after a delay to allow the user to see the notification
       setTimeout(() => {
         navigate("/individual-home");
       }, 3000);
@@ -120,7 +119,6 @@ const BankDetails = ({ darkMode }) => {
   const handleCloseNotification = () => {
     setNotification({...notification, show: false});
     
-    // If it was a success notification, navigate after closing
     if (notification.variant === "success") {
       navigate("/individual-home");
     }

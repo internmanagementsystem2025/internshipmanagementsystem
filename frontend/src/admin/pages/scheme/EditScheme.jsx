@@ -6,7 +6,7 @@ import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import Notification from "../../../components/notifications/Notification";
 
-const API_BASE_URL = "http://localhost:5000/api/schemes";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/schemes`;
 
 const EditScheme = ({ darkMode }) => {
   const [schemeData, setSchemeData] = useState({
@@ -43,7 +43,6 @@ const EditScheme = ({ darkMode }) => {
         
         const response = await axios.get(`${API_BASE_URL}/${schemeId}`);
         
-        // Handle both response formats: {data: scheme} or {success: true, data: scheme}
         const scheme = response.data.data || response.data;
         
         if (!scheme) {
@@ -137,11 +136,7 @@ const EditScheme = ({ darkMode }) => {
       if (startDate >= endDate) {
         errors.schemeEndDate = "End date must be after start date";
       }
-      
-      // Optional: Check if start date is not in the past (uncomment if needed)
-      // if (startDate < currentDate) {
-      //   errors.schemeStartDate = "Start date cannot be in the past";
-      // }
+    
     }
     
     // Numeric validation
@@ -171,7 +166,6 @@ const EditScheme = ({ darkMode }) => {
     
     // Handle numeric inputs
     if (name === 'totalAllocation' || name === 'perHeadAllowance') {
-      // Allow only positive numbers
       if (value === '' || (!isNaN(value) && parseFloat(value) >= 0)) {
         setSchemeData(prevData => ({
           ...prevData,

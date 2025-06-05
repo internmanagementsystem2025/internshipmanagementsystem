@@ -7,7 +7,6 @@ import axios from "axios";
 import logo from "../../assets/logo.png";
 import Notification from "../notifications/Notification";
 
-// Move PasswordInput component outside to prevent re-creation on every render
 const PasswordInput = React.memo(React.forwardRef(({ 
   type, 
   name, 
@@ -38,7 +37,6 @@ const PasswordInput = React.memo(React.forwardRef(({
     e.stopPropagation();
     if (togglePassword) {
       togglePassword();
-      // Maintain focus on input after toggling password visibility
       setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
@@ -177,7 +175,6 @@ const UserProfile = ({ darkMode }) => {
   const newPasswordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
 
-  const backendUrl = "http://localhost:5000";
 
   // Theme configuration
   const theme = {
@@ -252,7 +249,7 @@ const UserProfile = ({ darkMode }) => {
       }
 
       await axios.put(
-        `${backendUrl}/api/auth/change-password`,
+        `${import.meta.env.VITE_BASE_URL}/api/auth/change-password`,
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,

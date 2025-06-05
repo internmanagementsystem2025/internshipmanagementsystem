@@ -112,7 +112,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/districts");
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/districts`);
         setDistricts(response.data);
       } catch (error) {
         console.error("Error fetching districts:", error);
@@ -122,7 +122,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
 
     const fetchInstitutes = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/institutes");
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/institutes`);
         setInstitutes(response.data.institutes || []);
       } catch (error) {
         console.error("Error fetching institutes:", error);
@@ -173,7 +173,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/api/auth/register",
+        `${import.meta.env.VITE_BASE_URL}/api/auth/register`,
         formDataWithUserType,
         {
           headers: {

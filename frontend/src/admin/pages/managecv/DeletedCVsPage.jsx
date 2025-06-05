@@ -5,7 +5,7 @@ import {Table, Button, Container, Spinner, Alert, Form, Row, Col, Modal, Badge, 
 import { FaChevronLeft,  FaChevronRight,  FaTrash,  FaUndo,  FaEye, FaExclamationTriangle, FaInfoCircle} from "react-icons/fa";
 import logo from "../../../assets/logo.png";
 
-const API_BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000/api";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
 const DeletedCVsPage = ({ darkMode = false }) => {
   const [deletedCVs, setDeletedCVs] = useState([]);

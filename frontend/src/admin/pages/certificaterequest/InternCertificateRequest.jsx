@@ -31,7 +31,7 @@ const InternCertificateRequests = ({ darkMode }) => {
         return;
       }
       
-      const response = await axios.get(`http://localhost:5000/api/certificates/all-requests?status=${statusFilter}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/certificates/all-requests?status=${statusFilter}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -69,7 +69,7 @@ const InternCertificateRequests = ({ darkMode }) => {
     setCompleteLoading(true);
     try {
       await axios.put(
-        `http://localhost:5000/api/certificates/update-status/${selectedRequestId}`,
+        `${import.meta.env.VITE_BASE_URL}/api/certificates/update-status/${selectedRequestId}`,
         { status: "completed" },
         {
           headers: {

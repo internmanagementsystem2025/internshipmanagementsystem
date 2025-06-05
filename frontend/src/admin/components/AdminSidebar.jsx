@@ -45,7 +45,6 @@ const AdminSidebar = ({ darkMode }) => {
 
   // This is the function that needs fixing
   const toggleSidebar = () => {
-    // Modified to ensure clicking X always closes the sidebar
     if (show) {
       setShow(false);
       closeAllDropdowns();

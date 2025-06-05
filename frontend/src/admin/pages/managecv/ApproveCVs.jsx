@@ -13,7 +13,7 @@ import { FaPenFancy, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import logo from "../../../assets/logo.png";
 import ApproveModal from "../../../components/notifications/ApproveModal";
 import DeclineModal from "../../../components/notifications/DeclineModal";
-const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
 const ApproveCVs = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -82,7 +82,7 @@ const ApproveCVs = ({ darkMode }) => {
   // Add this useEffect to trigger the initial load
   useEffect(() => {
     fetchCVs();
-  }, []); // Empty dependency array means it runs once on mount
+  }, []); 
 
   // Approve CV(s)
   const handleApprove = async () => {

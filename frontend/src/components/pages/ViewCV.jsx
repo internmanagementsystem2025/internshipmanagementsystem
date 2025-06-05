@@ -8,7 +8,6 @@ import PreviousTrainingSection from "../pages/PreviousTrainingSection";
 import InternshipTypeSection from "../pages/InternshipTypeSection";
 import ViewUploadDocuments from "../pages/ViewUploadDocuments";
 
-const API_BASE_URL = "http://localhost:5000"; 
 
 const ViewCV = ({ darkMode }) => {
   const { cvId } = useParams(); 
@@ -33,9 +32,9 @@ const ViewCV = ({ darkMode }) => {
         }
 
         const [districtsRes, institutesRes, cvRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/districts`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_BASE_URL}/api/institutes`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_BASE_URL}/api/cvs/${cvId}`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${import.meta.env.VITE_BASE_URL}/api/districts`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${import.meta.env.VITE_BASE_URL}/api/institutes`, { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get(`${import.meta.env.VITE_BASE_URL}/api/cvs/${cvId}`, { headers: { Authorization: `Bearer ${token}` } }),
         ]);
 
         setDistricts(districtsRes.data || []);
@@ -51,11 +50,9 @@ const ViewCV = ({ darkMode }) => {
     };
 
     if (cvId) fetchData();
-  }, [cvId, navigate]); // Re-run on cvId or navigate changes
+  }, [cvId, navigate]); 
 
-  // Dummy handleInputChange function since we're in read-only mode
   const handleInputChange = () => {
-    // This function is required by UserInfoSection but won't do anything in view mode
     console.log("Input change attempted in read-only mode");
   };
 
@@ -103,7 +100,7 @@ const ViewCV = ({ darkMode }) => {
 
           <button
             className={`btn ${darkMode ? "btn-light text-dark" : "btn-secondary"} w-100 mt-3`}
-            onClick={() => navigate(-1)} // Navigate back to the previous page
+            onClick={() => navigate(-1)} 
           >
             Back to Previous Page
           </button>

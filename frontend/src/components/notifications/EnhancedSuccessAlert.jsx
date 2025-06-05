@@ -10,7 +10,6 @@ const EnhancedSuccessAlert = ({
   showCount = true
 }) => {
   useEffect(() => {
-    // Auto-dismiss after 5 seconds
     const timer = setTimeout(() => {
       if (onClose) onClose();
     }, 5000);

@@ -38,11 +38,11 @@ const SchemeInfo = ({ darkMode }) => {
         setLoading(true);
         setError("");
         
-        const response = await axios.get(`http://localhost:5000/api/schemes/${schemeId}`);
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/schemes/${schemeId}`);
         
         // Check if the response is successful
         if (response.data && response.data.success) {
-          setSchemeData(response.data.data); // Access the nested data property
+          setSchemeData(response.data.data); 
         } else {
           throw new Error(response.data?.message || "Failed to fetch scheme details");
         }

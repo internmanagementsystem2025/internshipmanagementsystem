@@ -15,7 +15,7 @@ const ViewInstituteDetails = ({ darkMode }) => {
     const fetchInstituteDetails = async () => {
       setLoading(true);
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/universities/${id}`, {
+        const { data } = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/universities/${id}`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
         setInstitute(data);

@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 const ConfirmDeleteModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
   return (
     <>
-      {/* Overlay for background blur effect */}
       {show && (
         <div
           style={{
@@ -15,9 +14,9 @@ const ConfirmDeleteModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
             left: 0,
             width: "100%",
             height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.3)", // Dim background
-            backdropFilter: "blur(8px)", // Apply blur effect
-            zIndex: 1040, // Ensure it appears behind modal
+            backgroundColor: "rgba(0, 0, 0, 0.3)", 
+            backdropFilter: "blur(8px)", 
+            zIndex: 1040, 
           }}
         />
       )}
@@ -27,7 +26,7 @@ const ConfirmDeleteModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
         onHide={onClose}
         centered
         backdrop="static"
-        style={{ zIndex: 1050 }} // Ensure modal is above overlay
+        style={{ zIndex: 1050 }} 
       >
         <Modal.Header
           closeButton
