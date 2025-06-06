@@ -367,7 +367,7 @@ const IndividualSidebar = ({ darkMode }) => {
                             transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                             display: 'flex',
                             alignItems: 'center',
-                            fontSize: '0.95rem',
+                            fontSize: '1rem',
                             fontWeight: isActive ? '600' : '500',
                             textDecoration: 'none',
                             position: 'relative',
