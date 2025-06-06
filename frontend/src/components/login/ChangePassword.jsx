@@ -1,5 +1,5 @@
-/* import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
- import { Container, Card, Button, Form, Alert, Spinner, InputGroup } from "react-bootstrap";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { Container, Card, Button, Form, Alert, Spinner, InputGroup } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FiLock, FiEye, FiEyeOff, FiUser, FiCheck, FiX } from "react-icons/fi";
@@ -152,7 +152,7 @@ const PasswordInput = React.memo(React.forwardRef(({
   );
 }));
 
-const UserProfile = ({ darkMode }) => {
+const ChangePassword = ({ darkMode }) => {
   const navigate = useNavigate();
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -305,7 +305,7 @@ const UserProfile = ({ darkMode }) => {
         transition: 'background-color 0.3s ease'
       }}
     >
-
+      {/* Background Effects */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -320,7 +320,7 @@ const UserProfile = ({ darkMode }) => {
           : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
       }} />
 
-
+      {/* Main Content */}
       <div style={{ position: 'relative', zIndex: 1, padding: "2rem 0" }}>
         <Container>
           <Notification 
@@ -330,7 +330,7 @@ const UserProfile = ({ darkMode }) => {
             variant={notificationVariant} 
           />
           
-
+          {/* Header */}
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -351,7 +351,7 @@ const UserProfile = ({ darkMode }) => {
             </p>
           </motion.div>
 
-
+          {/* Password Change Form */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -369,7 +369,7 @@ const UserProfile = ({ darkMode }) => {
                   overflow: 'hidden'
                 }}
               >
-
+                {/* Card Header */}
                 <div style={{
                   background: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
                   padding: '2rem',
@@ -471,7 +471,8 @@ const UserProfile = ({ darkMode }) => {
                         theme={theme}
                         darkMode={darkMode}
                       />
-
+                      
+                      {/* Password Strength Indicator */}
                       {passwordData.newPassword && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
@@ -551,7 +552,7 @@ const UserProfile = ({ darkMode }) => {
                         darkMode={darkMode}
                       />
                       
-     
+                      {/* Password Match Indicator */}
                       {passwordData.confirmNewPassword && (
                         <motion.div
                           initial={{ opacity: 0 }}
@@ -639,6 +640,7 @@ const UserProfile = ({ darkMode }) => {
                 </Card.Body>
               </Card>
 
+              {/* Security Note */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -670,4 +672,4 @@ const UserProfile = ({ darkMode }) => {
   );
 };
 
-export default UserProfile; */
+export default ChangePassword;
