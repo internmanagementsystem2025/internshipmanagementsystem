@@ -1,57 +1,120 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Nav } from "react-bootstrap";
-import { FiMenu, FiX, FiHome, FiFileText, FiList,  FiFilePlus, FiCheckCircle, FiCalendar, FiAward, FiUsers,  FiRepeat, FiLayers, FiMail, FiClipboard, FiBriefcase, FiDatabase, FiCodepen, FiCreditCard, FiBarChart, FiHelpCircle } from "react-icons/fi";
+import { 
+  FiMenu, FiX, FiHome, FiFileText, FiList, FiFilePlus, 
+  FiCheckCircle, FiCalendar, FiAward, FiUsers, FiRepeat, 
+  FiLayers, FiMail, FiClipboard, FiBriefcase, FiDatabase, 
+  FiCodepen, FiCreditCard, FiBarChart, FiHelpCircle, FiChevronDown,
+  FiFile, FiUpload, FiCheck, FiLayout, FiUserPlus, FiClock,
+  FiBook, FiBookOpen, FiFileMinus, FiFilePlus as FiFilePlusAlt,
+  FiUserCheck, FiUserX, FiMapPin, FiSettings, FiTruck, FiDollarSign,
+  FiPieChart, FiMessageSquare, FiGrid, FiPackage, FiPlus
+} from "react-icons/fi";
 import { FaBuildingColumns } from "react-icons/fa6";
 import logo from "../../assets/logo.png";
+import { motion, AnimatePresence } from "framer-motion";
 
 const AdminSidebar = ({ darkMode }) => {
   const [show, setShow] = useState(false);
   const [hovered, setHovered] = useState(null);
-  const [cvsDropdown, setCvsDropdown] = useState(false);
-  const [interviewsDropdown, setInterviewsDropdown] = useState(false);
-  const [inductionsDropdown, setInductionsDropdown] = useState(false);
-  const [instituteDropdown, setInstituteDropdown] = useState(false);
-  const [schemeDropdown, setSchemeDropdown] = useState(false);
-  const [rotationDropdown, setRotationDropdown] = useState(false);
-  const [templateDropdown, setTemplateDropdown] = useState(false);
-  
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
   const sidebarRef = useRef(null);
   const hoverTimeoutRef = useRef(null);
+  const location = useLocation();
 
   const closeAllDropdowns = () => {
-    setCvsDropdown(false);
-    setInterviewsDropdown(false);
-    setInductionsDropdown(false);
-    setInstituteDropdown(false);
-    setSchemeDropdown(false);
-    setRotationDropdown(false);
-    setTemplateDropdown(false);
+    setActiveDropdown(null);
   };
+
+  // Theme configuration
+  const theme = {
+    backgroundColor: darkMode ? "#000000" : "#f8fafc",
+    sidebarBackground: darkMode ? "#1E1E1E" : "rgba(255, 255, 255, 0.95)",
+    toggleBackground: darkMode ? "#2c3e50" : "rgba(255, 255, 255, 0.9)",
+    accentColor: darkMode ? "#2563eb" : "#10b981",
+    textPrimary: darkMode ? "#E1E1E1" : "#1e293b",
+    textSecondary: darkMode ? "#A0A0A0" : "#64748b",
+    border: darkMode ? "#333333" : "rgba(0, 0, 0, 0.1)",
+    gradientStart: darkMode ? "#2563eb" : "#10b981",
+    gradientEnd: darkMode ? "#1e40af" : "#059669",
+    hoverBackground: darkMode ? "#007bff" : "#10b981",
+    activeBorder: darkMode ? "#2563eb" : "#10b981",
+    dropdownBackground: darkMode ? "#2a2a2a" : "#f8f9fa",
+    dropdownHover: darkMode ? "#3a3a3a" : "#e9ecef",
+  };
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkIsMobile);
+    };
+  }, []);
 
   const handleMouseEnter = () => {
-    clearTimeout(hoverTimeoutRef.current);
-    setShow(true);
-  };
-
-  const handleMouseLeave = () => {
-    hoverTimeoutRef.current = setTimeout(() => {
-      if (!sidebarRef.current?.matches(':hover')) {
-        setShow(false);
-        closeAllDropdowns();
-      }
-    }, 300);
-  };
-
-  // This is the function that needs fixing
-  const toggleSidebar = () => {
-    if (show) {
-      setShow(false);
-      closeAllDropdowns();
-    } else {
+    if (!isMobile) {
+      clearTimeout(hoverTimeoutRef.current);
       setShow(true);
     }
   };
+
+  const handleMouseLeave = () => {
+    if (!isMobile) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        if (!sidebarRef.current?.matches(':hover')) {
+          setShow(false);
+          closeAllDropdowns();
+        }
+      }, 300);
+    }
+  };
+
+  const toggleSidebar = () => {
+    setShow(!show);
+    if (!show) {
+      closeAllDropdowns();
+    }
+  };
+
+  const toggleDropdown = (key) => {
+    setActiveDropdown(activeDropdown === key ? null : key);
+  };
+
+  const handleNavLinkClick = () => {
+    if (isMobile) {
+      setShow(false);
+    }
+    closeAllDropdowns();
+  };
+
+  // Close sidebar when clicking outside on mobile
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isMobile && show && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        const toggleButton = document.querySelector('[data-sidebar-toggle]');
+        if (toggleButton && !toggleButton.contains(event.target)) {
+          setShow(false);
+          closeAllDropdowns();
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [show, isMobile]);
 
   useEffect(() => {
     return () => {
@@ -59,971 +122,610 @@ const AdminSidebar = ({ darkMode }) => {
     };
   }, []);
 
+  const isActiveRoute = (route) => {
+    return location.pathname === route;
+  };
+
+  // Navigation items configuration with icons for dropdown items
+  const navItems = [
+    {
+      title: "Home",
+      icon: FiHome,
+      route: "/admin-home",
+      key: "home"
+    },
+    {
+      title: "Manage CVs",
+      icon: FiFileText,
+      key: "manage-cvs",
+      hasDropdown: true,
+      dropdownItems: [
+        { title: "View All CVs", route: "/view-all-cvs", icon: FiFile },
+        { title: "Add New CV", route: "/admin-add-cv", icon: FiFilePlus },
+        { title: "Approve CV", route: "/admin-approve-cvs", icon: FiCheckCircle },
+      ]
+    },
+    {
+      title: "Interviews",
+      icon: FiCalendar,
+      key: "interviews",
+      hasDropdown: true,
+      dropdownItems: [
+        { title: "All Interviews", route:"/view-all-interviews", icon: FiList },
+        { title: "New Interview", route:"/add-new-interview", icon: FiUserPlus },
+        { title: "Schedule Interviews", route:"/schedule-interview", icon: FiClock },
+        { title: "Interview Results", route:"/interview-results", icon: FiAward },
+      ]
+    },
+    {
+      title: "Induction",
+      icon: FiUsers,
+      key: "inductions",
+      hasDropdown: true,
+      dropdownItems: [
+        { title: "All Inductions", route:"/view-all-inductions", icon: FiUsers },
+        { title: "New Induction", route:"/add-new-induction", icon: FiUserPlus },
+        { title: "Schedule Inductions", route:"/schedule-induction", icon: FiClock },
+        { title: "Induction Results", route:"/induction-results", icon: FiCheckCircle },
+      ]
+    },
+    {
+      title: "Assign to Scheme",
+      icon: FiList,
+      route: "/schedule-scheme",
+      key: "assign-to-scheme"
+    },
+    {
+      title: "Intern Status",
+      icon: FiHelpCircle,
+      route: "/intern-status",
+      key: "intern-status"
+    },
+    {
+      title: "Life Cycle",
+      icon: FiRepeat,
+      route: "/life-cycle",
+      key: "life-cycle"
+    },
+    {
+      title: "Institute",
+      icon: FaBuildingColumns,
+      key: "institutes",
+      hasDropdown: true,
+      dropdownItems: [
+        { title: "All Institutes", route:"/view-all-institute", icon: FiGrid },
+        { title: "New Institute", route:"/add-new-institute", icon: FiPlus },
+        { title: "Approve Institute", route:"/approve-institute", icon: FiCheck },
+      ]
+    },
+    {
+      title: "Schemes",
+      icon: FiLayers,
+      key: "schemes",
+      hasDropdown: true,
+      dropdownItems: [
+        { title: "All Schemes", route:"/view-all-scheme", icon: FiLayers },
+        { title: "New Scheme", route:"/add-new-scheme", icon: FiFilePlus },
+        { title: "Add Employees", route:"/add-employees", icon: FiUserPlus },
+        { title: "View Employees", route: "/view-employees", icon: FiUsers }
+      ]
+    },
+    {
+      title: "Intern Requests",
+      icon: FiMail,
+      route: "/staff-intern-request",
+      key: "requests"
+    },
+    {
+      title: "Certificate Requests",
+      icon: FiClipboard,
+      route: "/intern-certificate-request",
+      key: "certificate-request"
+    },
+    {
+      title: "Intern Placement",
+      icon: FiBriefcase,
+      route: "/intern-placement",
+      key: "intern-placement"
+    },
+    {
+      title: "Rotations",
+      icon: FiDatabase,
+      key: "rotations",
+      hasDropdown: true,
+      dropdownItems: [
+        { title: "Stations", route:"/all-rotational-stations", icon: FiMapPin },
+        { title: "Schedule", route:"/schedule-rotations", icon: FiClock },
+      ]
+    },
+    {
+      title: "Templates",
+      icon: FiCodepen,
+      key: "templates",
+      hasDropdown: true,
+      dropdownItems: [
+        { title: "All certificates", route:"/all-certificate", icon: FiFileText },
+        { title: "New Certificate", route:"/add-certificate", icon: FiFilePlus },
+        { title: "All Certificate Letters", route:"/all-certificate-letters", icon: FiMail },
+        { title: "New Certificate Letter", route: "/add-certificate-letter", icon: FiFilePlusAlt },
+        { title: "All Placement Letters", route:"/all-placement-letters", icon: FiBriefcase },
+        { title: "New Placement Letter", route: "/add-new-placement-letter", icon: FiFilePlus },
+      ]
+    },
+    {
+      title: "Bank Details",
+      icon: FiCreditCard,
+      route: "/intern-bank-details",
+      key: "bank-details"
+    },
+    {
+      title: "Reports",
+      icon: FiBarChart,
+      route: "/admin-reports",
+      key: "reports"
+    },
+    {
+      title: "Help & Support",
+      icon: FiHelpCircle,
+      route: "/admin-help-support",
+      key: "help-support"
+    },
+  ];
+
   return (
     <>
-      {/* Persistent Sidebar Toggle Icon */}
-      <div 
+      {/* Sidebar Toggle Button */}
+      <motion.div 
+        data-sidebar-toggle
         className="position-fixed"
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3 }}
         style={{
-          left: show ? '250px' : '0',
+          left: show ? '260px' : '10px',
           top: '5px',
           zIndex: 2000,
-          transition: 'left 0.3s ease',
-          backgroundColor: darkMode ? '#2c3e50' : '#f8f9fa',
-          borderRadius: '0 5px 5px 0',
-          padding: '10px 5px',
-          boxShadow: '2px 2px 5px rgba(0,0,0,0.2)',
-          cursor: 'pointer'
+          transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          background: theme.toggleBackground,
+          backdropFilter: 'blur(20px)',
+          borderRadius: '16px',
+          padding: '10px',
+          boxShadow: darkMode 
+            ? '0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+            : '0 8px 32px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+          cursor: 'pointer',
+          border: `1px solid ${theme.border}`
         }}
         onClick={toggleSidebar}
-        onMouseEnter={() => !show && setShow(true)}
+        onMouseEnter={() => !isMobile && !show && setShow(true)}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
       >
-        {show ? (
-          <FiX size={24} color={darkMode ? "#fff" : "#000"} />
-        ) : (
-          <FiMenu size={24} color={darkMode ? "#fff" : "#000"} />
-        )}
-      </div>
+        <AnimatePresence mode="wait">
+          {show ? (
+            <motion.div
+              key="close"
+              initial={{ rotate: -90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: 90, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <FiX size={24} color={theme.textPrimary} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="menu"
+              initial={{ rotate: 90, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              exit={{ rotate: -90, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <FiMenu size={24} color={theme.textPrimary} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
-      {/* Sidebar */}
-      <div
-        ref={sidebarRef}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          position: 'fixed',
-          left: show ? 0 : '-250px',
-          top: 0,
-          width: '250px',
-          height: '100vh',
-          backgroundColor: darkMode ? "#343a40" : "#f8f9fa",
-          color: darkMode ? "#fff" : "#000",
-          transition: 'left 0.3s ease',
-          zIndex: 1000,
-          overflowY: 'auto',
-          boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
-        }}
-      >
-        {/* Sidebar Header */}
-        <div
-          style={{
-            backgroundColor: darkMode ? "#343a40" : "#f8f9fa",
-            padding: "16px",
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: `1px solid ${darkMode ? "#666" : "#ddd"}`
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-          <img
-            src={logo}
-            alt="Logo"
+      {/* Mobile Backdrop */}
+      <AnimatePresence>
+        {isMobile && show && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             style={{
-              width: "80px",
-              height: "30px",
-              marginRight: "10px",
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              background: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 999,
+            }}
+            onClick={() => {
+              setShow(false);
+              closeAllDropdowns();
             }}
           />
-            <div>
-            <span
-              className="block text-sm font-semibold"
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar */}
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            ref={sidebarRef}
+            initial={{ x: -280, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -280, opacity: 0 }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 300, 
+              damping: 30,
+              opacity: { duration: 0.2 }
+            }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            style={{
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              width: '280px',
+              height: '100vh',
+              background: theme.sidebarBackground,
+              backdropFilter: 'blur(20px)',
+              color: theme.textPrimary,
+              zIndex: isMobile ? 1001 : 1000,
+              overflowY: 'auto',
+              boxShadow: darkMode 
+                ? '0 25px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                : '0 25px 50px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+              fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+            }}
+          >
+            {/* Custom Scrollbar */}
+            <style>{`
+              ::-webkit-scrollbar {
+                width: 6px;
+              }
+              ::-webkit-scrollbar-track {
+                background: transparent;
+              }
+              ::-webkit-scrollbar-thumb {
+                background: ${theme.accentColor}40;
+                border-radius: 10px;
+              }
+              ::-webkit-scrollbar-thumb:hover {
+                background: ${theme.accentColor}60;
+              }
+            `}</style>
+
+            {/* Sidebar Header */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
               style={{
-                fontSize: "0.75rem",
-                color: darkMode ? "#fff" : "#000",
-                display: "block",
+                background: `linear-gradient(135deg, ${theme.gradientStart}10, ${theme.gradientEnd}10)`,
+                padding: "24px 20px",
+                display: 'flex',
+                alignItems: 'center',
+                borderBottom: `1px solid ${theme.border}`,
+                position: 'relative',
+                overflow: 'hidden'
               }}
             >
-              Sri Lanka Telecom
-            </span>
-            <span
-              className="block text-sm"
-              style={{
-                fontSize: "0.875rem",
-                color: darkMode ? "#b0b0b0" : "#6c757d",
-                display: "block",
-              }}
-            >
-              Mobitel
-            </span>
-          </div>
-          </div>
-        </div>
-
-        {/* Sidebar Body */}
-        <div
-          className="d-flex flex-column justify-content-between"
-          style={{
-            backgroundColor: darkMode ? "#343a40" : "#f8f9fa",
-            color: darkMode ? "#fff" : "#000",
-            height: "calc(100vh - 80px)",
-            paddingBottom: "10px",
-            overflowY: "auto", 
-          }}
-        >
-          <style>{`
-            ::-webkit-scrollbar {
-              display: none;
-            }
-          `}</style>
-          
-          {/* Navigation Links */}
-          <div>
-            <Nav className="flex-column ">
-              {/* Home */}
-              <Nav.Link
-                as={Link}
-                to="/admin-home"
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("home")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "home" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "home" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiHome size={20} className="me-2" />
-                Home
-              </Nav.Link>
-
-              {/* Manage CV */}
-              <Nav.Link
-                onClick={() => {
-                  setCvsDropdown(!cvsDropdown);
-                  setInterviewsDropdown(false);
-                }}
-                onMouseEnter={() => setHovered("cvs-manage")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "cvs-manage" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "cvs-manage" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  cursor: "pointer",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiFileText size={20} className="me-2" />
-                Manage CVs
-              </Nav.Link>
-
-              {cvsDropdown && (
-                <div style={{ marginLeft: "30px" }}>
-                  <Nav.Link
-                    as={Link}
-                    to="/view-all-cvs"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("view-all-cvs")}
-                    onMouseLeave={() => setHovered(null)}
+              <div style={{ display: 'flex', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+                <motion.img
+                  whileHover={{ scale: 1.05 }}
+                  src={logo}
+                  alt="Logo"
+                  style={{ 
+                    width: "90px", 
+                    height: "35px", 
+                    marginRight: "15px",
+                    filter: darkMode ? 'brightness(1.2) contrast(0.9)' : 'brightness(1)'
+                  }}
+                />
+                <div>
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
                     style={{
-                      color: hovered === "view-all-cvs" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "view-all-cvs" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      transition: "all 0.3s ease",
-                      margin: "3px 0",
+                      fontSize: "0.85rem",
+                      color: theme.textPrimary,
+                      display: "block",
+                      fontWeight: "700",
+                      letterSpacing: "0.5px"
                     }}
                   >
-                    <FiList size={18} className="me-2" />
-                    View All CVs
-                  </Nav.Link>
-                  <Nav.Link
-                    as={Link}
-                    to="/admin-add-cv"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("add-cv")}
-                    onMouseLeave={() => setHovered(null)}
+                    Sri Lanka Telecom
+                  </motion.span>
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
                     style={{
-                      color: hovered === "add-cv" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "add-cv" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      transition: "all 0.3s ease",
-                      margin: "3px 0",
+                      fontSize: "0.95rem",
+                      color: theme.textSecondary,
+                      display: "block",
+                      fontWeight: "500"
                     }}
                   >
-                    <FiFilePlus size={18} className="me-2" />
-                    Add New CV
-                  </Nav.Link>
-                  <Nav.Link
-                    as={Link}
-                    to="/admin-approve-cvs"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("approve-cv")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "approve-cv" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "approve-cv" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      transition: "all 0.3s ease",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiCheckCircle size={18} className="me-2" />
-                    Approve CV
-                  </Nav.Link>
+                    Mobitel
+                  </motion.span>
                 </div>
-              )}
+              </div>
+            </motion.div>
 
-              {/* Interview */}
-              <Nav.Link
-                onClick={() => {
-                  setInterviewsDropdown(!interviewsDropdown);
-                  setCvsDropdown(false);
-                }}
-                onMouseEnter={() => setHovered("interviews")}
-                onMouseLeave={() => setHovered(null)}
+            {/* Sidebar Body */}
+            <div style={{
+              height: "calc(100vh - 120px)",
+              padding: "20px 0",
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              {/* Navigation Links */}
+              <div style={{ flex: 1 }}>
+                <Nav className="flex-column">
+                  {navItems.map((item, index) => {
+                    const isActive = isActiveRoute(item.route) || 
+                                    (item.hasDropdown && item.dropdownItems.some(di => isActiveRoute(di.route)));
+                    const isHovered = hovered === item.key;
+                    const isDropdownOpen = activeDropdown === item.key;
+                    
+                    return (
+                      <motion.div 
+                        key={item.key} 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 + index * 0.05 }}
+                      >
+                        <div style={{ position: 'relative' }}>
+                          <Nav.Link
+                            as={item.hasDropdown ? 'div' : Link}
+                            to={!item.hasDropdown ? item.route : null}
+                            onClick={() => {
+                              if (item.hasDropdown) {
+                                toggleDropdown(item.key);
+                              } else {
+                                handleNavLinkClick();
+                              }
+                            }}
+                            onMouseEnter={() => !isMobile && setHovered(item.key)}
+                            onMouseLeave={() => !isMobile && setHovered(null)}
+                            style={{
+                              color: isActive || isHovered ? "#fff" : theme.textPrimary,
+                              background: isActive 
+                                ? `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`
+                                : isHovered 
+                                  ? `linear-gradient(135deg, ${theme.gradientStart}90, ${theme.gradientEnd}90)`
+                                  : "transparent",
+                              borderRadius: isDropdownOpen ? "12px 12px 0 0" : "12px",
+                              padding: "14px 20px",
+                              margin: "4px 16px",
+                              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                              display: 'flex',
+                              alignItems: 'center',
+                              fontSize: '1rem',
+                              fontWeight: isActive ? '600' : '500',
+                              textDecoration: 'none',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              border: isActive ? `1px solid ${theme.activeBorder}40` : 'none',
+                              boxShadow: isActive 
+                                ? `0 8px 25px ${theme.accentColor}30`
+                                : isHovered 
+                                  ? `0 4px 15px ${theme.accentColor}20`
+                                  : 'none',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {isActive && (
+                              <motion.div
+                                layoutId="activeIndicator"
+                                style={{
+                                  position: 'absolute',
+                                  left: 0,
+                                  top: 0,
+                                  bottom: 0,
+                                  width: '4px',
+                                  background: '#fff',
+                                  borderRadius: '0 4px 4px 0'
+                                }}
+                              />
+                            )}
+                            
+                            <motion.div
+                              whileHover={{ scale: 1.1, rotate: 5 }}
+                              whileTap={{ scale: 0.9 }}
+                              style={{
+                                marginRight: '14px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '24px',
+                                height: '24px'
+                              }}
+                            >
+                              <item.icon size={20} />
+                            </motion.div>
+                            
+                            <span style={{ 
+                              letterSpacing: '0.3px',
+                              flex: 1
+                            }}>
+                              {item.title}
+                            </span>
+
+                            {item.hasDropdown && (
+                              <motion.div
+                                animate={{ rotate: isDropdownOpen ? 180 : 0 }}
+                                style={{ 
+                                  marginLeft: 'auto',
+                                  transition: 'transform 0.2s ease' 
+                                }}
+                              >
+                                <FiChevronDown size={16} />
+                              </motion.div>
+                            )}
+
+                            {isHovered && !isActive && (
+                              <motion.div
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 0.1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 0,
+                                  background: `radial-gradient(circle at center, ${theme.accentColor}, transparent)`,
+                                  pointerEvents: 'none'
+                                }}
+                              />
+                            )}
+                          </Nav.Link>
+
+                          {/* Dropdown Content with enhanced hover effects */}
+                          {item.hasDropdown && isDropdownOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.2 }}
+                              style={{
+                                background: theme.dropdownBackground,
+                                borderRadius: '0 0 12px 12px',
+                                margin: '0 16px',
+                                overflow: 'hidden',
+                                boxShadow: darkMode 
+                                  ? '0 4px 6px rgba(0, 0, 0, 0.3)'
+                                  : '0 4px 6px rgba(0, 0, 0, 0.1)'
+                              }}
+                            >
+                              {item.dropdownItems.map((dropdownItem, idx) => {
+                                const isDropdownItemActive = isActiveRoute(dropdownItem.route);
+                                const dropdownItemHoverBg = darkMode 
+                                  ? 'rgba(59, 130, 246, 0.2)' 
+                                  : 'rgba(16, 185, 129, 0.1)';
+                                
+                                return (
+                                  <motion.div
+                                    key={idx}
+                                    whileHover={{ 
+                                      backgroundColor: dropdownItemHoverBg,
+                                      transition: { duration: 0.1 }
+                                    }}
+                                    whileTap={{ scale: 0.98 }}
+                                    style={{
+                                      background: isDropdownItemActive ? theme.dropdownHover : 'transparent',
+                                      transition: 'all 0.2s ease'
+                                    }}
+                                  >
+                                    <Nav.Link
+                                      as={Link}
+                                      to={dropdownItem.route}
+                                      onClick={handleNavLinkClick}
+                                      style={{
+                                        padding: '12px 20px 12px 52px',
+                                        color: isDropdownItemActive ? theme.accentColor : theme.textPrimary,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontSize: '0.9rem',
+                                        fontWeight: isDropdownItemActive ? '600' : '400',
+                                        textDecoration: 'none',
+                                        position: 'relative'
+                                      }}
+                                    >
+                                      {/* Active indicator for dropdown items */}
+                                      {isDropdownItemActive && (
+                                        <motion.div
+                                          layoutId="dropdownActiveIndicator"
+                                          style={{
+                                            position: 'absolute',
+                                            left: 0,
+                                            top: 0,
+                                            bottom: 0,
+                                            width: '4px',
+                                            background: theme.accentColor,
+                                            borderRadius: '0 4px 4px 0'
+                                          }}
+                                        />
+                                      )}
+
+                                      {/* Dropdown item icon with hover effect */}
+                                      <motion.div
+                                        style={{ 
+                                          marginRight: '12px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          width: '20px'
+                                        }}
+                                        whileHover={{ 
+                                          scale: 1.1,
+                                          color: theme.accentColor
+                                        }}
+                                        transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+                                      >
+                                        <dropdownItem.icon 
+                                          size={16} 
+                                          color={isDropdownItemActive ? theme.accentColor : theme.textPrimary}
+                                        />
+                                      </motion.div>
+                                      
+                                      {/* Dropdown item text */}
+                                      <motion.span
+                                        whileHover={{ 
+                                          x: 2,
+                                          color: theme.accentColor
+                                        }}
+                                        transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+                                      >
+                                        {dropdownItem.title}
+                                      </motion.span>
+                                    </Nav.Link>
+                                  </motion.div>
+                                );
+                              })}
+                            </motion.div>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </Nav>
+              </div>
+
+              {/* Footer decoration */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
                 style={{
-                  color: hovered === "interviews" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "interviews" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  cursor: "pointer",
-                  margin: "5px 10px",
+                  padding: '20px',
+                  textAlign: 'center',
+                  borderTop: `1px solid ${theme.border}`,
+                  background: `linear-gradient(135deg, ${theme.gradientStart}05, ${theme.gradientEnd}05)`
                 }}
               >
-                <FiCalendar size={20} className="me-2" />
-                Interviews
-              </Nav.Link>
-
-              {interviewsDropdown && (
-                <div style={{ marginLeft: "30px" }}>
-                  <Nav.Link
-                    as={Link}
-                    to="/view-all-interviews"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("all-interviews")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "all-interviews" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "all-interviews" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      transition: "all 0.3s ease",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiList size={18} className="me-2" />
-                    All Interviews
-                  </Nav.Link>
-                  <Nav.Link
-                    as={Link}
-                    to="/add-new-interview"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("new-interview")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "new-interview" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "new-interview" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      transition: "all 0.3s ease",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiFilePlus size={18} className="me-2" />
-                    New Interview
-                  </Nav.Link>
-                  <Nav.Link
-                    as={Link}
-                    to="/schedule-interview"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("schedule-interview")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "schedule-interview" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "schedule-interview" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      transition: "all 0.3s ease",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiCalendar size={18} className="me-2" />
-                    Schedule Interview
-                  </Nav.Link>
-                  <Nav.Link
-                    as={Link}
-                    to="/interview-results"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("interview-results")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "interview-results" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "interview-results" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      transition: "all 0.3s ease",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiAward size={18} className="me-2" />
-                    Interview Results
-                  </Nav.Link>
+                <div style={{
+                  fontSize: '0.75rem',
+                  color: theme.textSecondary,
+                  fontWeight: '500'
+                }}>
+                  Admin Portal v1.0
                 </div>
-              )}
-
-              {/* Induction */}
-              <Nav.Link
-                onClick={() => {
-                  setInductionsDropdown(!inductionsDropdown);
-                  setCvsDropdown(false);
-                  setInterviewsDropdown(false);
-                }}
-                onMouseEnter={() => setHovered("inductions")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "inductions" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "inductions" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  cursor: "pointer",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiUsers size={20} className="me-2" />
-                Inductions
-              </Nav.Link>
-
-              {inductionsDropdown && (
-                <div style={{ marginLeft: "30px" }}>
-                  <Nav.Link
-                    as={Link}
-                    to="/view-all-inductions"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("all-inductions")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "all-inductions" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "all-inductions" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiList size={18} className="me-2" />
-                    All Inductions
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/add-new-induction"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("new-induction")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "new-induction" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "new-induction" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiFilePlus size={18} className="me-2" />
-                    New Induction
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/schedule-induction"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("schedule-induction")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "schedule-induction" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "schedule-induction" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiCalendar size={18} className="me-2" />
-                    Schedule Induction
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/induction-results"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("induction-results")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "induction-results" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "induction-results" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiAward size={18} className="me-2" />
-                    Induction Results
-                  </Nav.Link>
-                </div>
-              )}                 
-
-              {/* Assign to Scheme */}
-              <Nav.Link
-                as={Link}
-                to="/schedule-scheme"
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("assign-scheme")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "assign-scheme" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "assign-scheme" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiList size={20} className="me-2" />
-                Assign to Scheme
-              </Nav.Link>
-
-              {/* Intern Status */}
-              <Nav.Link
-                as={Link}
-                to="/intern-status"
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("intern-status")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "intern-status" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "intern-status" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiHelpCircle size={20} className="me-2" />
-                Intern Status
-              </Nav.Link>
-
-              {/* Life Cycle */}
-              <Nav.Link
-                as={Link}
-                to="/life-cycle"
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("life-cycle")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "life-cycle" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "life-cycle" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiRepeat size={20} className="me-2" />
-                Life Cycle
-              </Nav.Link>
-
-              {/* Institute */}
-              <Nav.Link
-                onClick={() => {
-                  setInstituteDropdown(!instituteDropdown);
-                  setCvsDropdown(false);
-                  setInterviewsDropdown(false);
-                }}
-                onMouseEnter={() => setHovered("institute")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "institute" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "institute" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  cursor: "pointer",
-                  margin: "5px 10px",
-                }}
-              >
-                <FaBuildingColumns size={20} className="me-2" />
-                Institute
-              </Nav.Link>
-
-              {instituteDropdown && (
-                <div style={{ marginLeft: "30px" }}>
-                  <Nav.Link
-                    as={Link}
-                    to="/view-all-institute"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("all-institute")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "all-institute" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "all-institute" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiList size={18} className="me-2" />
-                    All institute
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/add-new-institute"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("new-institute")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "new-institute" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "new-institute" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiFilePlus size={18} className="me-2" />
-                    New institute
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/approve-institute"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("approve-institute")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "approve-institute" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "approve-institute" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiCheckCircle size={18} className="me-2" />
-                    Approve institute
-                  </Nav.Link>
-                </div>
-              )}
-
-              {/* Schemes */}
-              <Nav.Link
-                onClick={() => {
-                  closeAllDropdowns();
-                  setSchemeDropdown(!schemeDropdown);
-                }}
-                onMouseEnter={() => setHovered("scheme")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "scheme" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "scheme" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  cursor: "pointer",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiLayers size={20} className="me-2" />
-                Scheme
-              </Nav.Link>
-
-              {schemeDropdown && (
-                <div style={{ marginLeft: "30px" }}>
-                  <Nav.Link
-                    as={Link}
-                    to="/view-all-scheme"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("all-scheme")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "all-scheme" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "all-scheme" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiList size={18} className="me-2" />
-                    All schemes
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/add-new-scheme"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("new-scheme")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "new-scheme" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "new-scheme" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiFilePlus size={18} className="me-2" />
-                    New scheme
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/add-employees"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("add-employees")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "add-employees" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "add-employees" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiUsers size={18} className="me-2" />
-                    Add Employees
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/view-employees"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("view-employees")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "view-employees" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "view-employees" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiUsers size={18} className="me-2" />
-                    View Employees
-                  </Nav.Link>
-
-                </div>
-              )}
-              
-              {/* Requests */}
-              <Nav.Link
-                as={Link}
-                to="/staff-intern-request"
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("/staff-intern-request")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "/staff-intern-request" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "/staff-intern-request" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiMail size={20} className="me-2" />
-                Intern Requests
-              </Nav.Link>
-
-              {/* Certificate Requests */}
-              <Nav.Link
-                as={Link}
-                to="/intern-certificate-request"
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("request")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "request" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "request" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiClipboard size={20} className="me-2" />
-                Certificate Requests
-              </Nav.Link>
-
-              {/* Intern Placements */}
-              <Nav.Link
-                as={Link}
-                to="/intern-placement"
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("intern-placement")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "intern-placement" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "intern-placement" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiBriefcase size={20} className="me-2" />
-                Intern Placement
-              </Nav.Link>
-
-              {/* Rotational */}
-              <Nav.Link
-                onClick={() => {
-                  closeAllDropdowns();
-                  setRotationDropdown(!rotationDropdown);
-                }}
-                onMouseEnter={() => setHovered("rotation")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "rotation" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "rotation" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  cursor: "pointer",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiDatabase size={20} className="me-2" />
-                Rotations
-              </Nav.Link>
-
-              {rotationDropdown && (
-                <div style={{ marginLeft: "30px" }}>
-                  <Nav.Link
-                    as={Link}
-                    to="/all-rotational-stations"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("all-rotational-stations")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "all-rotational-stations" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "all-rotational-stations" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiList size={18} className="me-2" />
-                    Stations
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/schedule-rotations"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("schedule-for-rotations")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "schedule-for-rotations" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "schedule-for-rotations" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiCheckCircle size={18} className="me-2" />
-                    Schedule
-                  </Nav.Link>
-                </div>
-              )}
-
-              {/* Templates */}
-              <Nav.Link
-                onClick={() => {
-                  closeAllDropdowns();
-                  setTemplateDropdown(!templateDropdown);
-                }}
-                onMouseEnter={() => setHovered("template")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "template" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "template" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  cursor: "pointer",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiCodepen size={20} className="me-2" />
-                Templates
-              </Nav.Link>
-
-              {templateDropdown && (
-                <div style={{ marginLeft: "30px" }}>
-                  <Nav.Link
-                    as={Link}
-                    to="/all-certificate"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("all-certificate")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "all-certificate" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "all-certificate" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiList size={18} className="me-2" />
-                    All Certificates
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/add-certificate"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("add-new-certificate")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "add-new-certificate" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "add-new-certificate" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiFilePlus size={18} className="me-2" />
-                    New Certificate
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/all-certificate-letters"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("all-certificate-letters")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "all-certificate-letters" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "all-certificate-letters" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiList size={18} className="me-2" />
-                    All Certificate Letters
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/add-certificate-letter"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("add-new-certificate-letter")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "add-new-certificate-letter" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "add-new-certificate-letter" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiFilePlus size={18} className="me-2" />
-                    New Certificate Letter
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/all-placement-letters"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("all-placement-letters")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "all-placement-letters" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "all-placement-letters" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiList size={18} className="me-2" />
-                    All Placement Letters
-                  </Nav.Link>
-
-                  <Nav.Link
-                    as={Link}
-                    to="/add-new-placement-letter"
-                    onClick={() => setShow(false)}
-                    onMouseEnter={() => setHovered("add-new-placement-letter")}
-                    onMouseLeave={() => setHovered(null)}
-                    style={{
-                      color: hovered === "add-new-placement-letter" ? "#fff" : darkMode ? "#fff" : "#000",
-                      backgroundColor: hovered === "add-new-placement-letter" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                      borderRadius: "5px",
-                      padding: "8px",
-                      margin: "3px 0",
-                    }}
-                  >
-                    <FiFilePlus size={18} className="me-2" />
-                    New Placement Letter
-                  </Nav.Link>
-                </div>
-              )}
-
-              {/* Bank Details */}
-              <Nav.Link
-                as={Link}
-                to="/intern-bank-details"
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("bank-details")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "bank-details" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "bank-details" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiCreditCard size={20} className="me-2" />
-                Bank Details
-              </Nav.Link>
-
-              {/* Reports */}
-              <Nav.Link
-                as={Link}
-                to="/admin-reports" 
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("reports")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "reports" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "reports" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiBarChart size={20} className="me-2" />
-                Reports
-              </Nav.Link>
-            
-              {/* Help */}
-              <Nav.Link
-                as={Link}
-                to="/admin-help-support"
-                onClick={() => setShow(false)}
-                onMouseEnter={() => setHovered("help")}
-                onMouseLeave={() => setHovered(null)}
-                style={{
-                  color: hovered === "help" ? "#fff" : darkMode ? "#fff" : "#000",
-                  backgroundColor: hovered === "help" ? (darkMode ? "#007bff" : "#28a745") : "transparent",
-                  borderRadius: "5px",
-                  padding: "10px",
-                  transition: "all 0.3s ease",
-                  margin: "5px 10px",
-                }}
-              >
-                <FiHelpCircle size={20} className="me-2" />
-                Help
-              </Nav.Link>
-            </Nav>
-          </div>
-
-        </div>
-      </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
