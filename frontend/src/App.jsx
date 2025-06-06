@@ -13,7 +13,6 @@ import InstituteSidebar from "./institute/components/InstituteSidebar";
 import AdminSidebar from "./admin/components/AdminSidebar";
 import StaffSidebar from "./staff/components/StaffSidebar";
 import { Footer } from "./components/pages/Footer";
-import UserProfile from "./components/login/UserProfile";
 import ConnectivityNotification from "./components/notifications/ConnectivityNotification";
 import LandingPage from "./components/login/LandingPage";
 import ProtectedRoute from "./components/login/ProtectedRoute";
@@ -31,7 +30,6 @@ import InstituteAddCV from "./institute/pages/requestinternship/InstituteAddCV";
 import ViewCV from "./components/pages/ViewCV";
 import EditCV from "./components/pages/EditCV";
 import InstituteHelp from "./institute/pages/help/InstituteHelp";
-
 import AdminHome from "./admin/pages/home/AdminHome";
 import ViewAllCVs from "./admin/pages/managecv/ViewAllCVs";
 import DeletedCVsPage  from "./admin/pages/managecv/DeletedCVsPage";
@@ -109,6 +107,7 @@ import ViewCertificateRequest  from "./components/pages/ViewCertificateRequest";
 import DownloadCertificate  from "./individual/pages/certificaterequest/DownloadCertificate";
 import AdminReports  from "./admin/pages/reports/AdminReports";
 import LearnMorePage from "./components/login/LearnMorePage";
+import ChangePassword  from "./components/login/ChangePassword";
 
 
 function App() {
@@ -328,7 +327,7 @@ function App() {
     <Route path="/status-report" element={<StatusReport darkMode={darkMode} />} />
     <Route path="/request-certificate" element={<TrainingCertificateRequest darkMode={darkMode} />} />
     <Route path="/download-certificate" element={<DownloadCertificate darkMode={darkMode} />} />
-    <Route path="/user-profile/:id" element={<UserProfile darkMode={darkMode} />} />
+    <Route path="/change-password/:id" element={<ChangePassword darkMode={darkMode} />} />
 
     {/* Institute */}
     <Route path="/institute-home" element={<InstituteHome darkMode={darkMode} />} />
