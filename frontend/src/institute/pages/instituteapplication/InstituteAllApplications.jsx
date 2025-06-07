@@ -168,14 +168,14 @@ const InstituteAllApplications = ({ darkMode }) => {
   ];
 
   return (
-    <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
+    <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`} style={{ paddingBottom: "40px" }}>
       <Container className="text-center mt-4 mb-3">
         <img src={logo} alt="SLT Mobitel Logo" className="mx-auto d-block" style={{ height: "50px" }} />
         <h3 className="mt-3">ALL CV APPLICATIONS</h3>
       </Container>
 
       <Container
-        className="mt-4 p-4 rounded"
+        className="mt-4 p-4 rounded mb-5"
         style={{
           background: darkMode ? "#343a40" : "#ffffff",
           color: darkMode ? "white" : "black",
@@ -205,101 +205,103 @@ const InstituteAllApplications = ({ darkMode }) => {
         </div>
 
         {loading ? (
-          <div className="text-center">
+          <div className="text-center mb-4">
             <Spinner animation="border" variant={darkMode ? "light" : "dark"} />
           </div>
         ) : error ? (
-          <Alert variant="danger" className="text-center">{error}</Alert>
+          <Alert variant="danger" className="text-center mb-4">{error}</Alert>
         ) : (
           <>
-            <Table striped bordered hover variant={darkMode ? "dark" : "light"} responsive>
-              <thead>
-                <tr>
-                  {columns.map((col, index) => (
-                    <th key={index}>{col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {currentCvs.length > 0 ? (
-                  currentCvs.map((cv, index) => (
-                    <tr key={cv._id || index}>
-                      <td>{indexOfFirstCv + index + 1}</td>
-                      <td>{cv.refNo || "N/A"}</td>
-                      <td>{cv.fullName || "N/A"}</td>
-                      <td>{cv.nic || "N/A"}</td>
-                      <td>{cv.selectedRole || "N/A"}</td>
-                      <td>
-                        <span className={`badge ${getStatusBadgeClass(cv.currentStatus)}`}>
-                          {formatStatusText(cv.currentStatus)}
-                        </span>
-                      </td>
+            <div className="mb-4">
+              <Table striped bordered hover variant={darkMode ? "dark" : "light"} responsive className="mb-0">
+                <thead>
+                  <tr>
+                    {columns.map((col, index) => (
+                      <th key={index}>{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentCvs.length > 0 ? (
+                    currentCvs.map((cv, index) => (
+                      <tr key={cv._id || index}>
+                        <td>{indexOfFirstCv + index + 1}</td>
+                        <td>{cv.refNo || "N/A"}</td>
+                        <td>{cv.fullName || "N/A"}</td>
+                        <td>{cv.nic || "N/A"}</td>
+                        <td>{cv.selectedRole || "N/A"}</td>
+                        <td>
+                          <span className={`badge ${getStatusBadgeClass(cv.currentStatus)}`}>
+                            {formatStatusText(cv.currentStatus)}
+                          </span>
+                        </td>
 
-                      <td>
-                        <Button 
-                          size="sm" 
-                          variant="outline-primary" 
-                          onClick={() => handleView(cv._id)} 
-                          className="fw-semibold"
-                        >
-                          View
-                        </Button>
-                      </td>
-                      <td>
-                        {canEditCV(cv.currentStatus) && (
+                        <td>
                           <Button 
                             size="sm" 
-                            variant="outline-success" 
-                            onClick={() => handleEdit(cv._id)} 
+                            variant="outline-primary" 
+                            onClick={() => handleView(cv._id)} 
                             className="fw-semibold"
                           >
-                            Edit
+                            View
                           </Button>
-                        )}
+                        </td>
+                        <td>
+                          {canEditCV(cv.currentStatus) && (
+                            <Button 
+                              size="sm" 
+                              variant="outline-success" 
+                              onClick={() => handleEdit(cv._id)} 
+                              className="fw-semibold"
+                            >
+                              Edit
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="8" className="text-center">
+                        No CVs found for this user
                       </td>
                     </tr>
-                  ))
-                ) : (
+                  )}
+                </tbody>
+                <tfoot>
                   <tr>
-                    <td colSpan="8" className="text-center">
-                      No CVs found for this user
+                    <td colSpan={columns.length} style={{ padding: "5px", fontSize: "14px" }}>
+                      <div className="d-flex justify-content-between align-items-center" style={{ minHeight: "30px" }}>
+                        <div className="flex-grow-1 text-center">
+                          <span>{filteredCvs.length} application(s) in total</span>
+                        </div>
+                        <div className="d-flex align-items-center">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            style={{ color: darkMode ? "white" : "black", padding: 0, margin: 0 }}
+                          >
+                            <FaChevronLeft /><FaChevronLeft />
+                          </Button>
+                          <span className="mx-2">{`Page ${currentPage} of ${totalPages}`}</span>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                            style={{ color: darkMode ? "white" : "black", padding: 0, margin: 0 }}
+                          >
+                            <FaChevronRight /><FaChevronRight />
+                          </Button>
+                        </div>
+                      </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={columns.length} style={{ padding: "5px", fontSize: "14px" }}>
-                    <div className="d-flex justify-content-between align-items-center" style={{ minHeight: "30px" }}>
-                      <div className="flex-grow-1 text-center">
-                        <span>{filteredCvs.length} application(s) in total</span>
-                      </div>
-                      <div className="d-flex align-items-center">
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                          disabled={currentPage === 1}
-                          style={{ color: darkMode ? "white" : "black", padding: 0, margin: 0 }}
-                        >
-                          <FaChevronLeft /><FaChevronLeft />
-                        </Button>
-                        <span className="mx-2">{`Page ${currentPage} of ${totalPages}`}</span>
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                          disabled={currentPage === totalPages}
-                          style={{ color: darkMode ? "white" : "black", padding: 0, margin: 0 }}
-                        >
-                          <FaChevronRight /><FaChevronRight />
-                        </Button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </tfoot>
-            </Table>
+                </tfoot>
+              </Table>
+            </div>
           </>
         )}
       </Container>

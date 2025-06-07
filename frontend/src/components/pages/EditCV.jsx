@@ -7,11 +7,14 @@ import EmergencySection from "../pages/EmergencySection";
 import PreviousTrainingSection from "../pages/PreviousTrainingSection";
 import InternshipTypeSection from "../pages/InternshipTypeSection";
 import UploadDocumentSection from "../pages/UploadDocumentSection";
-
+import { useNotification } from "../notifications/Notification"; 
 
 const EditCV = ({ darkMode }) => {
   const { cvId } = useParams();
   const navigate = useNavigate();
+  
+  // Initialize notification hook
+  const { showNotification, NotificationComponent } = useNotification();
 
   // CV Data State with proper structure matching the backend schema
   const [cvData, setCvData] = useState({
@@ -67,8 +70,6 @@ const EditCV = ({ darkMode }) => {
   const [institutes, setInstitutes] = useState([]);
   const [selectedRole, setSelectedRole] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState("");
   const [formErrors, setFormErrors] = useState({});
 
   // File State
@@ -84,7 +85,7 @@ const EditCV = ({ darkMode }) => {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
-          alert("You are not logged in. Please log in.");
+          showNotification("You are not logged in. Please log in.", "error");
           navigate("/login");
           return;
         }
@@ -136,16 +137,17 @@ const EditCV = ({ darkMode }) => {
 
         setCvData(fetchedCV);
         setSelectedRole(fetchedCV.selectedRole || "");
+        showNotification("CV data loaded successfully!", "success");
       } catch (err) {
         console.error("Error fetching data:", err.message);
-        setError("Failed to fetch data. Please try again.");
+        showNotification("Failed to fetch CV data. Please try again.", "error");
       } finally {
         setLoading(false);
       }
     };
 
     if (cvId) fetchData();
-  }, [cvId, navigate]);
+  }, [cvId, navigate, showNotification]);
 
   // Handle Input Changes with proper nesting for roleData
   const handleInputChange = (e) => {
@@ -207,6 +209,7 @@ const EditCV = ({ darkMode }) => {
   // Handle File Uploads
   const handleFileChange = (e) => {
     setFiles({ ...files, [e.target.name]: e.target.files[0] });
+    showNotification(`${e.target.files[0].name} uploaded successfully!`, "info", 3000);
   };
 
   // Validate form data
@@ -256,14 +259,14 @@ const EditCV = ({ darkMode }) => {
   // Submit Updated CV Data
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSuccessMessage("");
-    setError(null);
 
     // Validate form
     if (!validateForm()) {
-      setError("Please fix all the validation errors before submitting.");
+      showNotification("Please fix all validation errors before submitting.", "warning");
       return;
     }
+
+    setLoading(true);
 
     try {
       const token = localStorage.getItem("token");
@@ -318,21 +321,37 @@ const EditCV = ({ darkMode }) => {
         },
       });
 
-      setSuccessMessage("CV updated successfully!");
-      setTimeout(() => navigate(-1), 2000); 
+      showNotification("CV updated successfully! Redirecting...", "success", 3000);
+      setTimeout(() => navigate(-1), 3000); 
     } catch (error) {
       console.error("Error updating CV:", error.response?.data?.message || error.message);
-      setError(error.response?.data?.message || "Failed to update CV. Please try again.");
+      showNotification(
+        error.response?.data?.message || "Failed to update CV. Please try again.", 
+        "error"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) return <div className="text-center text-white">Loading...</div>;
-  if (error && error !== "Please fix all the validation errors before submitting.") {
-    return <div className="text-danger text-center">{error}</div>;
+  if (loading && !cvData.fullName) {
+    return (
+      <div className={`d-flex justify-content-center align-items-center min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
+        <div className="text-center">
+          <div className="spinner-border mb-3" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p>Loading CV data...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
+      {/* Notification Component */}
+      <NotificationComponent darkMode={darkMode} />
+      
       {/* Header */}
       <div className="text-center mt-4 mb-3">
         <img src={logo} alt="Company Logo" className="mx-auto d-block" style={{ height: "50px" }} />
@@ -345,16 +364,6 @@ const EditCV = ({ darkMode }) => {
           <h2 className="text-start">Edit Your CV</h2>
           <p className="text-start">Update your CV details below.</p>
           <hr />
-
-          {/* Error Message */}
-          {error && (
-            <div className="alert alert-danger mb-3">{error}</div>
-          )}
-
-          {/* Success Message */}
-          {successMessage && (
-            <div className="alert alert-success mb-3">{successMessage}</div>
-          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit}>
@@ -398,7 +407,14 @@ const EditCV = ({ darkMode }) => {
               className={`btn ${darkMode ? "btn-light text-dark" : "btn-primary"} w-100 mt-3`}
               disabled={loading}
             >
-              {loading ? "Updating..." : "Update CV"}
+              {loading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                  Updating...
+                </>
+              ) : (
+                "Update CV"
+              )}
             </button>
           </form>
 
@@ -406,6 +422,7 @@ const EditCV = ({ darkMode }) => {
           <button 
             className={`btn ${darkMode ? "btn-light text-dark" : "btn-secondary"} w-100 mt-3`} 
             onClick={() => navigate(-1)}
+            disabled={loading}
           >
             Back to Previous Page
           </button>
