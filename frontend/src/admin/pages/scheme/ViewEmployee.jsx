@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Select from 'react-select';
 import { Table, Button, Container, Spinner, Alert, Form, Modal } from "react-bootstrap";
-import { FaUser, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaUser, FaChevronLeft, FaChevronRight, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import DeleteModal from "../../../components/notifications/DeleteModal"; 
 import logo from "../../../assets/logo.png";
 
-const API_URL = `${import.meta.env.VITE_BASE_URL}/employees`;
+const API_URL = `${import.meta.env.VITE_BASE_URL}/api/employees`;
 
 const ViewEmployees = ({ darkMode }) => {
   const [employees, setEmployees] = useState([]);
@@ -21,6 +21,7 @@ const ViewEmployees = ({ darkMode }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
   const navigate = useNavigate();
 
   const formatDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-CA') : '';
@@ -56,6 +57,46 @@ const ViewEmployees = ({ darkMode }) => {
       setLoading(false);
     }
   };
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (columnKey) => {
+    if (sortConfig.key !== columnKey) {
+      return <FaSort className="ms-1" style={{ opacity: 0.5 }} />;
+    }
+    return sortConfig.direction === 'asc' ? 
+      <FaSortUp className="ms-1" /> : 
+      <FaSortDown className="ms-1" />;
+  };
+
+  const sortedEmployees = React.useMemo(() => {
+    let sortableEmployees = [...employees];
+    if (sortConfig.key) {
+      sortableEmployees.sort((a, b) => {
+        let aValue = a[sortConfig.key] || '';
+        let bValue = b[sortConfig.key] || '';
+        
+        // Convert to lowercase for case-insensitive sorting
+        if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+        if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableEmployees;
+  }, [employees, sortConfig]);
 
   const handleDeleteClick = (employee) => {
     setSelectedEmployee(employee);
@@ -117,7 +158,7 @@ const ViewEmployees = ({ darkMode }) => {
     return <span className={`badge bg-${color}`}>{status}</span>;
   };
 
-  const filteredEmployees = employees.filter((employee) =>
+  const filteredEmployees = sortedEmployees.filter((employee) =>
     employee.full_name.toLowerCase().includes(filter.toLowerCase()) ||
     employee.employee_code.toLowerCase().includes(filter.toLowerCase())
   );
@@ -128,20 +169,20 @@ const ViewEmployees = ({ darkMode }) => {
   const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
 
   const columns = [
-    "#",
-    "Employee Code",
-    "Full Name",
-    "Email",
-    "Department",
-    "Job Title",
-    "Hierarchy Level",
-    "Division",
-    "Cost Center",
-    "Grade",
-    "Join Date",
-    "Status",
-    "Edit",
-    "Delete"
+    { key: "#", label: "#", sortable: false },
+    { key: "employee_code", label: "Employee Code", sortable: true },
+    { key: "full_name", label: "Full Name", sortable: true },
+    { key: "email", label: "Email", sortable: false },
+    { key: "department", label: "Department", sortable: false },
+    { key: "job_title", label: "Job Title", sortable: false },
+    { key: "hierarchy_level", label: "Hierarchy Level", sortable: false },
+    { key: "division_code", label: "Division", sortable: false },
+    { key: "cost_center", label: "Cost Center", sortable: false },
+    { key: "grade_level", label: "Grade", sortable: false },
+    { key: "joining_date", label: "Join Date", sortable: false },
+    { key: "status", label: "Status", sortable: false },
+    { key: "edit", label: "Edit", sortable: false },
+    { key: "delete", label: "Delete", sortable: false }
   ];
 
   return (
@@ -192,8 +233,20 @@ const ViewEmployees = ({ darkMode }) => {
             <Table striped bordered hover variant={darkMode ? "dark" : "light"} responsive>
               <thead>
                 <tr>
-                  {columns.map((col, index) => (
-                    <th key={index}>{col}</th>
+                  {columns.map((column) => (
+                    <th 
+                      key={column.key} 
+                      style={{ 
+                        cursor: column.sortable ? 'pointer' : 'default',
+                        userSelect: 'none'
+                      }}
+                      onClick={() => column.sortable && handleSort(column.key)}
+                    >
+                      <div className="d-flex align-items-center justify-content-between">
+                        <span>{column.label}</span>
+                        {column.sortable && getSortIcon(column.key)}
+                      </div>
+                    </th>
                   ))}
                 </tr>
               </thead>

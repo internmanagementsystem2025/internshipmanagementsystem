@@ -106,6 +106,7 @@ const EmailConfirmPage = ({ darkMode }) => {
   const [notification, setNotification] = useState("");
   const [showNotification, setShowNotification] = useState(false);
   const [notificationVariant, setNotificationVariant] = useState("success");
+  const [success, setSuccess] = useState("");
 
   const emailRef = useRef(null);
 
@@ -134,51 +135,88 @@ const EmailConfirmPage = ({ darkMode }) => {
   };
 
   // Handle email input change
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
-    if (error) setError("");
-  };
+const handleEmailChange = (e) => {
+  setEmail(e.target.value.trim());
+  if (error) setError("");
+  if (success) setSuccess("");
+};
 
   // Email validation
-  const isValidEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
+};
 
   // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  
+  // Validate email before sending
+  if (!email || !isValidEmail(email)) {
+    setError("Please enter a valid email address");
+    return;
+  }
+  
+  setLoading(true);
+  setError("");
+  setSuccess("");
 
-    // Validate email
-    if (!isValidEmail(email)) {
-      setError("Please enter a valid email address");
-      return;
-    }
+  try {
+    console.log('Submitting email:', email); 
+    
+    const response = await axios.post(
+      `${import.meta.env.VITE_BASE_URL}/api/auth/request-password-reset-otp`,
+      { email },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000, 
+      }
+    );
 
-    setLoading(true);
-
-    try {
-      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/request-password-reset-otp`, { email });
+    console.log('Response:', response.data);
+    
+    if (response.status === 200) {
+      triggerNotification("Password reset code sent to your email!", "success");
+      setSuccess("Password reset code sent to your email!");
       
-      triggerNotification("Verification code sent to your email!", "success");
+      // Log OTP in development mode
+      if (response.data.debug && response.data.debug.otp) {
+        console.log('Development OTP:', response.data.debug.otp);
+      }
       
       setTimeout(() => {
         navigate(`/forgot-password/verify-otp?email=${encodeURIComponent(email)}`);
       }, 2000);
-
-    } catch (err) {
-      console.error("Email confirmation error:", err);
-      const errorMessage = err.response?.data?.message || "Error sending verification code";
-      setError(errorMessage);
-      triggerNotification(errorMessage, "danger");
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error("Email confirmation error:", err);
+    
+    if (err.response) {
+      const errorMessage = err.response.data?.message || "Failed to send reset code";
+      setError(errorMessage);
+      triggerNotification(errorMessage, "error");
+    } else if (err.request) {
+      const errorMsg = "No response from server. Please check your connection.";
+      setError(errorMsg);
+      triggerNotification(errorMsg, "error");
+    } else {
+      const errorMsg = "An unexpected error occurred. Please try again.";
+      setError(errorMsg);  
+      triggerNotification(errorMsg, "error");
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleBackToLogin = () => {
     navigate("/login");
   };
+
+  
 
   return (
     <div
@@ -206,6 +244,8 @@ const EmailConfirmPage = ({ darkMode }) => {
           ? 'radial-gradient(circle at 20% 50%, #0ea5e9 0%, transparent 50%), radial-gradient(circle at 80% 20%, #1d4ed8 0%, transparent 50%)'
           : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
       }} />
+
+      
 
       {/* Main Content */}
       <div style={{ position: 'relative', zIndex: 1, padding: "2rem 0" }}>

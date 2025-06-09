@@ -6,6 +6,7 @@ const path = require("path");
 const http = require("http");
 const socketIo = require("socket.io");
 
+
 const authRoutes = require("./routes/authRoutes");
 const emailRoutes = require("./routes/emailRoutes");
 const bankRoutes = require("./routes/bankRoutes");
@@ -46,6 +47,7 @@ const io = socketIo(server, { cors: { origin: "*" } });
 app.use(cors());
 app.use(express.json());
 app.use(errorHandler);
+app.use(express.urlencoded({ extended: true }));
 autoDeleteRejectedCVs();
 
 // Serve static files (for image uploads, etc.)

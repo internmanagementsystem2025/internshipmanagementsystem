@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useMemo, useEffect } from "react"
 import { Container, Card, Button, Form, Spinner } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiLock, FiKey, FiArrowLeft, FiSave, FiX, FiCheck, FiEye, FiEyeOff, FiShield, FiMail } from "react-icons/fi";
+import { FiLock, FiKey, FiArrowLeft, FiSave, FiX, FiCheck, FiEye, FiEyeOff, FiShield} from "react-icons/fi";
 import axios from "axios";
 import logo from "../../assets/logo.png";
 import Notification from "../notifications/Notification";
@@ -782,7 +782,7 @@ const VerifyOTPPage = ({ darkMode }) => {
                   color: theme.textSecondary,
                   lineHeight: 1.5
                 }}>
-                  <strong style={{ color: theme.textPrimary }}>Security Notice:</strong> The verification code expires in 3 minutes. 
+                  <strong style={{ color: theme.textPrimary }}>Security Notice:</strong> The verification code expires in 10 minutes. 
                   Your new password must be at least 8 characters with uppercase, lowercase, and numbers.
                 </div>
               </motion.div>

@@ -35,7 +35,7 @@ const AddEmployee = ({ darkMode }) => {
     setSuccess("");
 
     try {
-      await axios.post(`${import.meta.env.VITE_BASE_URL}/employees/add`, employee);
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/employees/add`, employee);
       setSuccess('Employee added successfully!');
       setEmployee({
         employee_code: '',
@@ -75,7 +75,7 @@ const AddEmployee = ({ darkMode }) => {
     formData.append('file', file);
 
     try {
-      await axios.post(`${import.meta.env.VITE_BASE_URL}/employees/upload`, formData, {
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/employees/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }

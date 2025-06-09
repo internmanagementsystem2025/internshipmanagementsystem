@@ -342,75 +342,176 @@ const changePassword = async (req, res) => {
 // Request password reset with OTP
 const requestPasswordResetOTP = async (req, res) => {
   try {
+    console.log('Request body:', req.body); 
+    
     const { email } = req.body;
 
-    const user = await User.findOne({ email });
+    // Validate email format
+    if (!email || !email.includes('@')) {
+      console.log('Invalid email format:', email);
+      return res.status(400).json({ message: "Valid email is required" });
+    }
+
+    // Check if User model exists
+    if (!User) {
+      console.error('User model not found');
+      return res.status(500).json({ message: "Server configuration error" });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
+      console.log('User not found for email:', email);
       return res.status(404).json({ message: "User not found" });
     }
 
+    // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date();
     otpExpiry.setMinutes(otpExpiry.getMinutes() + 3); 
 
+    // Clear any existing OTP data
     user.resetPasswordOTP = otp;
     user.resetPasswordOTPExpiry = otpExpiry;
-    await user.save();
-
+    
     try {
-      await EmailService.sendPasswordResetOTP(email, user.username, otp);
-      res.status(200).json({ 
-        message: "OTP has been sent to your email"
-      });
+      await user.save();
+      console.log(`OTP generated for ${email}: ${otp} (expires at ${otpExpiry})`);
+    } catch (saveError) {
+      console.error("Error saving OTP to database:", saveError);
+      return res.status(500).json({ message: "Database error occurred" });
+    }
+
+    // Send OTP email
+    try {
+      if (EmailService && EmailService.sendPasswordResetOTP) {
+        await EmailService.sendPasswordResetOTP(email, user.username, otp);
+        console.log(`OTP email sent successfully to ${email}`);
+        
+        res.status(200).json({ 
+          message: "OTP has been sent to your email",
+          ...(process.env.NODE_ENV === 'development' && { debug: { otp, expiresAt: otpExpiry } })
+        });
+      } else {
+        console.log('Email service not available, OTP will be logged only');
+        res.status(200).json({ 
+          message: "OTP generated successfully. Email service temporarily unavailable.",
+          ...(process.env.NODE_ENV === 'development' && { debug: { otp, expiresAt: otpExpiry } })
+        });
+      }
     } catch (emailError) {
       console.error("Failed to send OTP email:", emailError);
-      res.status(500).json({ 
-        message: "Failed to send OTP email. Please try again later.",
-        otp: process.env.NODE_ENV === 'development' ? otp : undefined
+      
+      res.status(200).json({ 
+        message: "OTP generated successfully, but email delivery failed. Please contact support if you don't receive the email.",
+        ...(process.env.NODE_ENV === 'development' && { 
+          debug: { otp, expiresAt: otpExpiry, emailError: emailError.message } 
+        })
       });
     }
   } catch (error) {
-    console.error("Error generating OTP:", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Error generating OTP:", error);
+    res.status(500).json({ 
+      message: "Server error", 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 };
 
-// Verify OTP and reset password
 const verifyOTPAndResetPassword = async (req, res) => {
   try {
+    console.log('Verify OTP request body:', req.body); 
+    
     const { email, otp, newPassword } = req.body;
 
+    // Validate input
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: "Email, OTP, and new password are required" });
+    }
+
+    // Validate OTP format (should be 6 digits)
+    if (!/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ message: "OTP must be 6 digits" });
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters long" });
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(newPassword)) {
+      return res.status(400).json({ 
+        message: "Password must contain at least one lowercase letter, one uppercase letter, and one number" 
+      });
+    }
+
+    console.log(`Verifying OTP for email: ${email}, OTP: ${otp}`);
+
     const user = await User.findOne({ 
-      email,
+      email: email.toLowerCase(),
       resetPasswordOTP: otp,
       resetPasswordOTPExpiry: { $gt: new Date() }
     });
 
     if (!user) {
+      console.log(`OTP verification failed for ${email}. User not found or OTP expired/invalid.`);
+      
+      const userExists = await User.findOne({ email: email.toLowerCase() });
+      if (userExists) {
+        if (userExists.resetPasswordOTP !== otp) {
+          return res.status(400).json({ message: "Invalid OTP code" });
+        } else if (userExists.resetPasswordOTPExpiry && userExists.resetPasswordOTPExpiry <= new Date()) {
+          return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+        }
+      }
+      
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-    user.password = hashedPassword;
-    user.resetPasswordOTP = undefined;
-    user.resetPasswordOTPExpiry = undefined;
-        
-    await user.save();
+    console.log(`OTP verified successfully for ${email}`);
 
     try {
-      await EmailService.sendPasswordResetConfirmation(email, user.username);
+      if (!bcrypt) {
+        console.error('bcrypt not available');
+        return res.status(500).json({ message: "Server configuration error" });
+      }
+
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      user.password = hashedPassword;
+      user.resetPasswordOTP = undefined;
+      user.resetPasswordOTPExpiry = undefined;
+      
+      await user.save();
+      console.log(`Password reset successfully for ${email}`);
+
+    } catch (hashError) {
+      console.error("Error hashing password:", hashError);
+      return res.status(500).json({ message: "Error updating password" });
+    }
+    try {
+      if (EmailService && EmailService.sendPasswordResetConfirmation) {
+        await EmailService.sendPasswordResetConfirmation(email, user.username);
+      }
     } catch (emailError) {
       console.error("Failed to send password reset confirmation email:", emailError);
     }
 
-    res.status(200).json({ message: "Password reset successful" });
+    res.status(200).json({ 
+      message: "Password reset successful",
+      success: true 
+    });
+
   } catch (error) {
-    console.error("Error resetting password:", error.message);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error resetting password:", error);
+    res.status(500).json({ 
+      message: "Server error occurred while resetting password",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
+
 
 const getUserProfileByNic = async (req, res) => {
   try {
