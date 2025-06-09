@@ -108,6 +108,7 @@ import DownloadCertificate  from "./individual/pages/certificaterequest/Download
 import AdminReports  from "./admin/pages/reports/AdminReports";
 import LearnMorePage from "./components/login/LearnMorePage";
 import ChangePassword  from "./components/login/ChangePassword";
+import InternPlacement from "./admin/pages/internplacement/InternPlacement";
 
 
 function App() {
@@ -233,7 +234,8 @@ function App() {
     "/edit-rotational-stations/:id",
     "/admin-reports" ,
     "/add-employees",
-    "/view-employees"
+    "/view-employees",
+    "/intern-placement",
   ];
 
   const staffRoutes = [
@@ -399,6 +401,7 @@ function App() {
     <Route path="/intern-certificate-request" element={<InternCertificateRequest darkMode={darkMode} />} />
     <Route path="/view-certificate-request/:id" element={<ViewCertificateRequest darkMode={darkMode} />} />
     <Route path="/admin-reports" element={<AdminReports darkMode={darkMode} />} />
+    <Route path="/intern-placement" element={<InternPlacement darkMode={darkMode} />} />
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />
