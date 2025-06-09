@@ -94,7 +94,7 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
                 Switch to {darkMode ? "Light" : "Dark"} Mode
               </Dropdown.Item>
 
-              <Dropdown.Item onClick={() => navigate(`/user-profile/${user.id}`)} style={dropdownItemStyle(theme)}>
+              <Dropdown.Item onClick={() => navigate(`/change-password/${user.id}`)} style={dropdownItemStyle(theme)}>
                 <FiUser size={16} style={{ marginRight: "8px" }} />
                 Change Password
               </Dropdown.Item>

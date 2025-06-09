@@ -29,8 +29,8 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
-// Enhanced Animated Logo Component with continuous animation
-const AnimatedLogo = ({ darkMode }) => {
+// Enhanced Animated Logo Component with better mobile scaling
+const AnimatedLogo = ({ darkMode, isMobile }) => {
   const accentColor = darkMode ? "#00aaff" : "#00cc66";
   
   return (
@@ -45,7 +45,8 @@ const AnimatedLogo = ({ darkMode }) => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        position: 'relative'
+        position: 'relative',
+        padding: isMobile ? '1rem' : '2rem'
       }}
     >
       {/* Continuous floating animation for the main text */}
@@ -70,7 +71,7 @@ const AnimatedLogo = ({ darkMode }) => {
           opacity: { delay: 0.3, duration: 0.8 }
         }}
         style={{
-          fontSize: '4rem',
+          fontSize: isMobile ? '2rem' : '3.5rem',
           fontWeight: 'bold',
           color: darkMode ? 'white' : '#1e293b',
           textAlign: 'center',
@@ -97,10 +98,10 @@ const AnimatedLogo = ({ darkMode }) => {
           }
         }}
         style={{
-          fontSize: '1.5rem',
+          fontSize: isMobile ? '1rem' : '1.25rem',
           fontWeight: '600',
           color: darkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
-          marginTop: '1rem',
+          marginTop: isMobile ? '0.5rem' : '1rem',
           textAlign: 'center'
         }}
       >
@@ -124,26 +125,27 @@ const AnimatedLogo = ({ darkMode }) => {
           opacity: { delay: 0.7, duration: 1 }
         }}
         style={{
-          height: '4px',
+          height: '3px',
           background: `linear-gradient(90deg, ${accentColor}, transparent)`,
-          marginTop: '2rem',
-          borderRadius: '2px'
+          marginTop: isMobile ? '1rem' : '2rem',
+          borderRadius: '2px',
+          maxWidth: '200px'
         }}
       />
       
-      {/* Floating particles animation */}
-      {[...Array(6)].map((_, i) => (
+      {/* Floating particles animation - reduced for mobile */}
+      {[...Array(isMobile ? 3 : 6)].map((_, i) => (
         <motion.div
           key={i}
           initial={{ 
             opacity: 0,
-            x: Math.random() * 400 - 200,
-            y: Math.random() * 400 - 200
+            x: Math.random() * (isMobile ? 200 : 400) - (isMobile ? 100 : 200),
+            y: Math.random() * (isMobile ? 200 : 400) - (isMobile ? 100 : 200)
           }}
           animate={{ 
             opacity: [0, 0.6, 0],
-            x: Math.random() * 400 - 200,
-            y: Math.random() * 400 - 200,
+            x: Math.random() * (isMobile ? 200 : 400) - (isMobile ? 100 : 200),
+            y: Math.random() * (isMobile ? 200 : 400) - (isMobile ? 100 : 200),
             scale: [0, 1, 0]
           }}
           transition={{ 
@@ -154,11 +156,11 @@ const AnimatedLogo = ({ darkMode }) => {
           }}
           style={{
             position: 'absolute',
-            width: '8px',
-            height: '8px',
+            width: isMobile ? '6px' : '8px',
+            height: isMobile ? '6px' : '8px',
             borderRadius: '50%',
             background: accentColor,
-            boxShadow: `0 0 20px ${accentColor}80`,
+            boxShadow: `0 0 ${isMobile ? '15px' : '20px'} ${accentColor}80`,
             pointerEvents: 'none'
           }}
         />
@@ -179,8 +181,8 @@ const AnimatedLogo = ({ darkMode }) => {
         }}
         style={{
           position: 'absolute',
-          width: '300px',
-          height: '300px',
+          width: isMobile ? '200px' : '300px',
+          height: isMobile ? '200px' : '300px',
           border: `2px solid ${accentColor}`,
           borderRadius: '50%',
           pointerEvents: 'none'
@@ -192,11 +194,14 @@ const AnimatedLogo = ({ darkMode }) => {
 
 const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => {
   const [internalDarkMode, setInternalDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('darkMode');
-    if (savedTheme !== null) {
-      return JSON.parse(savedTheme);
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('darkMode');
+      if (savedTheme !== null) {
+        return JSON.parse(savedTheme);
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
     }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false;
   });
 
   const [isMobile, setIsMobile] = useState(false);
@@ -239,7 +244,7 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
 
   // Handle theme persistence
   useEffect(() => {
-    if (propDarkMode === undefined) {
+    if (typeof window !== 'undefined' && propDarkMode === undefined) {
       localStorage.setItem('darkMode', JSON.stringify(internalDarkMode));
     }
   }, [internalDarkMode, propDarkMode]);
@@ -251,7 +256,9 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
     } else {
       const newDarkMode = !internalDarkMode;
       setInternalDarkMode(newDarkMode);
-      localStorage.setItem('darkMode', JSON.stringify(newDarkMode));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('darkMode', JSON.stringify(newDarkMode));
+      }
     }
   };
 
@@ -292,7 +299,7 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
         width: '100%',
         height: '100%',
         zIndex: 0,
-        opacity: 0.1,
+        opacity: isMobile ? 0.05 : 0.1,
         pointerEvents: 'none',
         background: darkMode 
           ? 'radial-gradient(circle at 20% 50%, #00aaff 0%, transparent 50%), radial-gradient(circle at 80% 20%, #0066ff 0%, transparent 50%)'
@@ -301,13 +308,13 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
 
       {/* Main Content */}
       <div style={{ position: 'relative', zIndex: 1 }}>
-        {/* Enhanced Navbar with Company Logo */}
+        {/* Enhanced Navbar */}
         <nav style={{ 
           background: "transparent", 
           position: "fixed", 
           top: 0,
           width: "100%",
-          padding: isMobile ? "1rem" : "1rem 2rem",
+          padding: isMobile ? "0.75rem 1rem" : "1rem 2rem",
           zIndex: 10,
           backdropFilter: 'blur(20px)',
           borderBottom: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
@@ -346,7 +353,7 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                   border: "none",
                   color: theme.color,
                   cursor: "pointer",
-                  padding: "0.5rem",
+                  padding: isMobile ? "0.4rem" : "0.5rem",
                   borderRadius: "50%",
                   transition: "all 0.3s ease",
                   display: 'flex',
@@ -409,10 +416,9 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
           alignItems: "center", 
           justifyContent: "center", 
           minHeight: '100vh', 
-          paddingTop: '80px',
           maxWidth: "1200px",
           margin: "0 auto",
-          padding: isMobile ? "80px 1rem 2rem" : "80px 2rem 2rem"
+          padding: isMobile ? "70px 1rem 1rem" : "80px 2rem 2rem"
         }}>
           {/* Hero Section */}
           <div style={{ 
@@ -423,17 +429,20 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
             width: "100%"
           }}>
             {/* Left Content */}
-            <div style={{ textAlign: (isMobile || isTablet) ? "center" : "left" }}>
+            <div style={{ 
+              textAlign: (isMobile || isTablet) ? "center" : "left",
+              order: isMobile ? 2 : 1
+            }}>
               <motion.h1
                 initial={{ opacity: 0, y: -50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
                 style={{ 
-                  fontSize: isMobile ? "2rem" : isTablet ? "2.5rem" : "3rem", 
+                  fontSize: isMobile ? "1.75rem" : isTablet ? "2.25rem" : "3rem", 
                   color: theme.accentColor,
                   lineHeight: 1.2,
                   fontWeight: "800",
-                  marginBottom: "1.5rem",
+                  marginBottom: isMobile ? "1rem" : "1.5rem",
                   textShadow: `0 0 15px ${theme.accentColor}40`
                 }}
               >
@@ -453,8 +462,8 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                 transition={{ delay: 0.3, duration: 0.8 }}
                 style={{ 
                   color: theme.textSecondary,
-                  fontSize: isMobile ? "1rem" : "1.1rem",
-                  marginBottom: "2rem",
+                  fontSize: isMobile ? "0.95rem" : "1.1rem",
+                  marginBottom: isMobile ? "1.5rem" : "2rem",
                   lineHeight: 1.6,
                   maxWidth: isMobile ? "100%" : "90%"
                 }}
@@ -468,9 +477,10 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                 transition={{ delay: 0.5, duration: 0.8 }}
                 style={{ 
                   display: "flex", 
-                  gap: "1rem", 
+                  gap: isMobile ? "0.75rem" : "1rem", 
                   justifyContent: (isMobile || isTablet) ? "center" : "flex-start",
-                  flexWrap: "wrap"
+                  flexDirection: isMobile ? "column" : "row",
+                  alignItems: isMobile ? "center" : "flex-start"
                 }}
               >
                 <motion.button 
@@ -480,16 +490,19 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                     background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
                     color: "white",
                     border: "none",
-                    padding: isMobile ? "0.8rem 1.5rem" : "1rem 2rem",
+                    padding: isMobile ? "0.875rem 2rem" : "1rem 2rem",
                     borderRadius: "12px",
-                    fontSize: isMobile ? "0.9rem" : "1rem",
+                    fontSize: isMobile ? "0.95rem" : "1rem",
                     fontWeight: "600",
                     cursor: "pointer",
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '0.5rem',
                     boxShadow: `0 8px 25px ${theme.accentColor}40`,
-                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    width: isMobile ? '100%' : 'auto',
+                    maxWidth: isMobile ? '280px' : 'none'
                   }} 
                   onClick={handleGetStarted}
                 >
@@ -503,13 +516,15 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                     background: 'transparent',
                     color: theme.accentColor,
                     border: `2px solid ${theme.accentColor}`,
-                    padding: isMobile ? "0.8rem 1.5rem" : "1rem 2rem",
+                    padding: isMobile ? "0.875rem 2rem" : "1rem 2rem",
                     borderRadius: "12px",
-                    fontSize: isMobile ? "0.9rem" : "1rem",
+                    fontSize: isMobile ? "0.95rem" : "1rem",
                     fontWeight: "600",
                     cursor: "pointer",
                     backdropFilter: 'blur(10px)',
-                    transition: "all 0.3s ease"
+                    transition: "all 0.3s ease",
+                    width: isMobile ? '100%' : 'auto',
+                    maxWidth: isMobile ? '280px' : 'none'
                   }}
                   onClick={handleLearnMore}
                 >
@@ -517,7 +532,7 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                 </motion.button>
               </motion.div>
 
-              {/* Mobile buttons */}
+              {/* Mobile authentication buttons */}
               {isMobile && (
                 <motion.div 
                   initial={{ opacity: 0 }}
@@ -525,9 +540,10 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                   transition={{ delay: 0.7, duration: 0.8 }}
                   style={{ 
                     display: "flex", 
-                    gap: "0.5rem", 
+                    gap: "0.75rem", 
                     justifyContent: "center",
-                    marginTop: "1.5rem"
+                    marginTop: "1.5rem",
+                    flexDirection: "row"
                   }}
                 >
                   <motion.button 
@@ -537,12 +553,13 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                       background: "transparent", 
                       color: theme.color,
                       border: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                      padding: "0.6rem 1.2rem",
+                      padding: "0.75rem 1.5rem",
                       borderRadius: "8px",
                       cursor: "pointer",
                       backdropFilter: 'blur(10px)',
                       transition: "all 0.3s ease",
-                      fontSize: '0.85rem'
+                      fontSize: '0.9rem',
+                      flex: 1
                     }} 
                     onClick={handleLogin}
                   >
@@ -556,12 +573,13 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                       background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`, 
                       color: "white",
                       border: "none",
-                      padding: "0.6rem 1.2rem",
+                      padding: "0.75rem 1.5rem",
                       borderRadius: "8px",
                       cursor: "pointer",
                       boxShadow: `0 4px 15px ${theme.accentColor}40`,
                       transition: "all 0.3s ease",
-                      fontSize: '0.85rem'
+                      fontSize: '0.9rem',
+                      flex: 1
                     }}
                     onClick={handleRegister}
                   >
@@ -571,17 +589,17 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
               )}
             </div>
             
-            {/* Right Content - Always Animated Logo */}
+            {/* Right Content - Animated Logo */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
               style={{
                 width: '100%',
-                height: isMobile ? '400px' : '500px',
-                borderRadius: '24px',
+                height: isMobile ? '300px' : isTablet ? '400px' : '500px',
+                borderRadius: isMobile ? '16px' : '24px',
                 overflow: 'hidden',
-                boxShadow: `0 25px 50px ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
+                boxShadow: `0 ${isMobile ? '15px' : '25px'} ${isMobile ? '30px' : '50px'} ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
                 background: darkMode 
                   ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.4), rgba(15, 30, 55, 0.3))' 
                   : 'linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(248, 250, 252, 0.3))',
@@ -590,10 +608,11 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                order: isMobile ? 1 : 2
               }}
             >
-              <AnimatedLogo darkMode={darkMode} />
+              <AnimatedLogo darkMode={darkMode} isMobile={isMobile} />
             </motion.div>
           </div>
         </div>
@@ -635,6 +654,19 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
         ::-webkit-scrollbar-thumb {
           background: ${theme.accentColor};
           border-radius: 3px;
+        }
+        
+        /* Mobile-specific optimizations */
+        @media (max-width: 767px) {
+          body {
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
+          }
+          
+          button {
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: transparent;
+          }
         }
       `}</style>
     </div>
