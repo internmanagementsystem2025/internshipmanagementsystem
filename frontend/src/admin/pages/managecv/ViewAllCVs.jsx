@@ -101,6 +101,66 @@ const ViewAllCVs = ({ darkMode = false }) => {
     "#dee2e6",
   ];
 
+const calculateColumnWidths = () => {
+  if (!filteredData.length) return {};
+
+  const columnWidths = {};
+
+  const calculateWidth = (values, headerText, minWidth = 80, maxWidth = 600) => {
+    const allValues = [...values.filter(v => v != null), headerText];
+    
+    const maxLength = Math.max(
+      ...allValues.map(val => String(val || "").length)
+    );
+    
+    const calculatedWidth = Math.max(minWidth, Math.min(maxWidth, maxLength * 10 + 40));
+    return calculatedWidth;
+  };
+
+
+  // Fixed width columns
+  const nicValues = [...filteredData.map(cv => cv.nic), "NIC"];
+  columnWidths["nic"] = calculateWidth(nicValues, 100, 180);
+
+  const refNoValues = [...filteredData.map(cv => cv.refNo), "Ref No"];
+  columnWidths["refNo"] = calculateWidth(refNoValues, 80, 150);
+
+  const nameValues = [...filteredData.map(cv => renderNameWithPrefix(cv.fullName, cv.gender)), "Name"];
+  columnWidths["name"] = calculateWidth(nameValues, 150, 250);
+
+  const cvFromValues = [...filteredData.map(cv => cv.userType), "CV From"];
+  columnWidths["cvFrom"] = calculateWidth(cvFromValues, 90, 140);
+
+  const internTypeValues = [...filteredData.map(cv => cv.selectedRole), "Intern Type"];
+  columnWidths["internType"] = calculateWidth(internTypeValues, 100, 160);
+
+  columnWidths["applicationDate"] = 150; // Fixed for date consistency
+
+  const districtValues = [...filteredData.map(cv => cv.district), "District"];
+  columnWidths["district"] = calculateWidth(districtValues, 100, 180);
+
+  const instituteValues = [...filteredData.map(cv => cv.institute), "Institute"];
+  columnWidths["institute"] = calculateWidth(instituteValues, 150, 300);
+
+  const referredByValues = [...filteredData.map(cv => cv.referredBy), "Referred By"];
+  columnWidths["referredBy"] = calculateWidth(referredByValues, 100, 180);
+
+  columnWidths["status"] = 200; 
+  
+if (hasInternshipCVs()) {
+    const categoryValues = [
+      ...filteredData
+        .filter(cv => cv.selectedRole === 'internship')
+        .map(cv => cv.roleData?.internship?.categoryOfApply),
+      "Category of Apply"
+    ];
+    columnWidths["categoryOfApply"] = calculateWidth(categoryValues, 120, 200);
+  }
+
+  return columnWidths;
+};
+
+
   const colorPalette = darkMode ? darkModeColors : lightModeColors;
   const genderColors = darkMode
     ? { Male: "#4dabf7", Female: "#ff8cc8", Other: "#69db7c" }
@@ -531,163 +591,173 @@ The CV has been moved to deleted items and can be restored by administrators if 
 
   // Table columns and pagination
   const getColumns = () => {
-    const baseColumns = [
-      { key: "#", label: "#", width: "60px" },
-      { key: "nic", label: "NIC", width: "140px" },
-      { key: "refNo", label: "Ref No", width: "120px" },
-      { key: "name", label: "Name", width: "180px" },
-      { key: "cvFrom", label: "CV From", width: "110px" },
-      { key: "internType", label: "Intern Type", width: "130px" },
-      { key: "applicationDate", label: "Application Date", width: "150px" },
-      { key: "district", label: "District", width: "120px" },
-      { key: "institute", label: "Institute", width: "200px" },
-      { key: "referredBy", label: "Referred By", width: "140px" },
-    ];
+  const columnWidths = calculateColumnWidths();
+  
+  const baseColumns = [
+    { key: "#", label: "#", width: `${columnWidths["#"] || 60}px` },
+    { key: "nic", label: "NIC", width: `${columnWidths["nic"] || 140}px` },
+    { key: "refNo", label: "Ref No", width: `${columnWidths["refNo"] || 120}px` },
+    { key: "name", label: "Name", width: `${columnWidths["name"] || 180}px` },
+    { key: "cvFrom", label: "CV From", width: `${columnWidths["cvFrom"] || 110}px` },
+    { key: "internType", label: "Intern Type", width: `${columnWidths["internType"] || 130}px` },
+    { key: "applicationDate", label: "Application Date", width: `${columnWidths["applicationDate"] || 150}px` },
+    { key: "district", label: "District", width: `${columnWidths["district"] || 120}px` },
+    { key: "institute", label: "Institute", width: `${columnWidths["institute"] || 200}px` },
+    { key: "referredBy", label: "Referred By", width: `${columnWidths["referredBy"] || 140}px` },
+  ];
 
-    if (hasInternshipCVs()) {
-      baseColumns.push({
-        key: "categoryOfApply",
-        label: "Category of Apply",
-        width: "160px",
-      });
-    }
+  if (hasInternshipCVs()) {
+    baseColumns.push({
+      key: "categoryOfApply",
+      label: "Category of Apply",
+      width: `${columnWidths["categoryOfApply"] || 160}px`,
+    });
+  }
 
-    baseColumns.push(
-      { key: "status", label: "Status", width: "120px" },
-      { key: "view", label: "View", width: "80px" },
-      { key: "delete", label: "Delete", width: "80px" }
-    );
+  baseColumns.push(
+    { key: "status", label: "Status", width: `${columnWidths["status"] || 120}px` },
+    { key: "view", label: "View", width: `${columnWidths["view"] || 80}px` },
+    { key: "delete", label: "Delete", width: `${columnWidths["delete"] || 80}px` }
+  );
 
-    return baseColumns;
-  };
+  return baseColumns;
+};
+
+useEffect(() => {
+}, [filteredData]);
 
   const columns = getColumns();
+  const totalTableWidth = columns.reduce((total, col) => {
+  return total + parseInt(col.width.replace("px", ""));
+  }, 0);
+  const minTableWidth = 1200; 
+  const finalTableWidth = Math.max(totalTableWidth, minTableWidth);
   const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
   const indexOfLastCV = currentPage * itemsPerPage;
   const indexOfFirstCV = indexOfLastCV - itemsPerPage;
   const currentCVs = filteredData.slice(indexOfFirstCV, indexOfLastCV);
 
   // Table styles
-  const tableContainerStyles = {
-    overflowX: "auto",
-    overflowY: "visible",
-    WebkitOverflowScrolling: "touch",
-    scrollbarWidth: "auto",
-    scrollbarColor: darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa",
-    border: darkMode ? "1px solid #454d55" : "1px solid #dee2e6",
-    borderRadius: "0.375rem",
-    boxShadow: darkMode
-      ? "0 0.125rem 0.25rem rgba(255, 255, 255, 0.075)"
-      : "0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)",
-    position: "relative",
-    minHeight: "200px",
-  };
+const tableContainerStyles = {
+  overflowX: "auto",
+  overflowY: "visible",
+  WebkitOverflowScrolling: "touch",
+  scrollbarWidth: "auto",
+  scrollbarColor: darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa",
+  border: darkMode ? "1px solid #454d55" : "1px solid #dee2e6",
+  borderRadius: "0.375rem",
+  boxShadow: darkMode
+    ? "0 0.125rem 0.25rem rgba(255, 255, 255, 0.075)"
+    : "0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)",
+  position: "relative",
+  minHeight: "200px",
+};
 
   const scrollbarStyles = `
-    .enhanced-table-container::-webkit-scrollbar {
-      height: 12px;
-      background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
-      border-radius: 6px;
-    }
-    
-    .enhanced-table-container::-webkit-scrollbar-track {
-      background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
-      border-radius: 6px;
-      border: 1px solid ${darkMode ? "#454d55" : "#dee2e6"};
-    }
-    
-    .enhanced-table-container::-webkit-scrollbar-thumb {
-      background-color: ${darkMode ? "#6c757d" : "#adb5bd"};
-      border-radius: 6px;
-      border: 2px solid ${darkMode ? "#343a40" : "#f8f9fa"};
-      transition: background-color 0.2s ease;
-    }
-    
-    .enhanced-table-container::-webkit-scrollbar-thumb:hover {
-      background-color: ${darkMode ? "#868e96" : "#868e96"};
-    }
-    
-    .enhanced-table-container::-webkit-scrollbar-thumb:active {
-      background-color: ${darkMode ? "#495057" : "#6c757d"};
-    }
-    
-    .enhanced-table-container {
-      scrollbar-width: auto;
-      scrollbar-color: ${darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa"};
-    }
+  .enhanced-table-container::-webkit-scrollbar {
+    height: 12px;
+    background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
+    border-radius: 6px;
+  }
+  
+  .enhanced-table-container::-webkit-scrollbar-track {
+    background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
+    border-radius: 6px;
+    border: 1px solid ${darkMode ? "#454d55" : "#dee2e6"};
+  }
+  
+  .enhanced-table-container::-webkit-scrollbar-thumb {
+    background-color: ${darkMode ? "#6c757d" : "#adb5bd"};
+    border-radius: 6px;
+    border: 2px solid ${darkMode ? "#343a40" : "#f8f9fa"};
+    transition: background-color 0.2s ease;
+  }
+  
+  .enhanced-table-container::-webkit-scrollbar-thumb:hover {
+    background-color: ${darkMode ? "#868e96" : "#868e96"};
+  }
+  
+  .enhanced-table-container::-webkit-scrollbar-thumb:active {
+    background-color: ${darkMode ? "#495057" : "#6c757d"};
+  }
+  
+  .enhanced-table-container {
+    scrollbar-width: auto;
+    scrollbar-color: ${darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa"};
+  }
 
-    /* Fixed table layout with precise column widths */
-    .enhanced-table-container table {
-      table-layout: fixed;
-      width: ${columns.reduce((total, col) => total + parseInt(col.width.replace("px", "")), 0)}px;
-      min-width: ${columns.reduce((total, col) => total + parseInt(col.width.replace("px", "")), 0)}px;
-    }
+  /* Fixed table layout with dynamic column widths */
+  .enhanced-table-container table {
+    table-layout: fixed;
+    width: ${totalTableWidth}px;
+    min-width: ${totalTableWidth}px;
+  }
 
-    .enhanced-table-container th,
-    .enhanced-table-container td {
-      white-space: nowrap;
-      padding: 0.75rem 0.5rem;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      vertical-align: middle;
-    }
+  .enhanced-table-container th,
+  .enhanced-table-container td {
+    white-space: nowrap;
+    padding: 0.75rem 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+  }
 
-    /* Specific column widths */
-    ${columns
-      .map(
-        (col, index) => `
-    .enhanced-table-container th:nth-child(${index + 1}),
-    .enhanced-table-container td:nth-child(${index + 1}) { 
-      width: ${col.width}; 
-      min-width: ${col.width}; 
-      max-width: ${col.width}; 
-    }`
-      )
-      .join("\n")}
+  /* Specific column widths */
+  ${columns
+    .map(
+      (col, index) => `
+  .enhanced-table-container th:nth-child(${index + 1}),
+  .enhanced-table-container td:nth-child(${index + 1}) { 
+    width: ${col.width}; 
+    min-width: ${col.width}; 
+    max-width: ${col.width}; 
+  }`
+    )
+    .join("\n")}
 
-    /* Smooth scrolling behavior */
-    .enhanced-table-container {
-      scroll-behavior: smooth;
-    }
+  /* Smooth scrolling behavior */
+  .enhanced-table-container {
+    scroll-behavior: smooth;
+  }
 
-    /* Focus styles for accessibility */
-    .enhanced-table-container:focus {
-      outline: 2px solid ${darkMode ? "#0d6efd" : "#0d6efd"};
-      outline-offset: 2px;
-    }
+  /* Focus styles for accessibility */
+  .enhanced-table-container:focus {
+    outline: 2px solid ${darkMode ? "#0d6efd" : "#0d6efd"};
+    outline-offset: 2px;
+  }
 
-    /* Sticky header */
-    .enhanced-table-container thead th {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
-      border-bottom: 2px solid ${darkMode ? "#454d55" : "#dee2e6"};
-    }
+  /* Sticky header */
+  .enhanced-table-container thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
+    border-bottom: 2px solid ${darkMode ? "#454d55" : "#dee2e6"};
+  }
 
-    /* Better cell content handling */
-    .enhanced-table-container td {
-      position: relative;
-    }
+  /* Better cell content handling */
+  .enhanced-table-container td {
+    position: relative;
+  }
 
-    .enhanced-table-container td:hover {
-      overflow: visible;
-      z-index: 5;
-    }
+  .enhanced-table-container td:hover {
+    overflow: visible;
+    z-index: 5;
+  }
 
-    /* Button sizing in action columns */
-    .enhanced-table-container .btn-sm {
-      padding: 0.25rem 0.5rem;
-      font-size: 0.875rem;
-      white-space: nowrap;
-    }
+  /* Button sizing in action columns */
+  .enhanced-table-container .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
 
-    /* Badge styling */
-    .enhanced-table-container .badge {
-      font-size: 0.75rem;
-      white-space: nowrap;
-    }
-  `;
+  /* Badge styling */
+  .enhanced-table-container .badge {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+`;
 
   // Loading and error states
   if (loading) {
@@ -745,29 +815,10 @@ The CV has been moved to deleted items and can be restored by administrators if 
 
       <Container className="py-4">
         {/* Header */}
-        <div className="text-center mb-5">
-          <div className="mb-3">
-            <img
-              src={logo}
-              alt="SLT Mobitel Logo"
-              className="mx-auto d-block"
-              style={{ height: "50px", maxWidth: "200px" }}
-              onError={(e) => {
-                e.target.style.display = "none";
-              }}
-            />
-          </div>
-          <h1
-            className={`display-5 fw-bold mb-3 ${
-              darkMode ? "text-white" : "text-dark"
-            }`}
-          >
-            CV Management Dashboard
-          </h1>
-          <p className={`lead ${darkMode ? "text-white-50" : "text-muted"}`}>
-            Comprehensive insights and management for CV submissions
-          </p>
-        </div>
+      <div className="text-center mt-4 mb-3">
+        <img src={logo} alt="Company Logo" className="mx-auto d-block" style={{ height: "50px" }} />
+        <h3 className="mt-3">VIEW ALL CVs</h3>
+      </div>
 
         {/* Year Filter */}
         <Row className="mb-4">
@@ -918,54 +969,6 @@ The CV has been moved to deleted items and can be restored by administrators if 
             </Card>
           </Col>
 
-          {/* Gender Distribution Chart 
-          <Col xl={6} lg={6} md={12} className="mb-4">
-            <Card
-              className={`border-0 shadow-lg h-100 ${
-                darkMode ? "bg-dark" : "bg-white"
-              }`}
-            >
-              <Card.Header
-                className={`border-0 py-3 ${
-                  darkMode ? "bg-secondary text-white" : "bg-primary text-white"
-                }`}
-              >
-                <h5 className="mb-0 fw-bold">
-                  <FaUsers className="me-2" />
-                  Gender Distribution - {selectedYear}
-                </h5>
-                <small className="opacity-75">Filtered by selected year</small>
-              </Card.Header>
-              <Card.Body>
-                <ResponsiveContainer width="100%" height={350}>
-                  <PieChart>
-                    <Pie
-                      data={genderData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={120}
-                      innerRadius={60}
-                      paddingAngle={5}
-                      dataKey="count"
-                      nameKey="gender"
-                    >
-                      {genderData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<PieTooltip />} />
-                    <Legend
-                      wrapperStyle={{
-                        fontSize: "14px",
-                        color: darkMode ? "#adb5bd" : "#6c757d",
-                      }}
-                      iconType="rect"
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Card.Body>
-            </Card>
-          </Col>   */}
 
           {/* Intern Type Distribution Chart */}
           <Col  md={4} className="mb-4">
