@@ -29,8 +29,8 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
-// Enhanced Animated Logo Component with better mobile scaling
-const AnimatedLogo = ({ darkMode, isMobile }) => {
+// Enhanced Animated Logo Component - Only for desktop
+const AnimatedLogo = ({ darkMode }) => {
   const accentColor = darkMode ? "#00aaff" : "#00cc66";
   
   return (
@@ -46,7 +46,7 @@ const AnimatedLogo = ({ darkMode, isMobile }) => {
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
-        padding: isMobile ? '1rem' : '2rem'
+        padding: '2rem'
       }}
     >
       {/* Continuous floating animation for the main text */}
@@ -71,7 +71,7 @@ const AnimatedLogo = ({ darkMode, isMobile }) => {
           opacity: { delay: 0.3, duration: 0.8 }
         }}
         style={{
-          fontSize: isMobile ? '2rem' : '3.5rem',
+          fontSize: '3.5rem',
           fontWeight: 'bold',
           color: darkMode ? 'white' : '#1e293b',
           textAlign: 'center',
@@ -98,17 +98,17 @@ const AnimatedLogo = ({ darkMode, isMobile }) => {
           }
         }}
         style={{
-          fontSize: isMobile ? '1rem' : '1.25rem',
+          fontSize: '1.25rem',
           fontWeight: '600',
           color: darkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
-          marginTop: isMobile ? '0.5rem' : '1rem',
+          marginTop: '1rem',
           textAlign: 'center'
         }}
       >
         Internship Portal
       </motion.div>
       
-      {/* Animated gradient line with continuous movement */}
+      {/* Animated gradient line */}
       <motion.div
         initial={{ width: 0, opacity: 0 }}
         animate={{ 
@@ -127,25 +127,25 @@ const AnimatedLogo = ({ darkMode, isMobile }) => {
         style={{
           height: '3px',
           background: `linear-gradient(90deg, ${accentColor}, transparent)`,
-          marginTop: isMobile ? '1rem' : '2rem',
+          marginTop: '2rem',
           borderRadius: '2px',
           maxWidth: '200px'
         }}
       />
       
-      {/* Floating particles animation - reduced for mobile */}
-      {[...Array(isMobile ? 3 : 6)].map((_, i) => (
+      {/* Floating particles animation */}
+      {[...Array(6)].map((_, i) => (
         <motion.div
           key={i}
           initial={{ 
             opacity: 0,
-            x: Math.random() * (isMobile ? 200 : 400) - (isMobile ? 100 : 200),
-            y: Math.random() * (isMobile ? 200 : 400) - (isMobile ? 100 : 200)
+            x: Math.random() * 400 - 200,
+            y: Math.random() * 400 - 200
           }}
           animate={{ 
             opacity: [0, 0.6, 0],
-            x: Math.random() * (isMobile ? 200 : 400) - (isMobile ? 100 : 200),
-            y: Math.random() * (isMobile ? 200 : 400) - (isMobile ? 100 : 200),
+            x: Math.random() * 400 - 200,
+            y: Math.random() * 400 - 200,
             scale: [0, 1, 0]
           }}
           transition={{ 
@@ -156,11 +156,11 @@ const AnimatedLogo = ({ darkMode, isMobile }) => {
           }}
           style={{
             position: 'absolute',
-            width: isMobile ? '6px' : '8px',
-            height: isMobile ? '6px' : '8px',
+            width: '8px',
+            height: '8px',
             borderRadius: '50%',
             background: accentColor,
-            boxShadow: `0 0 ${isMobile ? '15px' : '20px'} ${accentColor}80`,
+            boxShadow: `0 0 20px ${accentColor}80`,
             pointerEvents: 'none'
           }}
         />
@@ -181,8 +181,8 @@ const AnimatedLogo = ({ darkMode, isMobile }) => {
         }}
         style={{
           position: 'absolute',
-          width: isMobile ? '200px' : '300px',
-          height: isMobile ? '200px' : '300px',
+          width: '300px',
+          height: '300px',
           border: `2px solid ${accentColor}`,
           borderRadius: '50%',
           pointerEvents: 'none'
@@ -299,7 +299,7 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
         width: '100%',
         height: '100%',
         zIndex: 0,
-        opacity: isMobile ? 0.05 : 0.1,
+        opacity: isMobile ? 0.03 : 0.1,
         pointerEvents: 'none',
         background: darkMode 
           ? 'radial-gradient(circle at 20% 50%, #00aaff 0%, transparent 50%), radial-gradient(circle at 80% 20%, #0066ff 0%, transparent 50%)'
@@ -314,7 +314,7 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
           position: "fixed", 
           top: 0,
           width: "100%",
-          padding: isMobile ? "0.75rem 1rem" : "1rem 2rem",
+          padding: isMobile ? "1rem 1.25rem" : "1rem 2rem",
           zIndex: 10,
           backdropFilter: 'blur(20px)',
           borderBottom: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
@@ -336,14 +336,14 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                 gap: '0.75rem'
               }}
             >
-                <img 
-                  src={Logo} 
-                  alt="Logo" 
-                  style={{ height: '40px', width: 'auto' }} 
-                />
+              <img 
+                src={Logo} 
+                alt="Logo" 
+                style={{ height: isMobile ? '35px' : '40px', width: 'auto' }} 
+              />
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.5rem" : "1rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.75rem" : "1rem" }}>
               <motion.button 
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.95 }}
@@ -353,7 +353,7 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                   border: "none",
                   color: theme.color,
                   cursor: "pointer",
-                  padding: isMobile ? "0.4rem" : "0.5rem",
+                  padding: isMobile ? "0.5rem" : "0.5rem",
                   borderRadius: "50%",
                   transition: "all 0.3s ease",
                   display: 'flex',
@@ -364,7 +364,8 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                 {darkMode ? <SunIcon /> : <MoonIcon />}
               </motion.button>
               
-              {!isMobile && (
+              {/* Only show login/register buttons on desktop */}
+              {!isMobile && !isTablet && (
                 <>
                   <motion.button 
                     whileHover={{ scale: 1.05 }}
@@ -418,31 +419,31 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
           minHeight: '100vh', 
           maxWidth: "1200px",
           margin: "0 auto",
-          padding: isMobile ? "70px 1rem 1rem" : "80px 2rem 2rem"
+          padding: isMobile ? "80px 1.25rem 2rem" : "80px 2rem 2rem"
         }}>
           {/* Hero Section */}
           <div style={{ 
             display: "grid", 
-            gridTemplateColumns: (isMobile || isTablet) ? "1fr" : "1fr 1fr",
-            gap: isMobile ? "2rem" : "3rem",
+            gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr" : "1fr 1fr",
+            gap: isMobile ? "2rem" : isTablet ? "2.5rem" : "3rem",
             alignItems: "center",
             width: "100%"
           }}>
             {/* Left Content */}
             <div style={{ 
-              textAlign: (isMobile || isTablet) ? "center" : "left",
-              order: isMobile ? 2 : 1
+              textAlign: isMobile ? "center" : isTablet ? "center" : "left",
+              order: 1
             }}>
               <motion.h1
                 initial={{ opacity: 0, y: -50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
                 style={{ 
-                  fontSize: isMobile ? "1.75rem" : isTablet ? "2.25rem" : "3rem", 
+                  fontSize: isMobile ? "2rem" : isTablet ? "2.5rem" : "3rem", 
                   color: theme.accentColor,
                   lineHeight: 1.2,
                   fontWeight: "800",
-                  marginBottom: isMobile ? "1rem" : "1.5rem",
+                  marginBottom: isMobile ? "1.25rem" : "1.5rem",
                   textShadow: `0 0 15px ${theme.accentColor}40`
                 }}
               >
@@ -462,10 +463,10 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                 transition={{ delay: 0.3, duration: 0.8 }}
                 style={{ 
                   color: theme.textSecondary,
-                  fontSize: isMobile ? "0.95rem" : "1.1rem",
-                  marginBottom: isMobile ? "1.5rem" : "2rem",
+                  fontSize: isMobile ? "1rem" : isTablet ? "1.1rem" : "1.1rem",
+                  marginBottom: isMobile ? "2rem" : "2rem",
                   lineHeight: 1.6,
-                  maxWidth: isMobile ? "100%" : "90%"
+                  maxWidth: isMobile ? "100%" : isTablet ? "100%" : "90%"
                 }}
               >
                 Manage and track your internship journey with ease. Join our innovative program and gain real-world experience with cutting-edge technologies.
@@ -477,10 +478,10 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                 transition={{ delay: 0.5, duration: 0.8 }}
                 style={{ 
                   display: "flex", 
-                  gap: isMobile ? "0.75rem" : "1rem", 
-                  justifyContent: (isMobile || isTablet) ? "center" : "flex-start",
+                  gap: isMobile ? "1rem" : "1rem", 
+                  justifyContent: isMobile ? "center" : isTablet ? "center" : "flex-start",
                   flexDirection: isMobile ? "column" : "row",
-                  alignItems: isMobile ? "center" : "flex-start"
+                  alignItems: "center"
                 }}
               >
                 <motion.button 
@@ -490,9 +491,9 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                     background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
                     color: "white",
                     border: "none",
-                    padding: isMobile ? "0.875rem 2rem" : "1rem 2rem",
+                    padding: isMobile ? "1rem 2.5rem" : "1rem 2rem",
                     borderRadius: "12px",
-                    fontSize: isMobile ? "0.95rem" : "1rem",
+                    fontSize: isMobile ? "1rem" : "1rem",
                     fontWeight: "600",
                     cursor: "pointer",
                     display: 'flex',
@@ -502,7 +503,7 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                     boxShadow: `0 8px 25px ${theme.accentColor}40`,
                     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                     width: isMobile ? '100%' : 'auto',
-                    maxWidth: isMobile ? '280px' : 'none'
+                    maxWidth: isMobile ? '320px' : 'none'
                   }} 
                   onClick={handleGetStarted}
                 >
@@ -516,104 +517,50 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
                     background: 'transparent',
                     color: theme.accentColor,
                     border: `2px solid ${theme.accentColor}`,
-                    padding: isMobile ? "0.875rem 2rem" : "1rem 2rem",
+                    padding: isMobile ? "1rem 2.5rem" : "1rem 2rem",
                     borderRadius: "12px",
-                    fontSize: isMobile ? "0.95rem" : "1rem",
+                    fontSize: isMobile ? "1rem" : "1rem",
                     fontWeight: "600",
                     cursor: "pointer",
                     backdropFilter: 'blur(10px)',
                     transition: "all 0.3s ease",
                     width: isMobile ? '100%' : 'auto',
-                    maxWidth: isMobile ? '280px' : 'none'
+                    maxWidth: isMobile ? '320px' : 'none'
                   }}
                   onClick={handleLearnMore}
                 >
                   Learn More
                 </motion.button>
               </motion.div>
-
-              {/* Mobile authentication buttons */}
-              {isMobile && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.7, duration: 0.8 }}
-                  style={{ 
-                    display: "flex", 
-                    gap: "0.75rem", 
-                    justifyContent: "center",
-                    marginTop: "1.5rem",
-                    flexDirection: "row"
-                  }}
-                >
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{ 
-                      background: "transparent", 
-                      color: theme.color,
-                      border: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                      padding: "0.75rem 1.5rem",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      backdropFilter: 'blur(10px)',
-                      transition: "all 0.3s ease",
-                      fontSize: '0.9rem',
-                      flex: 1
-                    }} 
-                    onClick={handleLogin}
-                  >
-                    Login
-                  </motion.button>
-                  
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{ 
-                      background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`, 
-                      color: "white",
-                      border: "none",
-                      padding: "0.75rem 1.5rem",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      boxShadow: `0 4px 15px ${theme.accentColor}40`,
-                      transition: "all 0.3s ease",
-                      fontSize: '0.9rem',
-                      flex: 1
-                    }}
-                    onClick={handleRegister}
-                  >
-                    Register
-                  </motion.button>
-                </motion.div>
-              )}
             </div>
             
-            {/* Right Content - Animated Logo */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
-              style={{
-                width: '100%',
-                height: isMobile ? '300px' : isTablet ? '400px' : '500px',
-                borderRadius: isMobile ? '16px' : '24px',
-                overflow: 'hidden',
-                boxShadow: `0 ${isMobile ? '15px' : '25px'} ${isMobile ? '30px' : '50px'} ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
-                background: darkMode 
-                  ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.4), rgba(15, 30, 55, 0.3))' 
-                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(248, 250, 252, 0.3))',
-                backdropFilter: 'blur(20px)',
-                border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                order: isMobile ? 1 : 2
-              }}
-            >
-              <AnimatedLogo darkMode={darkMode} isMobile={isMobile} />
-            </motion.div>
+            {/* Right Content - Animated Logo (Desktop Only) */}
+            {!isMobile && !isTablet && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+                style={{
+                  width: '100%',
+                  height: '500px',
+                  borderRadius: '24px',
+                  overflow: 'hidden',
+                  boxShadow: `0 25px 50px ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
+                  background: darkMode 
+                    ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.4), rgba(15, 30, 55, 0.3))' 
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(248, 250, 252, 0.3))',
+                  backdropFilter: 'blur(20px)',
+                  border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  order: 2
+                }}
+              >
+                <AnimatedLogo darkMode={darkMode} />
+              </motion.div>
+            )}
           </div>
         </div>
       </div>
@@ -631,6 +578,8 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
         
         body {
           overflow-x: hidden;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
         
         button:hover {
@@ -666,6 +615,40 @@ const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) =
           button {
             -webkit-appearance: none;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+          }
+          
+          /* Prevent zoom on input focus */
+          input, textarea, select {
+            font-size: 16px;
+          }
+        }
+        
+        /* Tablet optimizations */
+        @media (min-width: 768px) and (max-width: 1023px) {
+          button {
+            touch-action: manipulation;
+          }
+        }
+        
+        /* Focus styles for accessibility */
+        button:focus-visible {
+          outline: 2px solid ${theme.accentColor};
+          outline-offset: 2px;
+        }
+        
+        /* Ensure smooth animations on all devices */
+        @media (prefers-reduced-motion: no-preference) {
+          * {
+            scroll-behavior: smooth;
+          }
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+          * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
           }
         }
       `}</style>
