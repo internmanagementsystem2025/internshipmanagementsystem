@@ -351,7 +351,7 @@ const requestPasswordResetOTP = async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 30);
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 3); 
 
     user.resetPasswordOTP = otp;
     user.resetPasswordOTPExpiry = otpExpiry;
@@ -383,7 +383,7 @@ const verifyOTPAndResetPassword = async (req, res) => {
     const user = await User.findOne({ 
       email,
       resetPasswordOTP: otp,
-      resetPasswordOTPExpiry: { $gt: new Date() } 
+      resetPasswordOTPExpiry: { $gt: new Date() }
     });
 
     if (!user) {
@@ -396,7 +396,7 @@ const verifyOTPAndResetPassword = async (req, res) => {
     user.password = hashedPassword;
     user.resetPasswordOTP = undefined;
     user.resetPasswordOTPExpiry = undefined;
-    
+        
     await user.save();
 
     try {

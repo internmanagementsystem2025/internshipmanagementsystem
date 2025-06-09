@@ -429,7 +429,7 @@ const EmailConfirmPage = ({ darkMode }) => {
                   color: theme.textSecondary,
                   lineHeight: 1.5
                 }}>
-                  <strong style={{ color: theme.textPrimary }}>Secure Process:</strong> The verification code will expire in 10 minutes for your security. Check your spam folder if you don't receive it.
+                  <strong style={{ color: theme.textPrimary }}>Secure Process:</strong> The verification code will expire in 3 minutes for your security. Check your spam folder if you don't receive it.
                 </div>
               </motion.div>
             </div>

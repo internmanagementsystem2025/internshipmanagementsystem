@@ -782,7 +782,7 @@ const VerifyOTPPage = ({ darkMode }) => {
                   color: theme.textSecondary,
                   lineHeight: 1.5
                 }}>
-                  <strong style={{ color: theme.textPrimary }}>Security Notice:</strong> The verification code expires in 10 minutes. 
+                  <strong style={{ color: theme.textPrimary }}>Security Notice:</strong> The verification code expires in 3 minutes. 
                   Your new password must be at least 8 characters with uppercase, lowercase, and numbers.
                 </div>
               </motion.div>

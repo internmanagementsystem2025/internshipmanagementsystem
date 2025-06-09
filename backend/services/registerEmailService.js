@@ -166,7 +166,7 @@ const emailTemplates = {
         <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
           <p><strong>Security Information:</strong></p>
           <ul>
-            <li>This code expires in 30 minutes</li>
+            <li>This code expires in 3 minutes</li>
             <li>Do not share this code with anyone</li>
             <li>If you didn't request this, contact support immediately</li>
           </ul>
