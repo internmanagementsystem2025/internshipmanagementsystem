@@ -217,7 +217,7 @@ const ForgotPasswordPage = ({ darkMode }) => {
     setLoading(true);
 
     try {
-      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/reset-password`, {
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/reset-password`, {
         token,
         newPassword: password,
       });

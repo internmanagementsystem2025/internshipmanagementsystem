@@ -359,7 +359,7 @@ const VerifyOTPPage = ({ darkMode }) => {
     setLoading(true);
 
     try {
-      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/verify-otp-reset-password`, {
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/verify-otp-reset-password`, {
         email,
         otp,
         newPassword: password,
@@ -387,7 +387,7 @@ const VerifyOTPPage = ({ darkMode }) => {
     setError("");
 
     try {
-      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/request-password-reset-otp`, { email });
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/request-password-reset-otp`, { email });
       triggerNotification("New verification code sent to your email!", "success");
       setCountdown(60); 
     } catch (err) {
