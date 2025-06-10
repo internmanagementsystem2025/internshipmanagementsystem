@@ -137,22 +137,8 @@ const StaffSidebar = ({ darkMode }) => {
       route: "/staff-home",
       key: "home"
     },
-    {
-      title: "Staff Details",
-      icon: FiUserCheck,
-      key: "staff-details",
-      hasDropdown: true,
-      dropdownItems: [
-        { title: "Add Details", route: "/create-details", icon: FiFilePlus },
-        { title: "View Details", route: "/view-my-details", icon: FiList },
-      ]
-    },
-    {
-      title: "Executive Request",
-      icon: FiFile,
-      key: "executive-request",
-      route: "/executive-intern-request",
-    },
+    
+    
     {
       title: "Intern Request",
       icon: FiPenTool,
