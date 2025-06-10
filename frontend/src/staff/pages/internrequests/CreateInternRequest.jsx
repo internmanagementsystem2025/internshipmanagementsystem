@@ -4,12 +4,12 @@ import { useNavigate } from "react-router-dom";
 import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import axios from "axios";
-import Notification from "../../../components/notifications/Notification"; 
+import Notification from "../../../components/notifications/Notification";
 
 const CreateInternRequest = ({ darkMode }) => {
   const navigate = useNavigate();
   const [internRequest, setInternRequest] = useState({
-    internType: "",
+    internType: "internship",
     district: "",
     scheme: "",
     requiredInterns: "",
@@ -40,11 +40,12 @@ const CreateInternRequest = ({ darkMode }) => {
     const fetchDistricts = async () => {
       try {
         const response = await axios.get('http://localhost:5000/api/districts');
-        setDistricts(response.data);
-        setLoading(prevState => ({ ...prevState, districts: false }));
+        const districtsData = Array.isArray(response.data) ? response.data : [];
+        setDistricts(districtsData);
       } catch (error) {
         console.error("Error fetching districts:", error);
         setErrorMessage("Failed to load districts. Please refresh the page.");
+      } finally {
         setLoading(prevState => ({ ...prevState, districts: false }));
       }
     };
@@ -52,11 +53,12 @@ const CreateInternRequest = ({ darkMode }) => {
     const fetchSchemes = async () => {
       try {
         const response = await axios.get('http://localhost:5000/api/schemes');
-        setSchemes(response.data);
-        setLoading(prevState => ({ ...prevState, schemes: false }));
+        const schemesData = Array.isArray(response.data) ? response.data : [];
+        setSchemes(schemesData);
       } catch (error) {
         console.error("Error fetching schemes:", error);
         setErrorMessage("Failed to load schemes. Please refresh the page.");
+      } finally {
         setLoading(prevState => ({ ...prevState, schemes: false }));
       }
     };
@@ -71,10 +73,22 @@ const CreateInternRequest = ({ darkMode }) => {
   };
 
   const validateForm = () => {
+    if (!internRequest.periodFrom || !internRequest.periodTo) {
+      setErrorMessage("Please select both start and end dates.");
+      return false;
+    }
+
     if (new Date(internRequest.periodFrom) > new Date(internRequest.periodTo)) {
       setErrorMessage("End date must be after the start date.");
       return false;
     }
+
+    if (!internRequest.requiredInterns || parseInt(internRequest.requiredInterns) < 1) {
+      setErrorMessage("Please enter a valid number of interns required.");
+      return false;
+    }
+
+    setErrorMessage("");
     return true;
   };
 
@@ -85,10 +99,8 @@ const CreateInternRequest = ({ darkMode }) => {
 
     try {
       setIsSubmitting(true);
-      setErrorMessage("");
       
       const token = localStorage.getItem('token');
-      
       if (!token) {
         setErrorMessage("Authentication required. Please login again.");
         setIsSubmitting(false);
@@ -105,8 +117,6 @@ const CreateInternRequest = ({ darkMode }) => {
           }
         }
       );
-
-      console.log("Intern Request Submitted:", response.data);
 
       // Show success notification
       setNotificationMessage("Intern Request Created Successfully!");
@@ -128,22 +138,22 @@ const CreateInternRequest = ({ darkMode }) => {
         category: ""
       });
 
+      // Redirect after 3 seconds
       setTimeout(() => {
         navigate("/view-my-requests");
-      }, 3000); 
+      }, 3000);
     } catch (error) {
       console.error("Error submitting the form:", error);
+      let errorMsg = "Error submitting the form. Please try again later.";
       
       if (error.response) {
-        setErrorMessage(error.response.data.message || "Error submitting the form. Please try again later.");
+        errorMsg = error.response.data.message || errorMsg;
       } else if (error.request) {
-        setErrorMessage("No response from server. Please check your connection.");
-      } else {
-        setErrorMessage("Error submitting the form. Please try again later.");
+        errorMsg = "No response from server. Please check your connection.";
       }
 
-      // Show error notification
-      setNotificationMessage("Error submitting the form. Please try again later.");
+      setErrorMessage(errorMsg);
+      setNotificationMessage(errorMsg);
       setNotificationVariant("danger");
       setShowNotification(true);
     } finally {
@@ -193,7 +203,7 @@ const CreateInternRequest = ({ darkMode }) => {
                     </div>
                   </Form.Group>
 
-                  {/* District Dropdown - Connected to Backend */}
+                  {/* District Dropdown */}
                   <Form.Group controlId="district" className="mb-3">
                     <Form.Label>District</Form.Label>
                     <Form.Control
@@ -215,7 +225,7 @@ const CreateInternRequest = ({ darkMode }) => {
                     {loading.districts && <small className="text-muted">Loading districts...</small>}
                   </Form.Group>
 
-                  {/* Scheme Dropdown - Connected to Backend */}
+                  {/* Scheme Dropdown */}
                   <Form.Group controlId="scheme" className="mb-3">
                     <Form.Label>Scheme</Form.Label>
                     <Form.Control
@@ -363,12 +373,20 @@ const CreateInternRequest = ({ darkMode }) => {
                   {/* Submit and Cancel Buttons */}
                   <div className="d-flex justify-content-between mt-3">
                     <Button variant="danger" onClick={() => window.history.back()}>Cancel</Button>
-                    <Button type="submit" disabled={isSubmitting || loading.districts || loading.schemes}>
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting || loading.districts || loading.schemes}
+                      variant={darkMode ? "outline-light" : "primary"}
+                    >
                       {isSubmitting ? "Creating..." : "Create Intern Request"}
                     </Button>
                   </div>
 
-                  {errorMessage && <div className="mt-3 text-danger">{errorMessage}</div>}
+                  {errorMessage && (
+                    <div className={`mt-3 ${darkMode ? "text-warning" : "text-danger"}`}>
+                      {errorMessage}
+                    </div>
+                  )}
                 </Form>
               </Card.Body>
             </Card>
@@ -382,6 +400,7 @@ const CreateInternRequest = ({ darkMode }) => {
         onClose={() => setShowNotification(false)}
         message={notificationMessage}
         variant={notificationVariant}
+        darkMode={darkMode}
       />
     </div>
   );
