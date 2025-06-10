@@ -108,6 +108,7 @@ import AdminReports  from "./admin/pages/reports/AdminReports";
 import LearnMorePage from "./components/login/LearnMorePage";
 import ChangePassword  from "./components/login/ChangePassword";
 import InternPlacement from "./admin/pages/internplacement/InternPlacement";
+import InternAllocations from "./staff/pages/internallocation/MyInternsAllocation";
 
 
 
@@ -250,7 +251,7 @@ function App() {
     "/view-intern-request/:id",
     "/edit-intern-request/:id",
 
- 
+    "/my-interns-allocations",
   ];
 
   // Logic to determine which sidebar to show
@@ -414,7 +415,7 @@ function App() {
     <Route path="/view-intern-request/:id" element={<ViewInternRequest darkMode={darkMode} />} />
     <Route path="/edit-intern-request/:id" element={<EditInternRequest darkMode={darkMode} />} />
     
-
+    <Route path="/my-interns-allocations" element={<InternAllocations darkMode={darkMode} />} />
   </Route>
 </Routes>
 
