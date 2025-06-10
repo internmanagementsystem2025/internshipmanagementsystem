@@ -111,6 +111,7 @@ import InternPlacement from "./admin/pages/internplacement/InternPlacement";
 import InternAllocations from "./staff/pages/internallocation/MyInternsAllocation";
 
 
+
 function App() {
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("theme") === "dark"
