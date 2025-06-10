@@ -66,7 +66,7 @@ import InternLifeCycle from "./admin/pages/lifecycle/InternLifeCycle";
 import AcceptanceLetterRequest from "./admin/pages/lifecycle/AcceptanceLetterRequest";
 import ViewAcceptanceLetter from "./admin/pages/lifecycle/ViewAcceptanceLetter";
 import StaffHome from "./staff/pages/home/StaffHome";
-import ApproveExecutiveInternRequests from "./staff/pages/executiveinternrequests/ApproveExecutiveInternRequests";
+
 import InternPendingRequests from "./staff/pages/internpendingrequests/InternPendingRequests";
 import CertificateRequests from "./staff/pages/certificaterequest/CertificateRequests";
 import InternPlacements from "./staff/pages/internplacements/InternPlacements";
@@ -77,8 +77,7 @@ import CreateInternRequest from "./staff/pages/internrequests/CreateInternReques
 import ViewInternRequest from "./staff/pages/internrequests/ViewInternRequest";
 import EditInternRequest from "./staff/pages/internrequests/EditInternRequest";
 import StaffInternRequest from "./admin/pages/internrequest/StaffInternRequest";
-import CreateDetails from "./staff/pages/details/CreateDetails";
-import MyViewDetails from "./staff/pages/details/MyViewDetails";
+
 import AllCertificate from "./admin/pages/templates/AllCertificate";
 import AllCertificateLetters from "./admin/pages/templates/AllCertificateLetters";
 import AllPlacementLetters from "./admin/pages/templates/AllPlacementLetters";
@@ -109,6 +108,7 @@ import AdminReports  from "./admin/pages/reports/AdminReports";
 import LearnMorePage from "./components/login/LearnMorePage";
 import ChangePassword  from "./components/login/ChangePassword";
 import InternPlacement from "./admin/pages/internplacement/InternPlacement";
+
 
 
 function App() {
@@ -240,7 +240,7 @@ function App() {
 
   const staffRoutes = [
     "/staff-home",
-    "/executive-intern-request",
+
     "/my-interns-pending",
     "/my-certificate-request",
     "/my-interns-placement",
@@ -249,8 +249,8 @@ function App() {
     "/create-intern-request",
     "/view-intern-request/:id",
     "/edit-intern-request/:id",
-    "/create-details",
-    "/view-my-details",
+
+ 
   ];
 
   // Logic to determine which sidebar to show
@@ -338,7 +338,6 @@ function App() {
     <Route path="/view-cv/:cvId" element={<ViewCV darkMode={darkMode} />} />
     <Route path="/edit-cv/:cvId" element={<EditCV darkMode={darkMode} />} />
     <Route path="/institute-help-support" element={<InstituteHelp darkMode={darkMode} />} />
-    
     <Route path="/bulk-cv-upload" element={<BulkCVUploadForm darkMode={darkMode} />} />
 
     {/* Admin */}
@@ -405,7 +404,7 @@ function App() {
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />
-    <Route path="/executive-intern-request" element={<ApproveExecutiveInternRequests darkMode={darkMode} />} />
+    
     <Route path="/my-interns-pending" element={<InternPendingRequests darkMode={darkMode} />} />
     <Route path="/my-certificate-request" element={<CertificateRequests darkMode={darkMode} />} />
     <Route path="/my-interns-placement" element={<InternPlacements darkMode={darkMode} />} />
@@ -414,8 +413,8 @@ function App() {
     <Route path="/create-intern-request" element={<CreateInternRequest darkMode={darkMode} />} />
     <Route path="/view-intern-request/:id" element={<ViewInternRequest darkMode={darkMode} />} />
     <Route path="/edit-intern-request/:id" element={<EditInternRequest darkMode={darkMode} />} />
-    <Route path="/create-details" element={<CreateDetails darkMode={darkMode} />} />
-    <Route path="/view-my-details" element={<MyViewDetails darkMode={darkMode} />} />
+    
+
   </Route>
 </Routes>
 
