@@ -1,23 +1,14 @@
 import { useState, useEffect } from "react";
-import { Card, Row, Col, Container} from "react-bootstrap";
+import { Card, Row, Col, Container } from "react-bootstrap";
 import { FiFileText, FiUserCheck, FiUser, FiAward } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from "../../../assets/logo.png";
 
-
-
 const StaffHome = ({ darkMode }) => {
   const [hoveredCard, setHoveredCard] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const navigate = useNavigate();
-
-  // Define dark and light mode colors
-  const backgroundColor = darkMode ? "#1a1a1a" : "#f4f4f4";
-  const textColor = darkMode ? "white" : "#333";
-  const subTextColor = darkMode ? "lightgray" : "#666";
-
-
 
   const theme = {
     backgroundColor: darkMode ? "#000000" : "#f8fafc",
@@ -43,7 +34,6 @@ const StaffHome = ({ darkMode }) => {
       }, 60000);
     }
   }, []);
-
 
   return (
     <div
@@ -93,7 +83,7 @@ const StaffHome = ({ darkMode }) => {
             />
           </motion.div>
 
-        {/* Hero Section */}
+          {/* Hero Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -101,7 +91,7 @@ const StaffHome = ({ darkMode }) => {
             className="text-center mb-5"
           >
             <h1 style={{ 
-              fontSize: '3rem', 
+              fontSize: '2.5rem', 
               fontWeight: 800,
               backgroundImage: `linear-gradient(135deg, ${theme.accentColor}, ${theme.gradientEnd})`,
               backgroundClip: 'text',
@@ -117,17 +107,15 @@ const StaffHome = ({ darkMode }) => {
             </h1>
 
             <p style={{ 
-              fontSize: '1.2rem',
+              fontSize: '1.1rem',
               color: theme.textSecondary,
-              maxWidth: '600px',
+              maxWidth: '800px',
               margin: '0 auto',
               lineHeight: 1.6
             }}>
               Welcome to staff dashboard, where you can efficiently manage interns, interviews, schemes, and requests. Use the tools below to streamline your workflow and oversee all aspects of the internship program.
             </p>
           </motion.div>
-
-          
 
           {/* Action Cards */}
           <motion.div
@@ -137,13 +125,6 @@ const StaffHome = ({ darkMode }) => {
           >
             <Row className="justify-content-center g-4 mb-5">
               {[
-                { 
-                  title: "Executive Officer Request", 
-                  icon: FiUser, 
-                  route: "/executive-intern-request", 
-                  key: "executive-intern-request",
-                  description: "Manage requests from executive officers for interns"
-                },
                 { 
                   title: "Request Intern", 
                   icon: FiFileText, 
@@ -165,9 +146,8 @@ const StaffHome = ({ darkMode }) => {
                   key: "my-certificate-request",
                   description: "Search and view detailed profiles of interns"
                 }
-                
               ].map((card, index) => (
-                <Col md={3} key={card.key}>
+                <Col xs={12} sm={6} lg={4} key={card.key}>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -182,8 +162,9 @@ const StaffHome = ({ darkMode }) => {
                       style={{
                         cursor: "pointer",
                         border: "none",
-                        borderRadius: "20px",
-                        height: "200px",
+                        borderRadius: "16px",
+                        height: "280px",
+                        minWidth: "100%",
                         background: theme.cardBackground,
                         backdropFilter: 'blur(20px)',
                         boxShadow: hoveredCard === card.key 
@@ -206,41 +187,39 @@ const StaffHome = ({ darkMode }) => {
                         transition: 'all 0.3s ease'
                       }} />
                       
-                      <Card.Body className="d-flex flex-column align-items-center justify-content-center text-center h-100 position-relative">
+                      <Card.Body className="d-flex flex-column align-items-center justify-content-center text-center h-100 p-4 position-relative">
                         <motion.div
                           whileHover={{ scale: 1.1, rotate: 5 }}
                           transition={{ type: "spring", stiffness: 300 }}
                           style={{
-                            width: '70px',
-                            height: '70px',
+                            width: '80px',
+                            height: '80px',
                             borderRadius: '50%',
                             background: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            marginBottom: '1rem',
+                            marginBottom: '1.5rem',
                             boxShadow: `0 10px 25px ${darkMode ? 'rgba(14, 165, 233, 0.4)' : 'rgba(0, 204, 102, 0.4)'}`
                           }}
                         >
-                          <card.icon size={32} color="white" />
+                          <card.icon size={36} color="white" />
                         </motion.div>
 
-                        
-                        
                         <Card.Title style={{ 
                           color: theme.textPrimary,
-                          fontSize: '1.25rem',
+                          fontSize: '1.4rem',
                           fontWeight: '700',
-                          marginBottom: '0.5rem'
+                          marginBottom: '0.75rem'
                         }}>
                           {card.title}
                         </Card.Title>
                         
                         <p style={{ 
                           color: theme.textSecondary,
-                          fontSize: '0.9rem',
+                          fontSize: '1rem',
                           margin: 0,
-                          lineHeight: 1.4
+                          lineHeight: 1.5
                         }}>
                           {card.description}
                         </p>
@@ -251,9 +230,9 @@ const StaffHome = ({ darkMode }) => {
               ))}
             </Row>
           </motion.div>
-          </Container>
-          </div>
-          </div>
+        </Container>
+      </div>
+    </div>
   );
 };
 
