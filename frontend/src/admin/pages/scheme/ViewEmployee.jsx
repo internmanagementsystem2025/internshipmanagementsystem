@@ -31,8 +31,8 @@ const ViewEmployees = ({ darkMode }) => {
   }, []);
 
   const fetchEmployees = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const res = await axios.get(API_URL);
       const employeesWithId = res.data.filter(emp => emp._id);
       setEmployees(employeesWithId);
@@ -49,11 +49,10 @@ const ViewEmployees = ({ darkMode }) => {
           name: emp.full_name,
         }))
       );
-      setError("");
+      setLoading(false);
     } catch (err) {
-      setError("Failed to fetch employees.");
       console.error('Error fetching employees:', err);
-    } finally {
+      setError('Failed to fetch employees');
       setLoading(false);
     }
   };
@@ -113,6 +112,7 @@ const ViewEmployees = ({ darkMode }) => {
       setSelectedEmployee(null);
     } catch (error) {
       console.error("Error deleting employee:", error.message);
+      setError("Failed to delete employee");
     }
   };
 
@@ -129,13 +129,16 @@ const ViewEmployees = ({ darkMode }) => {
   const handleEditSave = async () => {
     const { _id, ...updateData } = selectedEmployee;
     try {
+      setLoading(true);
       await axios.put(`${API_URL}/${_id}`, updateData);
       setEditModal(false);
       setSelectedEmployee(null);
-      fetchEmployees();
+      await fetchEmployees();
+      setLoading(false);
     } catch (err) {
       console.error('Error updating employee:', err);
-      alert('Failed to update employee');
+      setError('Failed to update employee');
+      setLoading(false);
     }
   };
 
@@ -180,6 +183,7 @@ const ViewEmployees = ({ darkMode }) => {
     { key: "cost_center", label: "Cost Center", sortable: false },
     { key: "grade_level", label: "Grade", sortable: false },
     { key: "joining_date", label: "Join Date", sortable: false },
+    { key: "subordinates", label: "Subordinates", sortable: false },
     { key: "status", label: "Status", sortable: false },
     { key: "edit", label: "Edit", sortable: false },
     { key: "delete", label: "Delete", sortable: false }
@@ -265,6 +269,15 @@ const ViewEmployees = ({ darkMode }) => {
                       <td>{employee.cost_center || "N/A"}</td>
                       <td>{employee.grade_level || "N/A"}</td>
                       <td>{formatDate(employee.joining_date)}</td>
+                      <td>
+                        {employee.subordinates?.length ? (
+                          <ul className="mb-0 ps-3">
+                            {employee.subordinates.map(subId => (
+                              <li key={subId}>{employeeMap[subId] || subId}</li>
+                            ))}
+                          </ul>
+                        ) : <small>No subordinates</small>}
+                      </td>
                       <td>{getStatusBadge(employee.status)}</td>
                       <td>
                         <Button
@@ -386,7 +399,7 @@ const ViewEmployees = ({ darkMode }) => {
                     options={employeeOptionsFiltered}
                     value={selectedSubordinates}
                     onChange={(selected) => {
-                      const selectedIds = selected.map((item) => item.value);
+                      const selectedIds = selected ? selected.map((item) => item.value) : [];
                       setSelectedEmployee((prev) => ({
                         ...prev,
                         subordinates: selectedIds,
