@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Logo from "../../assets/logo.png";
+import { useMsal } from '@azure/msal-react';
+import { loginRequest } from '../../authconfig';
+
 
 // Fixed Icons as React components
 const SunIcon = () => (
@@ -224,6 +227,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   const [registrationMessage, setRegistrationMessage] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+  const { instance } = useMsal();
 
   const darkMode = propDarkMode !== undefined ? propDarkMode : internalDarkMode;
 
@@ -363,11 +367,16 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     }
   };
 
-  const handleAzureLogin = () => {
-    setIsOAuthLoading(true);
-    console.log('Redirecting to Azure auth for:', userType);
-    window.location.href = `${import.meta.env.VITE_BASE_URL}/api/auth/azure/login?userType=${userType}`;
+  const handleAzureLogin = async () => {
+    try {
+      setIsOAuthLoading(true);
+      await instance.loginRedirect(loginRequest);
+    } catch (err) {
+      console.error('Azure login error', err);
+      setIsOAuthLoading(false);
+    }
   };
+  
 
   const toggleStaffNotification = () => {
     setShowStaffNotification(!showStaffNotification);
