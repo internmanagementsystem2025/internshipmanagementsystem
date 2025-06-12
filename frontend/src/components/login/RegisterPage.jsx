@@ -321,33 +321,34 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
         </nav>
 
         {/* Main Content Container */}
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center", 
-          minHeight: '100vh', 
-          paddingTop: '80px',
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: isMobile ? "80px 1rem 2rem" : "80px 2rem 2rem"
-        }}>
+<div style={{ 
+  display: "flex", 
+  alignItems: "center", 
+  justifyContent: "center", 
+  minHeight: '100vh', 
+  paddingTop: '80px',
+  maxWidth: "1400px", 
+  margin: "0 auto",
+  padding: isMobile ? "80px 1rem 2rem" : "80px 3rem 2rem" 
+}}>
+
           {/* Register Form Container - Now full width */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{
-              background: darkMode 
-                ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.6), rgba(15, 30, 55, 0.4))' 
-                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.6))',
-              backdropFilter: 'blur(20px)',
-              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-              borderRadius: '24px',
-              padding: isMobile ? '2rem' : '3rem',
-              boxShadow: `0 25px 50px ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
-              width: '100%',
-              maxWidth: '800px'
-            }}
-          >
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  style={{
+    background: darkMode 
+      ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.6), rgba(15, 30, 55, 0.4))' 
+      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.6))',
+    backdropFilter: 'blur(20px)',
+    border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+    borderRadius: '24px',
+    padding: isMobile ? '2rem' : window.innerWidth > 1200 ? '4rem' : '3rem', 
+    boxShadow: `0 25px 50px ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
+    width: '100%',
+    maxWidth: window.innerWidth > 1400 ? '1400px' : '1000px'
+  }}
+>
             {loading ? (
               <div
                 style={{
