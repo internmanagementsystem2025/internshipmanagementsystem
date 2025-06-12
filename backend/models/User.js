@@ -1,6 +1,4 @@
-// Update your User model (models/User.js)
-
-const mongoose = require("mongoose"); 
+const mongoose = require("mongoose");
 
 const UserSchema = new mongoose.Schema(
   {
@@ -11,7 +9,7 @@ const UserSchema = new mongoose.Schema(
     password: { type: String, required: true },
     userType: { 
       type: String, 
-      enum: ["individual", "institute", "admin", "staff", "executive_staff"], // Changed senior_staff to executive_staff
+      enum: ["individual", "institute", "admin", "staff", "executive_staff"], 
       required: true 
     },
     postalAddress: String,
@@ -31,9 +29,7 @@ const UserSchema = new mongoose.Schema(
     resetPasswordOTPExpiry: Date,
     emailVerificationToken: String,
     emailVerificationTokenExpiry: Date,
-    isEmailVerified: { type: Boolean, default: false },
-    azureId: String,
-    isAzureUser: { type: Boolean, default: false } 
+    isEmailVerified: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
