@@ -11,7 +11,9 @@ const {
   requestPasswordResetOTP,
   verifyOTPAndResetPassword,
   getUserProfileByNic,
-  verifyEmail
+  verifyEmail,
+  azureLogin,    
+  azureCallback
 } = require("../controllers/authController");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -27,5 +29,9 @@ router.post("/verify-email", verifyEmail);
 // OTP-based password reset routes
 router.post("/request-password-reset-otp", requestPasswordResetOTP);
 router.post("/verify-otp-reset-password", verifyOTPAndResetPassword);
+
+// Add Azure OAuth routes
+router.get("/azure/login", azureLogin);
+router.get("/azure/callback", azureCallback);
 
 module.exports = router;

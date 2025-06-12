@@ -176,11 +176,20 @@ const loginUser = async (req, res) => {
   try {
     const { username, password, userType } = req.body;
 
+    // Check if staff/executive staff is trying to login with regular form
+    if (['staff', 'executive_staff'].includes(userType)) {
+      return res.status(400).json({ 
+        message: "Staff and Executive members must use Microsoft Azure login.", 
+        useAzureLogin: true 
+      });
+    }
+
     // Find user by username and user type
     let user = await User.findOne({ 
       $and: [
         { username },
-        { userType }
+        { userType },
+        { isAzureUser: { $ne: true } } 
       ]
     });
 
@@ -530,6 +539,132 @@ const getUserProfileByNic = async (req, res) => {
   }
 };
 
+
+// Azure OAuth login route
+const azureLogin = async (req, res) => {
+  try {
+    const { userType } = req.query;
+    
+    // Only allow staff and executive_staff for Azure login
+    if (!['staff', 'executive_staff'].includes(userType)) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_individual_only`);
+    }
+
+    const clientId = process.env.AZURE_CLIENT_ID;
+    const tenantId = process.env.AZURE_TENANT_ID;
+    const redirectUri = `${process.env.BASE_URL}/auth/azure/callback`;
+    const scope = 'openid profile email User.Read';
+
+    const authUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?` +
+      `client_id=${clientId}&` +
+      `response_type=code&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_mode=query&` +
+      `scope=${encodeURIComponent(scope)}&` +
+      `state=${userType}`;
+
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error('Azure login error:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/login?error=azure_auth_failed`);
+  }
+};
+
+// Azure OAuth callback route
+const azureCallback = async (req, res) => {
+  try {
+    const { code, state: userType, error } = req.query;
+
+    if (error) {
+      console.error('Azure OAuth error:', error);
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=azure_auth_failed`);
+    }
+
+    if (!code) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=authorization_code_missing`);
+    }
+
+    // Exchange authorization code for access token
+    const tokenResponse = await axios.post(
+      `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/oauth2/v2.0/token`,
+      new URLSearchParams({
+        client_id: process.env.AZURE_CLIENT_ID,
+        client_secret: process.env.AZURE_CLIENT_SECRET,
+        code: code,
+        redirect_uri: `${process.env.BASE_URL}/auth/azure/callback`,
+        grant_type: 'authorization_code',
+        scope: 'openid profile email User.Read'
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    );
+
+    const { access_token } = tokenResponse.data;
+
+    // Get user info from Microsoft Graph
+    const userResponse = await axios.get('https://graph.microsoft.com/v1.0/me', {
+      headers: {
+        'Authorization': `Bearer ${access_token}`
+      }
+    });
+
+    const azureUser = userResponse.data;
+    
+    // Check if user email is from authorized domain
+    if (!azureUser.mail || !azureUser.mail.endsWith('@intranet.slt.com.lk')) {
+      return res.redirect(`${process.env.FRONTEND_URL}/login?error=unauthorized_organization`);
+    }
+
+    // Find or create user in database
+    let user = await User.findOne({ 
+      email: azureUser.mail,
+      userType: { $in: ['staff', 'executive_staff'] }
+    });
+
+    if (!user) {
+      user = new User({
+        username: azureUser.mail.split('@')[0], 
+        email: azureUser.mail,
+        fullName: azureUser.displayName || azureUser.givenName + ' ' + azureUser.surname,
+        password: 'AZURE_AUTH', 
+        userType: userType || 'staff',
+        currentStatus: 'active',
+        approveRequest: true, 
+        isEmailVerified: true,
+        department: azureUser.department || '',
+        contactNumber: azureUser.mobilePhone || ''
+      });
+
+      await user.save();
+    } else {
+      // Update user type if specified
+      if (userType && ['staff', 'executive_staff'].includes(userType)) {
+        user.userType = userType;
+        await user.save();
+      }
+    }
+
+    // Generate JWT token
+    const token = generateToken(
+      user._id, 
+      user.username, 
+      user.email, 
+      user.userType, 
+      user.currentStatus
+    );
+
+    // Redirect to frontend with token
+    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}&userType=${user.userType}`);
+
+  } catch (error) {
+    console.error('Azure callback error:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/login?error=authentication_failed`);
+  }
+};
+
 module.exports = { 
   registerUser, 
   loginUser, 
@@ -541,5 +676,7 @@ module.exports = {
   verifyOTPAndResetPassword,
   getUserProfileByNic,
   verifyEmail,
+  azureCallback,
+  azureLogin,
   upload 
 };
