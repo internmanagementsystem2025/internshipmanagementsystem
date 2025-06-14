@@ -63,8 +63,6 @@ import VerifyOTPPage from "./components/login/VerifyOTPPage";
 import ScheduleInduction from "./admin/pages/induction/ScheduleInduction";
 import ScheduleScheme from "./admin/pages/assignscheme/ScheduleScheme";
 import InternLifeCycle from "./admin/pages/lifecycle/InternLifeCycle";
-import AcceptanceLetterRequest from "./admin/pages/lifecycle/AcceptanceLetterRequest";
-import ViewAcceptanceLetter from "./admin/pages/lifecycle/ViewAcceptanceLetter";
 import StaffHome from "./staff/pages/home/StaffHome";
 
 import InternPendingRequests from "./staff/pages/internpendingrequests/InternPendingRequests";
@@ -109,6 +107,10 @@ import LearnMorePage from "./components/login/LearnMorePage";
 import ChangePassword  from "./components/login/ChangePassword";
 import InternPlacement from "./admin/pages/internplacement/InternPlacement";
 import InternAllocations from "./staff/pages/internallocation/MyInternsAllocation";
+import GeneratePlacementLetter  from "./admin/pages/lifecycle/GeneratePlacementLetter";
+import ViewGeneratePlacementLetter  from "./admin/pages/lifecycle/ViewGeneratePlacementLetter";
+import PlacementLetterManagement  from "./admin/pages/others/PlacementLetterManagement";
+import AddNewUniversity  from "./admin/pages/others/AddNewUniversity";
 
 
 
@@ -237,6 +239,10 @@ function App() {
     "/add-employees",
     "/view-employees",
     "/intern-placement",
+    "/placement-letter-management",
+    "/add-new-university",
+    "/generate-placement-letter",
+    "/view-generate-placement-letter/preview",
   ];
 
   const staffRoutes = [
@@ -373,8 +379,9 @@ function App() {
     <Route path="/edit-scheme/:schemeId" element={<EditScheme darkMode={darkMode} />} />
     <Route path="/schedule-scheme" element={<ScheduleScheme darkMode={darkMode} />} />
     <Route path="/life-cycle" element={<InternLifeCycle darkMode={darkMode} />} />
-    <Route path="/acceptance-letter/:nic" element={<AcceptanceLetterRequest darkMode={darkMode} />} />
-    <Route path="/view-acceptance-letter/:nic" element={<ViewAcceptanceLetter darkMode={darkMode} />} />
+    <Route path="/generate-placement-letter" element={<GeneratePlacementLetter darkMode={darkMode} />} />
+    <Route path="/view-generate-placement-letter/:id" element={<ViewGeneratePlacementLetter darkMode={darkMode} />} />
+    <Route path="/view-generate-placement-letter/preview" element={<ViewGeneratePlacementLetter darkMode={darkMode} isPreview />} />
     <Route path="/admin-help-support" element={<AdminHelp darkMode={darkMode} />} />
     <Route path="/staff-intern-request" element={<StaffInternRequest darkMode={darkMode} />} />
     <Route path="/all-certificate" element={<AllCertificate darkMode={darkMode} />} />
@@ -402,6 +409,8 @@ function App() {
     <Route path="/view-certificate-request/:id" element={<ViewCertificateRequest darkMode={darkMode} />} />
     <Route path="/admin-reports" element={<AdminReports darkMode={darkMode} />} />
     <Route path="/intern-placement" element={<InternPlacement darkMode={darkMode} />} />
+    <Route path="/placement-letter-management" element={<PlacementLetterManagement darkMode={darkMode} />} />
+    <Route path="/add-new-university" element={<AddNewUniversity darkMode={darkMode} />} />
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />
