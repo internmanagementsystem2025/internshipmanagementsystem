@@ -114,6 +114,7 @@ import AddNewUniversity  from "./admin/pages/others/AddNewUniversity";
 
 
 
+
 function App() {
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("theme") === "dark"
