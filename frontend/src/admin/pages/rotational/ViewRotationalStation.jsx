@@ -17,7 +17,7 @@ import axios from "axios";
 import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 
-const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
 const ViewRotationalStation = ({ darkMode }) => {
   const { id } = useParams();

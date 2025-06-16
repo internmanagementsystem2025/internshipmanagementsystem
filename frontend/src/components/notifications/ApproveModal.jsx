@@ -19,7 +19,7 @@ const ApproveModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
       setTimeout(() => {
         onClose();
         setSuccessMessage("");
-      }, 1500); // Close after showing success message
+      }, 1500); 
     } catch (error) {
       setErrorMessage(
         error.response?.data?.message || "Failed to approve"

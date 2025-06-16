@@ -22,7 +22,7 @@ const ViewCertificateRequest = ({ darkMode }) => {
           return;
         }
 
-        const response = await axios.get(`http://localhost:5000/api/certificates/${id}`, {
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/certificates/${id}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -67,7 +67,7 @@ const ViewCertificateRequest = ({ darkMode }) => {
       const token = localStorage.getItem("token");
       
       await axios.put(
-        `http://localhost:5000/api/certificates/update-status/${id}`,
+        `${import.meta.env.VITE_BASE_URL}/api/certificates/update-status/${id}`,
         { status: "completed" },
         {
           headers: {
@@ -77,7 +77,7 @@ const ViewCertificateRequest = ({ darkMode }) => {
       );
       
       // Refresh certificate data
-      const response = await axios.get(`http://localhost:5000/api/certificates/${id}`, {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/certificates/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -409,7 +409,7 @@ const ViewCertificateRequest = ({ darkMode }) => {
                 </Card.Header>
                 <Card.Body className="text-center">
                   <img
-                    src={`http://localhost:5000/${certificate.traineeSignature}`}
+                    src={`${import.meta.env.VITE_BASE_URL}/${certificate.traineeSignature}`}
                     alt="Trainee Signature"
                     className="img-fluid border p-2 rounded"
                     style={{ maxHeight: "200px", background: "white" }}

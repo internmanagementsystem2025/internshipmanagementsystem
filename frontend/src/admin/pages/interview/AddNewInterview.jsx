@@ -14,11 +14,11 @@ import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import Notification from "../../../components/notifications/Notification";
 
-const API_BASE_URL = "http://localhost:5000/api/interviews";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/interviews`;
 
 const AddNewInterview = ({ darkMode }) => {
   const [interviewData, setInterviewData] = useState({
-    interviewName: "", // changed from interviewLabel to interviewName
+    interviewName: "", 
     interviewDate: "",
     interviewTime: "",
     location: "",
@@ -121,8 +121,8 @@ const AddNewInterview = ({ darkMode }) => {
                     <Form.Control
                       type="text"
                       placeholder="Enter Interview Name"
-                      name="interviewName" // changed to interviewName
-                      value={interviewData.interviewName} // updated value to interviewName
+                      name="interviewName" 
+                      value={interviewData.interviewName} 
                       onChange={handleInputChange}
                       className={`form-control ${
                         darkMode

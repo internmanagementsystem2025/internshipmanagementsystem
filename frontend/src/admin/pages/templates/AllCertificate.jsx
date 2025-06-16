@@ -29,7 +29,7 @@ const AllCertificate = ({ darkMode }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:5000/api/interncertificates");
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/interncertificates`);
       console.log("Fetched Certificates:", response.data);
       setCertificates(response.data);
     } catch (err) {
@@ -39,7 +39,6 @@ const AllCertificate = ({ darkMode }) => {
     }
   };
 
-  // Fetch certificates on component mount or when location.state changes
   useEffect(() => {
     refetchCertificates();
   }, [location.state?.refresh]);
@@ -54,7 +53,7 @@ const AllCertificate = ({ darkMode }) => {
     if (!certificateToDelete) return;
     
     try {
-      await axios.delete(`http://localhost:5000/api/interncertificates/${certificateToDelete._id}`);
+      await axios.delete(`${import.meta.env.VITE_BASE_URL}/api/interncertificates/${certificateToDelete._id}`);
       setShowDeleteModal(false);
       
       // Show success notification
@@ -128,7 +127,7 @@ const AllCertificate = ({ darkMode }) => {
           </Form.Group>
 
           <div className="d-flex flex-wrap justify-content-end align-items-center mt-2 mt-sm-0">
-            <Button variant="primary" onClick={() => navigate("/add-certificate")} className="mx-2 mb-2 mb-sm-0">
+            <Button variant="primary" onClick={() => navigate("/add-certificate")} className="mx-0 mb-2 mb-sm-0">
               New Certificate
             </Button>
           </div>

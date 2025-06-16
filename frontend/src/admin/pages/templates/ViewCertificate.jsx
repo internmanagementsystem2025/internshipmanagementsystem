@@ -15,7 +15,7 @@ const ViewCertificate = ({ darkMode }) => {
   useEffect(() => {
     const fetchCertificate = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/interncertificates/${id}`);
+        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/interncertificates/${id}`);
         if (!response.ok) {
           throw new Error("Failed to fetch certificate details");
         }

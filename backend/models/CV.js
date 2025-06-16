@@ -30,32 +30,27 @@ const cvSchema = new mongoose.Schema(
     roleData: {
       // Data Entry Operator specific fields
       dataEntry: {
-        proficiency: {
-          msWord: { type: Number, min: 0, max: 100, default: 0 },
-          msExcel: { type: Number, min: 0, max: 100, default: 0 },
-          msPowerPoint: { type: Number, min: 0, max: 100, default: 0 },
-        },
-        olResults: {
-          language: { type: String },
-          mathematics: { type: String },
-          science: { type: String },
-          english: { type: String },
-          history: { type: String },
-          religion: { type: String },
-          optional1: { type: String },
-          optional2: { type: String },
-          optional3: { type: String },
-        },
-        alResults: {
-          aLevelSubject1: { type: String },
-          aLevelSubject2: { type: String },
-          aLevelSubject3: { type: String },
-          git: { type: String },
-          gk: { type: String },
-        },
-        preferredLocation: { type: String },
-        otherQualifications: { type: String },
-      },
+      language: { type: String },
+      mathematics: { type: String },
+      science: { type: String },
+      english: { type: String },
+      history: { type: String },
+      religion: { type: String },
+      optional1Name: { type: String },
+      optional1Result: { type: String },
+      optional2Name: { type: String },
+      optional2Result: { type: String },
+      optional3Name: { type: String },
+      optional3Result: { type: String },
+      aLevelSubject1Name: { type: String },
+      aLevelSubject1Result: { type: String },
+      aLevelSubject2Name: { type: String },
+      aLevelSubject2Result: { type: String },
+      aLevelSubject3Name: { type: String },
+      aLevelSubject3Result: { type: String },
+      preferredLocation: { type: String },
+      otherQualifications: { type: String },
+    },
 
       // Internship specific fields
       internship: {
@@ -81,6 +76,18 @@ const cvSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    
+    // Soft Delete Implementation
+    isDeleted: { type: Boolean, default: false },
+    deletionInfo: {
+      deletedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      deletedDate: { type: Date },
+      adminName: { type: String },
+      employeeId: { type: String },
+      deletionReason: { type: String },
+      deletionComments: { type: String },
+    },
+    
     // CV Approval Status
     cvApproval: {
       cvApproved: { type: Boolean, default: false },
@@ -151,17 +158,18 @@ interview: {
 },
 
   // Induction Details
-  induction: {
+induction: {
   inductionAssigned: { type: Boolean, default: false },
   status: {
     type: String,
     enum: [
       "induction-not-scheduled",
-      "induction-scheduled",
-      "induction-completed",
-      "induction-failed",
+      "induction-scheduled", 
       "induction-assigned",
-      "induction-re-scheduled" // New status for rescheduled inductions
+      "induction-re-scheduled",
+      "induction-completed",
+      "induction-passed",
+      "induction-failed"
     ],
     default: "induction-not-scheduled",
   },
@@ -170,15 +178,27 @@ interview: {
   inductionStartDate: { type: String },
   inductionEndDate: { type: String },
   inductionLocation: { type: String },
-  rescheduleCount: { type: Number, default: 0 }, 
+  rescheduleCount: { type: Number, default: 0 },
   rescheduleHistory: [
     {
+      // Previous induction details
+      previousInductionId: { type: mongoose.Schema.Types.ObjectId, ref: "Induction" },
+      previousInductionName: { type: String },
       previousStartDate: { type: String },
       previousEndDate: { type: String },
       previousLocation: { type: String },
+      
+      // New induction details
+      newInductionId: { type: mongoose.Schema.Types.ObjectId, ref: "Induction" },
+      newInductionName: { type: String },
+      newStartDate: { type: String },
+      newEndDate: { type: String },
+      newLocation: { type: String },
+      
+      // Reschedule metadata
       rescheduledBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      rescheduledDate: { type: Date },
-      notes: { type: String }
+      rescheduledDate: { type: Date, default: Date.now },
+      reason: { type: String, required: true }
     }
   ],
   result: {
@@ -193,41 +213,142 @@ interview: {
   },
 },
 
-
     // Schema Assignment
-    schemaAssignment: {
-      schemaAssigned: { type: Boolean, default: false },
-      status: {
-        type: String,
-        enum: [
-          "schema-not-assigned",
-          "schema-assigned",
-          "schema-completed",
-          "terminated",
-        ],
-        default: "schema-not-assigned",
-      },
-      schemeId: { type: mongoose.Schema.Types.ObjectId, ref: "Scheme" },
-      schemeName: { type: String },
-      managerId: { type: String }, 
-      managerName: { type: String },
-      managerRole: { type: String },
-      internshipPeriod: { type: Number }, 
-      startDate: { type: Date },
-      endDate: { type: Date },
-      forRequest: { type: String, enum: ["yes", "no"], default: "no" },
-
-      evaluation: {
-        status: {
-          type: String,
-          enum: ["satisfactory", "unsatisfactory", "pending"],
-          default: "pending",
-        },
-        evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        evaluatedDate: { type: Date },
-        feedback: { type: String },
-      },
+   schemaAssignment: {
+  schemaAssigned: { type: Boolean, default: false },
+  status: {
+    type: String,
+    enum: [
+      "schema-not-assigned",
+      "schema-assigned",
+      "schema-completed",
+      "terminated",
+    ],
+    default: "schema-not-assigned",
+  },
+  schemeId: { type: mongoose.Schema.Types.ObjectId, ref: "Scheme" },
+  schemeName: { type: String, trim: true },
+  
+  // Manager Information
+  managerId: { type: String, trim: true }, 
+  managerName: { type: String, trim: true },
+  managerRole: { type: String, trim: true }, 
+  managerLevel: { type: Number, min: 1, max: 6 }, 
+  managerEmployeeCode: { type: String, trim: true },
+  managerEmail: { type: String, trim: true },
+  managerDepartment: { type: String, trim: true },
+  managerPosition: { type: String, trim: true },
+  
+  // Assignment Details
+  internshipPeriod: { type: Number, min: 1 }, 
+  startDate: { type: Date },
+  endDate: { type: Date },
+  forRequest: { type: String, enum: ["yes", "no"], default: "no" },
+  
+  // Assignment Metadata
+  assignedDate: { type: Date, default: Date.now },
+  assignedBy: { type: String, trim: true }, // Employee ID of who made the assignment
+  lastModified: { type: Date, default: Date.now },
+  modifiedBy: { type: String, trim: true },
+  
+  // Scheme Details (cached for performance)
+  schemeType: {
+    onRequest: { type: String, enum: ["yes", "no"] },
+    recurring: { type: String, enum: ["yes", "no"] },
+    rotational: { type: String, enum: ["yes", "no"] },
+  },
+  perHeadAllowance: { type: Number, min: 0 },
+  allowanceFrequency: {
+    type: String,
+    enum: ["daily", "weekly", "monthly"],
+  },
+  
+  // Progress Tracking
+  progressPercentage: { type: Number, default: 0, min: 0, max: 100 },
+  milestones: [{
+    name: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
+    dueDate: { type: Date },
+    completedDate: { type: Date },
+    status: { 
+      type: String, 
+      enum: ["pending", "in-progress", "completed", "overdue"],
+      default: "pending"
     },
+    completedBy: { type: String, trim: true }
+  }],
+  
+  // Evaluation System
+  evaluation: {
+    status: {
+      type: String,
+      enum: ["satisfactory", "unsatisfactory", "pending", "in-progress"],
+      default: "pending",
+    },
+    evaluatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    evaluatedDate: { type: Date },
+    feedback: { type: String, trim: true },
+    rating: { type: Number, min: 1, max: 5 }, 
+    evaluationDetails: {
+      technicalSkills: { type: Number, min: 1, max: 5 },
+      communication: { type: Number, min: 1, max: 5 },
+      teamwork: { type: Number, min: 1, max: 5 },
+      punctuality: { type: Number, min: 1, max: 5 },
+      initiative: { type: Number, min: 1, max: 5 },
+      overallPerformance: { type: Number, min: 1, max: 5 }
+    },
+    recommendations: { type: String, trim: true },
+    improvementAreas: [{ type: String, trim: true }],
+    strengths: [{ type: String, trim: true }],
+  },
+  
+  // Extension/Termination Details
+  extensionRequests: [{
+    requestedBy: { type: String, trim: true },
+    requestDate: { type: Date, default: Date.now },
+    requestedPeriod: { type: Number, min: 1 }, // Additional months
+    reason: { type: String, required: true, trim: true },
+    status: { 
+      type: String, 
+      enum: ["pending", "approved", "rejected"],
+      default: "pending"
+    },
+    approvedBy: { type: String, trim: true },
+    approvalDate: { type: Date },
+    remarks: { type: String, trim: true }
+  }],
+  
+  terminationDetails: {
+    terminatedDate: { type: Date },
+    terminatedBy: { type: String, trim: true },
+    terminationReason: { 
+      type: String,
+      enum: [
+        "completion",
+        "early-termination-performance",
+        "early-termination-conduct",
+        "mutual-agreement",
+        "personal-reasons",
+        "other"
+      ]
+    },
+    terminationRemarks: { type: String, trim: true },
+    finalEvaluation: {
+      completed: { type: Boolean, default: false },
+      rating: { type: Number, min: 1, max: 5 },
+      feedback: { type: String, trim: true }
+    }
+  },
+  
+  // Completion Certificate
+  completionCertificate: {
+    issued: { type: Boolean, default: false },
+    issuedDate: { type: Date },
+    issuedBy: { type: String, trim: true },
+    certificateNumber: { type: String, trim: true },
+    remarks: { type: String, trim: true }
+  }
+},
 
     // Overall CV Status
     currentStatus: {
@@ -381,6 +502,67 @@ cvSchema.methods.updateCurrentStatus = function () {
     this.currentStatus = "draft";
   };
 
+// Method to perform soft delete
+cvSchema.methods.softDelete = function(adminInfo) {
+  if (this.isDeleted) {
+    throw new Error('CV is already deleted');
+  }
+  
+  this.isDeleted = true;
+  this.deletionInfo = {
+    deletedBy: adminInfo.deletedBy,
+    deletedDate: new Date(),
+    adminName: adminInfo.adminName,
+    employeeId: adminInfo.employeeId,
+    deletionReason: adminInfo.deletionReason,
+    deletionComments: adminInfo.deletionComments,
+  };
+  return this.save();
+};
+
+// Method to restore soft deleted CV
+cvSchema.methods.restore = function() {
+  if (!this.isDeleted) {
+    throw new Error('CV is not deleted, cannot restore');
+  }
+  
+  this.isDeleted = false;
+  this.deletionInfo = undefined;
+  return this.save();
+};
+
+// Query middleware to exclude soft deleted documents by default
+cvSchema.pre(/^find/, function() {
+  const options = this.getOptions();
+  
+  // Only exclude deleted documents if not explicitly including them
+  if (!options.includeDeleted) {
+    const currentQuery = this.getQuery();
+    
+    // Only add the exclusion if isDeleted is not already specified in query
+    if (!currentQuery.hasOwnProperty('isDeleted')) {
+      this.where({ isDeleted: { $ne: true } });
+    }
+  }
+});
+
+// Static method to find deleted CVs
+cvSchema.statics.findDeleted = function(options = {}) {
+  return this.find({ isDeleted: true }).setOptions({ includeDeleted: true });
+};
+
+cvSchema.statics.findActive = function() {
+  return this.find({ isDeleted: { $ne: true } });
+};
+
+cvSchema.statics.countDeleted = function() {
+  return this.countDocuments({ isDeleted: true }).setOptions({ includeDeleted: true });
+};
+
+cvSchema.statics.countActive = function() {
+  return this.countDocuments({ isDeleted: { $ne: true } });
+};
+
 // Add indexes
 // Role-Specific Indexes
 cvSchema.index({ "roleData.internship.categoryOfApply": 1 }); 
@@ -392,7 +574,11 @@ cvSchema.index({ selectedRole: 1, "cvApproval.status": 1 });
 // Text Index for Search (Name/NIC)
 cvSchema.index({ fullName: "text", nic: "text" });
 
-// Unique NIC Index (Prevent duplicates)
-cvSchema.index({ nic: 1 }, { unique: true });
+// Unique NIC Index (Prevent duplicates) - only for non-deleted documents
+cvSchema.index({ nic: 1, isDeleted: 1 }, { unique: true });
+
+// Soft delete indexes
+cvSchema.index({ isDeleted: 1 });
+cvSchema.index({ "deletionInfo.deletedDate": 1 });
 
 module.exports = mongoose.model("CV", cvSchema);

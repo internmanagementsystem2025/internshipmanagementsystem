@@ -73,7 +73,6 @@ const createCV = async (req, res) => {
 
     // Create user account first if created by admin
     if (createdByAdmin) {
-      // Check if user already exists with this email or NIC
       const existingUser = await User.findOne({
         $or: [{ email: req.body.emailAddress }, { nic: req.body.nic }],
       });
@@ -91,7 +90,7 @@ const createCV = async (req, res) => {
         username,
         email: req.body.emailAddress,
         password: hashedPassword,
-        userType: "individual", // This creates the user with type "individual"
+        userType: "individual", 
         nic: req.body.nic,
         fullName: req.body.fullName,
         contactNumber: req.body.mobileNumber,
@@ -100,52 +99,45 @@ const createCV = async (req, res) => {
       });
     }
 
-    // Correctly structure data according to schema
-    const selectedRole = req.body.selectedRole;
-
     // Create properly structured roleData based on selected role
-    const roleData = {
-      dataEntry:
-        selectedRole === "dataEntry"
-          ? {
-              proficiency: {
-                msWord: parseInt(req.body["proficiency[msWord]"] || 0),
-                msExcel: parseInt(req.body["proficiency[msExcel]"] || 0),
-                msPowerPoint: parseInt(
-                  req.body["proficiency[msPowerPoint]"] || 0
-                ),
-              },
-              olResults: {
-                language: req.body["olResults[language]"] || "",
-                mathematics: req.body["olResults[mathematics]"] || "",
-                science: req.body["olResults[science]"] || "",
-                english: req.body["olResults[english]"] || "",
-                history: req.body["olResults[history]"] || "",
-                religion: req.body["olResults[religion]"] || "",
-                optional1: req.body["olResults[optional1]"] || "",
-                optional2: req.body["olResults[optional2]"] || "",
-                optional3: req.body["olResults[optional3]"] || "",
-              },
-              alResults: {
-                aLevelSubject1: req.body["alResults[aLevelSubject1]"] || "",
-                aLevelSubject2: req.body["alResults[aLevelSubject2]"] || "",
-                aLevelSubject3: req.body["alResults[aLevelSubject3]"] || "",
-                git: req.body["alResults[git]"] || "",
-                gk: req.body["alResults[gk]"] || "",
-              },
-              preferredLocation: req.body.preferredLocation || "",
-              otherQualifications: req.body.otherQualifications || "",
-            }
-          : null,
-      internship:
-        selectedRole === "internship"
-          ? {
-              categoryOfApply: req.body.categoryOfApply || "",
-              higherEducation: req.body.higherEducation || "",
-              otherQualifications: req.body.otherQualifications || "",
-            }
-          : null,
-    };
+    const selectedRole = req.body.selectedRole;
+    const roleData = {};
+    
+    if (selectedRole === "dataEntry") {
+      roleData.dataEntry = {
+        // O/L Results - FIXED: Use correct field names from req.body
+        language: req.body.language || "",
+        mathematics: req.body.mathematics || "",
+        science: req.body.science || "",
+        english: req.body.english || "",
+        history: req.body.history || "",
+        religion: req.body.religion || "",
+        optional1Name: req.body.optional1Name || "",
+        optional1Result: req.body.optional1Result || "",
+        optional2Name: req.body.optional2Name || "",
+        optional2Result: req.body.optional2Result || "",
+        optional3Name: req.body.optional3Name || "",
+        optional3Result: req.body.optional3Result || "",
+        
+        // A/L Results - FIXED: Use correct field names from req.body
+        aLevelSubject1Name: req.body.aLevelSubject1Name || "",
+        aLevelSubject1Result: req.body.aLevelSubject1Result || "",
+        aLevelSubject2Name: req.body.aLevelSubject2Name || "",
+        aLevelSubject2Result: req.body.aLevelSubject2Result || "",
+        aLevelSubject3Name: req.body.aLevelSubject3Name || "",
+        aLevelSubject3Result: req.body.aLevelSubject3Result || "",
+        
+        // Other fields - FIXED: These were already correct
+        preferredLocation: req.body.preferredLocation || "",
+        otherQualifications: req.body.otherQualifications || ""
+      };
+    } else if (selectedRole === "internship") {
+      roleData.internship = {
+        categoryOfApply: req.body.categoryOfApply || "",
+        higherEducation: req.body.higherEducation || "",
+        otherQualifications: req.body.otherQualifications || ""
+      };
+    }
 
     // Prepare CV data with proper approval status
     const cvData = {
@@ -164,7 +156,7 @@ const createCV = async (req, res) => {
       emailAddress: req.body.emailAddress,
       institute: req.body.institute,
       selectedRole: selectedRole,
-      roleData: roleData,
+      roleData: roleData, // This will now contain the correct data structure
       emergencyContactName1: req.body.emergencyContactName1,
       emergencyContactNumber1: req.body.emergencyContactNumber1,
       emergencyContactName2: req.body.emergencyContactName2 || "", 
@@ -522,7 +514,7 @@ const getAllCVsWithFiltering = async (req, res) => {
     const cvs = await CV.find(query)
       .sort({ applicationDate: -1 })
       .select(
-        "fullName nic refNo mobileNumber userType selectedRole applicationDate district institute referredBy cvApproval currentStatus roleData.internship.categoryOfApply roleData.dataEntry.preferredLocation internshipStartDate internshipEndDate internshipPeriod"
+        "fullName nic refNo mobileNumber gender userType selectedRole applicationDate district institute referredBy cvApproval currentStatus roleData.internship.categoryOfApply roleData.dataEntry.preferredLocation internshipStartDate internshipEndDate internshipPeriod"
       )
       .lean();
     
@@ -676,8 +668,66 @@ const updateCV = async (req, res) => {
   }
 };
 
-// Delete CV by ID
-const deleteCV = async (req, res) => {
+const softDeleteCV = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminName, employeeId, deletionReason, deletionComments } = req.body;
+
+    // Validate CV ID format
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid CV ID format" });
+    }
+
+    // Validate required fields
+    if (!adminName || !employeeId || !deletionReason) {
+      return res.status(400).json({ 
+        message: "Admin name, employee ID, and deletion reason are required" 
+      });
+    }
+
+    // Find the CV (exclude already deleted ones)
+    const cv = await CV.findById(id);
+    if (!cv) {
+      return res.status(404).json({ message: "CV not found" });
+    }
+
+    // Check if CV is already deleted
+    if (cv.isDeleted) {
+      return res.status(400).json({ message: "CV is already deleted" });
+    }
+
+    // Perform soft delete
+    const adminInfo = {
+      deletedBy: req.user?.id,
+      adminName: adminName.trim(),
+      employeeId: employeeId.trim(),
+      deletionReason: deletionReason.trim(),
+      deletionComments: deletionComments?.trim() || "",
+      deletedDate: new Date()
+    };
+
+    await cv.softDelete(adminInfo);
+
+    res.status(200).json({ 
+      message: "CV deleted successfully",
+      deletionInfo: {
+        refNo: cv.refNo,
+        deletedBy: adminInfo.adminName,
+        deletedDate: adminInfo.deletedDate,
+        reason: adminInfo.deletionReason
+      }
+    });
+  } catch (error) {
+    console.error("Error soft deleting CV:", error);
+    res.status(500).json({ 
+      message: "Failed to delete CV", 
+      error: error.message 
+    });
+  }
+};
+
+// Restore soft deleted CV
+const restoreCV = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -685,20 +735,141 @@ const deleteCV = async (req, res) => {
       return res.status(400).json({ message: "Invalid CV ID format" });
     }
 
-    const cv = await CV.findByIdAndDelete(id);
+    // Find the CV including deleted ones
+    const cv = await CV.findOne({ _id: id }).setOptions({ includeDeleted: true });
     if (!cv) {
       return res.status(404).json({ message: "CV not found" });
     }
 
-    res.status(200).json({ message: "CV deleted successfully" });
+    if (!cv.isDeleted) {
+      return res.status(400).json({ message: "CV is not deleted" });
+    }
+
+    await cv.restore();
+
+    res.status(200).json({ 
+      message: "CV restored successfully",
+      restoredCV: {
+        refNo: cv.refNo,
+        fullName: cv.fullName
+      }
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to delete CV", error: error.message });
+    console.error("Error restoring CV:", error);
+    res.status(500).json({ 
+      message: "Failed to restore CV", 
+      error: error.message 
+    });
   }
 };
 
-// Get CVs for logged-in user
+// Get all deleted CVs (for admin review)
+const getDeletedCVs = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const deletedCVs = await CV.find({ isDeleted: true })
+      .select('refNo fullName nic deletionInfo applicationDate')
+      .populate('deletionInfo.deletedBy', 'name email')
+      .sort({ 'deletionInfo.deletedDate': -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await CV.countDocuments({ isDeleted: true });
+
+    res.status(200).json({
+      deletedCVs,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching deleted CVs:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch deleted CVs", 
+      error: error.message 
+    });
+  }
+};
+
+// Get user's deleted CVs (for notification) - FIXED ROUTE
+const getUserDeletedCVs = async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    if (!userEmail) {
+      return res.status(400).json({ message: "User email not found in request" });
+    }
+
+    const deletedCVs = await CV.find({ 
+      emailAddress: userEmail, 
+      isDeleted: true 
+    })
+    .select('refNo fullName nic deletionInfo applicationDate selectedRole')
+    .populate('deletionInfo.deletedBy', 'name email')
+    .sort({ 'deletionInfo.deletedDate': -1 })
+    .setOptions({ includeDeleted: true });
+
+    res.status(200).json({
+      deletedCVs,
+      count: deletedCVs.length
+    });
+  } catch (error) {
+    console.error("Error fetching user deleted CVs:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch deleted CVs", 
+      error: error.message 
+    });
+  }
+};
+
+// Permanently delete CV (hard delete - use with extreme caution)
+const permanentlyDeleteCV = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { confirmDelete } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid CV ID format" });
+    }
+
+    if (confirmDelete !== "PERMANENTLY_DELETE") {
+      return res.status(400).json({ 
+        message: "Confirmation text 'PERMANENTLY_DELETE' is required" 
+      });
+    }
+
+    // Find and permanently delete
+    const cv = await CV.findOneAndDelete({ _id: id, isDeleted: true });
+    if (!cv) {
+      return res.status(404).json({ 
+        message: "CV not found or not in deleted state" 
+      });
+    }
+
+    res.status(200).json({ 
+      message: "CV permanently deleted",
+      deletedCV: {
+        refNo: cv.refNo,
+        fullName: cv.fullName
+      }
+    });
+  } catch (error) {
+    console.error("Error permanently deleting CV:", error);
+    res.status(500).json({ 
+      message: "Failed to permanently delete CV", 
+      error: error.message 
+    });
+  }
+};
+
+
+
+// Get CVs for logged-in user (active only)
 const getUserCVs = async (req, res) => {
   try {
     const userEmail = req.user.email;
@@ -709,7 +880,11 @@ const getUserCVs = async (req, res) => {
         .json({ message: "User email not found in request" });
     }
 
-    const cvs = await CV.find({ emailAddress: userEmail });
+    // Only get active CVs (not deleted)
+    const cvs = await CV.find({ 
+      emailAddress: userEmail,
+      isDeleted: { $ne: true }
+    });
 
     if (!cvs.length) {
       return res.status(404).json({ message: "No CVs found." });
@@ -743,6 +918,63 @@ const getCVByNIC = async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to fetch CV", error: error.message });
+  }
+};
+
+// Get CV by User ID
+const getCVByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    // Find CV by userId and exclude deleted CVs
+    const cv = await CV.findOne({ 
+      userId: userId,
+      isDeleted: { $ne: true }
+    }).populate('userId', 'fullName email'); // Optional: populate user details
+
+    if (!cv) {
+      return res.status(404).json({ message: "CV not found for this User ID" });
+    }
+
+    res.status(200).json(cv);
+  } catch (error) {
+    console.error("Error fetching CV by User ID:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch CV", error: error.message });
+  }
+};
+
+// Alternative version: Get all CVs for a specific user ID
+const getAllCVsByUserId = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    // Find all CVs by userId and exclude deleted CVs
+    const cvs = await CV.find({ 
+      userId: userId,
+      isDeleted: { $ne: true }
+    }).populate('userId', 'fullName email')
+      .sort({ applicationDate: -1 }); // Sort by most recent first
+
+    if (!cvs.length) {
+      return res.status(404).json({ message: "No CVs found for this User ID" });
+    }
+
+    res.status(200).json(cvs);
+  } catch (error) {
+    console.error("Error fetching CVs by User ID:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch CVs", error: error.message });
   }
 };
 
@@ -1202,7 +1434,7 @@ const assignInduction = async (req, res) => {
       id,
       {
         $set: {
-          "interview.status": "interview-skipped",
+          "interview.status": "interview-passed",
           "induction.status": "induction-assigned",
           "induction.inductionAssigned": true,
           "induction.inductionId": induction._id,
@@ -1329,8 +1561,14 @@ const getInterviewPassedCVs = async (req, res) => {
 // Get CVs assigned to inductions
 const getCVsAssignedToInduction = async (req, res) => {
   try {
+    // Include both induction-assigned and induction-re-scheduled statuses
     const cvs = await CV.find({
-      "induction.status": "induction-assigned",
+      $or: [
+        { "induction.status": "induction-assigned" },
+        { "induction.status": "induction-re-scheduled" },
+        { "currentStatus": "induction-assigned" },
+        { "currentStatus": "induction-re-scheduled" }
+      ]
     })
       .populate({
         path: "interview.interviews.interviewId",
@@ -1367,8 +1605,12 @@ const getCVsAssignedToInduction = async (req, res) => {
             induction?.inductionId?.induction ||
             induction?.inductionName ||
             "N/A",
-          startDate: induction?.inductionId?.startDate || "N/A",
-          endDate: induction?.inductionId?.endDate || "N/A",
+          startDate: induction?.inductionId?.startDate || 
+            induction?.inductionStartDate || "N/A",
+          endDate: induction?.inductionId?.endDate || 
+            induction?.inductionEndDate || "N/A",
+          location: induction?.inductionId?.location || 
+            induction?.inductionLocation || "N/A",
         },
       };
     });
@@ -1387,120 +1629,170 @@ const getCVsAssignedToInduction = async (req, res) => {
 const rescheduleInduction = async (req, res) => {
   try {
     const { id } = req.params;
-    const { newInductionId, startDate, endDate, location, notes } = req.body;
+    const { newInductionId, currentInductionId, reason } = req.body;
 
+    // Validate CV ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid CV ID format" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid CV ID format" 
+      });
+    }
+
+    // Validate new induction ID
+    if (!newInductionId || !mongoose.Types.ObjectId.isValid(newInductionId)) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Valid new induction ID is required" 
+      });
     }
 
     // Find the CV document
-    const cv = await CV.findById(id);
+    const cv = await CV.findById(id).populate("userId", "email fullName");
     if (!cv) {
-      return res.status(404).json({ message: "CV not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "CV not found" 
+      });
     }
 
     // Check if there's an induction to reschedule
     if (!cv.induction?.inductionId) {
-      return res.status(400).json({ message: "No induction found to reschedule" });
+      return res.status(400).json({ 
+        success: false,
+        message: "No induction found to reschedule" 
+      });
+    }
+
+    // Find the new induction
+    const newInduction = await Induction.findById(newInductionId);
+    if (!newInduction) {
+      return res.status(404).json({ 
+        success: false,
+        message: "New induction program not found" 
+      });
+    }
+
+    // Validate that the new induction has all required fields
+    const requiredFields = ["induction", "startDate", "endDate", "location"];
+    const missingFields = requiredFields.filter((field) => !newInduction[field]);
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "New induction program is incomplete",
+        missingFields,
+        details: `Missing: ${missingFields.join(", ")}`,
+      });
     }
 
     // Store the current induction details for history
     const previousInduction = {
+      inductionId: cv.induction.inductionId,
+      inductionName: cv.induction.inductionName,
       inductionStartDate: cv.induction.inductionStartDate,
       inductionEndDate: cv.induction.inductionEndDate,
       inductionLocation: cv.induction.inductionLocation || "Not specified"
     };
 
-    // If a new induction ID is provided, fetch the new induction details
-    let newInductionDetails = {};
-    if (newInductionId && mongoose.Types.ObjectId.isValid(newInductionId)) {
-      const newInduction = await Induction.findById(newInductionId);
-      if (newInduction) {
-        newInductionDetails = {
-          inductionId: newInductionId,
-          inductionName: newInduction.induction,
-          inductionStartDate: newInduction.startDate,
-          inductionEndDate: newInduction.endDate,
-          inductionLocation: newInduction.location 
-        };
-      }
-    }
-
-    // Create a rescheduling history entry if it doesn't exist
-    if (!cv.induction.rescheduleHistory) {
-      cv.induction.rescheduleHistory = [];
-    }
-
-    // Create a reschedule history entry
+    // Create reschedule history entry
     const rescheduleEntry = {
+      previousInductionId: previousInduction.inductionId,
+      previousInductionName: previousInduction.inductionName,
       previousStartDate: previousInduction.inductionStartDate,
       previousEndDate: previousInduction.inductionEndDate,
       previousLocation: previousInduction.inductionLocation,
+      newInductionId: newInduction._id,
+      newInductionName: newInduction.induction,
+      newStartDate: newInduction.startDate,
+      newEndDate: newInduction.endDate,
+      newLocation: newInduction.location,
       rescheduledBy: req.user.id,
       rescheduledDate: new Date(),
-      notes: notes || "No additional notes provided"
+      reason: reason || "No reason provided"
     };
 
-    // Update induction details
-    cv.induction = {
-      ...cv.induction,
-      status: "induction-re-scheduled", 
-      inductionAssigned: true, 
-      inductionId: newInductionDetails.inductionId || cv.induction.inductionId,
-      inductionName: newInductionDetails.inductionName || cv.induction.inductionName,
-      inductionStartDate: newInductionDetails.inductionStartDate || startDate || cv.induction.inductionStartDate,
-      inductionEndDate: newInductionDetails.inductionEndDate || endDate || cv.induction.inductionEndDate,
-      inductionLocation: newInductionDetails.inductionLocation || location || cv.induction.inductionLocation,
-      rescheduleCount: (cv.induction.rescheduleCount || 0) + 1,
-      rescheduleHistory: [
-        ...(cv.induction.rescheduleHistory || []),
-        rescheduleEntry
-      ],
-      result: { 
-        ...cv.induction.result,
-        status: "induction-pending",
-      }
-    };
+    // Update the CV with new induction details
+    const updatedCV = await CV.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "induction.status": "induction-re-scheduled",
+          "induction.inductionAssigned": true,
+          "induction.inductionId": newInduction._id,
+          "induction.inductionName": newInduction.induction,
+          "induction.inductionStartDate": newInduction.startDate,
+          "induction.inductionEndDate": newInduction.endDate,
+          "induction.inductionLocation": newInduction.location,
+          "induction.rescheduleCount": (cv.induction.rescheduleCount || 0) + 1,
+          "induction.result.status": "induction-pending",
+          "currentStatus": "induction-re-scheduled"
+        },
+        $push: {
+          "induction.rescheduleHistory": rescheduleEntry
+        }
+      },
+      { new: true }
+    ).populate("userId", "email fullName");
 
-    cv.currentStatus = "induction-re-scheduled";
-    
-    cv._skipStatusUpdate = true;
-    
-    await cv.save();
+    if (!updatedCV) {
+      return res.status(404).json({
+        success: false,
+        message: "Failed to update CV record"
+      });
+    }
 
-    // Populate for response
-    await cv.populate("userId", "email fullName");
-
+    // Send email notification about rescheduled induction
     try {
-      // Send email notification about rescheduled induction
-      if (cv.userId && cv.userId.email) {
-        const fullName = cv.userId.fullName || cv.fullName || "Applicant";
-        
-        // FIXED: Use the updated induction location directly
+      const recipientEmail = updatedCV.userId?.email;
+      const recipientName = updatedCV.userId?.fullName || updatedCV.fullName || "Applicant";
+      
+      if (recipientEmail) {
         await sendInductionRescheduleEmail({
-          recipientName: fullName,
-          recipientEmail: cv.userId.email,
-          refNo: cv.refNo,
-          inductionName: cv.induction.inductionName,
-          startDate: cv.induction.inductionStartDate,
-          endDate: cv.induction.inductionEndDate,
-          location: cv.induction.inductionLocation, 
-          notes: notes || "No additional notes provided"
+          recipientName: recipientName,
+          recipientEmail: recipientEmail,
+          refNo: updatedCV.refNo || "N/A",
+          inductionName: newInduction.induction,
+          startDate: newInduction.startDate,
+          endDate: newInduction.endDate,
+          location: newInduction.location,
+          previousInductionName: previousInduction.inductionName,
+          previousStartDate: previousInduction.inductionStartDate,
+          previousEndDate: previousInduction.inductionEndDate,
+          reason: reason || "No reason provided"
         });
+        console.log(`Reschedule email successfully sent to ${recipientEmail}`);
+      } else {
+        console.warn("No recipient email found for induction reschedule notification");
       }
     } catch (emailError) {
       console.error("Failed to send induction reschedule email:", emailError);
+      // Don't fail the entire operation if email fails
     }
 
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
       message: "Induction rescheduled successfully",
-      cv: cv
+      cv: updatedCV,
+      rescheduleDetails: {
+        previousInduction: previousInduction,
+        newInduction: {
+          id: newInduction._id,
+          name: newInduction.induction,
+          startDate: newInduction.startDate,
+          endDate: newInduction.endDate,
+          location: newInduction.location
+        },
+        reason: reason
+      }
     });
+
   } catch (error) {
     console.error("Error rescheduling induction:", error);
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Failed to reschedule induction",
-      error: error.message,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
@@ -1513,115 +1805,248 @@ const passInduction = async (req, res) => {
     const { feedback } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid CV ID format" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid CV ID format" 
+      });
     }
 
     const cv = await CV.findById(id).populate("userId", "email fullName");
     if (!cv) {
-      return res.status(404).json({ message: "CV not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "CV not found" 
+      });
     }
 
-    // Update induction status
-    cv.induction.result = {
-      status: "induction-passed",
-      evaluatedDate: new Date(),
-      evaluatedBy: req.user.id || null,
-      feedback: feedback || null,
-    };
-    cv.induction.status = "induction-completed";
-    cv.currentStatus = "induction-passed";
+    // Check if CV has an induction assigned
+    if (!cv.induction || !cv.induction.inductionId) {
+      return res.status(400).json({
+        success: false,
+        message: "No induction found for this CV"
+      });
+    }
 
-    await cv.save();
+    // Check if induction is in a valid state to be passed
+    const validStatuses = [
+      "induction-assigned", 
+      "induction-re-scheduled", 
+      "induction-pending"
+    ];
+    
+    if (!validStatuses.includes(cv.induction.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot pass induction. Current status: ${cv.induction.status}`
+      });
+    }
+
+    // Update induction result and status
+    const updatedCV = await CV.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "induction.result.status": "induction-passed",
+          "induction.result.evaluatedDate": new Date(),
+          "induction.result.evaluatedBy": req.user.id || null,
+          "induction.result.feedback": feedback || null,
+          "induction.status": "induction-completed",
+          "currentStatus": "induction-passed"
+        }
+      },
+      { new: true }
+    ).populate("userId", "email fullName");
+
+    if (!updatedCV) {
+      return res.status(404).json({
+        success: false,
+        message: "Failed to update CV record"
+      });
+    }
 
     // Send email notification
     try {
-      if (cv.userId && cv.userId.email) {
-        const fullName = cv.userId.fullName || cv.fullName || "Applicant";
+      const recipientEmail = updatedCV.userId?.email;
+      const recipientName = updatedCV.userId?.fullName || updatedCV.fullName || "Applicant";
+      
+      if (recipientEmail) {
         const nextSteps = feedback || "HR will contact you shortly with details regarding your internship placement.";
         
         await sendInductionPassEmail({
-          recipientName: fullName,
-          recipientEmail: cv.userId.email,
-          refNo: cv.refNo,
-          inductionName: cv.induction.inductionName,
-          nextSteps: nextSteps
+          recipientName: recipientName,
+          recipientEmail: recipientEmail,
+          refNo: updatedCV.refNo || "N/A",
+          inductionName: updatedCV.induction.inductionName,
+          nextSteps: nextSteps,
+          // Include reschedule information if applicable
+          wasRescheduled: (updatedCV.induction.rescheduleCount || 0) > 0,
+          rescheduleCount: updatedCV.induction.rescheduleCount || 0
         });
+        console.log(`Induction pass email successfully sent to ${recipientEmail}`);
+      } else {
+        console.warn("No recipient email found for induction pass notification");
       }
     } catch (emailError) {
       console.error("Failed to send induction pass email:", emailError);
+      // Don't fail the entire operation if email fails
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Induction marked as passed successfully and notification sent",
-      cv: cv,
+      cv: updatedCV,
+      inductionDetails: {
+        status: "induction-passed",
+        inductionName: updatedCV.induction.inductionName,
+        wasRescheduled: (updatedCV.induction.rescheduleCount || 0) > 0,
+        rescheduleCount: updatedCV.induction.rescheduleCount || 0,
+        evaluatedDate: updatedCV.induction.result.evaluatedDate,
+        feedback: feedback
+      }
     });
+
   } catch (error) {
     console.error("Error passing induction:", error);
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Failed to update induction status",
-      error: error.message,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
 
-// Updated Fail induction with email notification
+// Updated Fail induction with email notification - handles rescheduled inductions
 const failInduction = async (req, res) => {
   try {
     const { id } = req.params;
-    const { feedback } = req.body;
+    const { feedback, allowReschedule = false } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid CV ID format" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid CV ID format" 
+      });
     }
 
     const cv = await CV.findById(id).populate("userId", "email fullName");
     if (!cv) {
-      return res.status(404).json({ message: "CV not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "CV not found" 
+      });
     }
 
-    // Update induction status
-    cv.induction.result = {
-      status: "induction-failed",
-      evaluatedDate: new Date(),
-      evaluatedBy: req.user.id || null,
-      feedback: feedback || null,
-    };
-    cv.induction.status = "induction-failed";
-    cv.currentStatus = "induction-failed";
+    // Check if CV has an induction assigned
+    if (!cv.induction || !cv.induction.inductionId) {
+      return res.status(400).json({
+        success: false,
+        message: "No induction found for this CV"
+      });
+    }
 
-    await cv.save();
+    // Check if induction is in a valid state to be failed
+    const validStatuses = [
+      "induction-assigned", 
+      "induction-re-scheduled", 
+      "induction-pending"
+    ];
+    
+    if (!validStatuses.includes(cv.induction.status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot fail induction. Current status: ${cv.induction.status}`
+      });
+    }
+
+    // Determine the final status based on reschedule policy
+    const rescheduleCount = cv.induction.rescheduleCount || 0;
+    const maxReschedules = 2; // You can make this configurable
+    
+    let finalStatus = "induction-failed";
+    let nextAction = "terminated";
+    
+    // If reschedule is allowed and haven't exceeded max reschedules
+    if (allowReschedule && rescheduleCount < maxReschedules) {
+      finalStatus = "induction-failed-pending-reschedule";
+      nextAction = "reschedule-available";
+    }
+
+    // Update induction result and status
+    const updatedCV = await CV.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          "induction.result.status": "induction-failed",
+          "induction.result.evaluatedDate": new Date(),
+          "induction.result.evaluatedBy": req.user.id || null,
+          "induction.result.feedback": feedback || null,
+          "induction.status": finalStatus,
+          "currentStatus": finalStatus,
+          "induction.nextAction": nextAction
+        }
+      },
+      { new: true }
+    ).populate("userId", "email fullName");
+
+    if (!updatedCV) {
+      return res.status(404).json({
+        success: false,
+        message: "Failed to update CV record"
+      });
+    }
 
     // Send email notification
     try {
-      if (cv.userId && cv.userId.email) {
-        const fullName = cv.userId.fullName || cv.fullName || "Applicant";
-        
+      const recipientEmail = updatedCV.userId?.email;
+      const recipientName = updatedCV.userId?.fullName || updatedCV.fullName || "Applicant";
+      
+      if (recipientEmail) {
         await sendInductionFailEmail({
-          recipientName: fullName,
-          recipientEmail: cv.userId.email,
-          refNo: cv.refNo,
-          inductionName: cv.induction.inductionName,
-          feedback: feedback || "Thank you for your participation in our induction program."
+          recipientName: recipientName,
+          recipientEmail: recipientEmail,
+          refNo: updatedCV.refNo || "N/A",
+          inductionName: updatedCV.induction.inductionName,
+          feedback: feedback || "Thank you for your participation in our induction program.",
+          // Include reschedule information
+          wasRescheduled: rescheduleCount > 0,
+          rescheduleCount: rescheduleCount,
+          canReschedule: nextAction === "reschedule-available",
+          maxReschedules: maxReschedules
         });
+        console.log(`Induction fail email successfully sent to ${recipientEmail}`);
+      } else {
+        console.warn("No recipient email found for induction fail notification");
       }
     } catch (emailError) {
       console.error("Failed to send induction fail email:", emailError);
+      // Don't fail the entire operation if email fails
     }
 
-    res.status(200).json({
+    return res.status(200).json({
+      success: true,
       message: "Induction marked as failed successfully and notification sent",
-      cv: cv,
+      cv: updatedCV,
+      inductionDetails: {
+        status: finalStatus,
+        inductionName: updatedCV.induction.inductionName,
+        wasRescheduled: rescheduleCount > 0,
+        rescheduleCount: rescheduleCount,
+        canReschedule: nextAction === "reschedule-available",
+        maxReschedules: maxReschedules,
+        evaluatedDate: updatedCV.induction.result.evaluatedDate,
+        feedback: feedback
+      }
     });
+
   } catch (error) {
     console.error("Error failing induction:", error);
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       message: "Failed to update induction status",
-      error: error.message,
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };
-
 
 // ------------------------------------------------------------ Controllers for Rotational Section --------------------------------------------------------------------
 
@@ -1693,11 +2118,23 @@ const getCVsForSchemeAssignment = async (req, res) => {
 const assignSchemeToCV = async (req, res) => {
   try {
     const { id } = req.params;
-    const { schemeId, managerId, internshipPeriod, startDate, forRequest } = req.body;
+    const { 
+      schemeId, 
+      managerLevel, 
+      internshipPeriod, 
+      startDate, 
+      forRequest,
+      milestones // Optional milestones array
+    } = req.body;
 
     // Validate input
-    if (!schemeId || !managerId || !internshipPeriod || !startDate) {
+    if (!schemeId || !managerLevel || !internshipPeriod || !startDate) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Validate manager level (1-6)
+    if (managerLevel < 1 || managerLevel > 6) {
+      return res.status(400).json({ message: "Manager level must be between 1 and 6" });
     }
 
     // Get scheme details
@@ -1706,55 +2143,90 @@ const assignSchemeToCV = async (req, res) => {
       return res.status(404).json({ message: "Scheme not found" });
     }
 
+    // Check if scheme is active
+    if (!scheme.isActive) {
+      return res.status(400).json({ message: "Scheme is not active" });
+    }
+
     // Check if scheme has available slots
     if (scheme.totalEmptyCount <= 0) {
       return res.status(400).json({ message: "No available slots in this scheme" });
     }
 
-    // Get manager details from scheme
-    let managerDetails;
-    switch (managerId) {
-      case "generalManager":
-        managerDetails = scheme.generalManager;
-        break;
-      case "deputyManager":
-        managerDetails = scheme.deputyManager;
-        break;
-      case "supervisor":
-        managerDetails = scheme.supervisor;
-        break;
-      default:
-        return res.status(400).json({ message: "Invalid manager ID" });
+    // Get manager details from scheme based on level
+    const levelKey = `level${managerLevel}Manager`;
+    const managerDetails = scheme[levelKey];
+
+    if (!managerDetails || !managerDetails.employeeId) {
+      return res.status(400).json({ 
+        message: `No manager assigned at level ${managerLevel} for this scheme` 
+      });
     }
 
     // Check if manager has available allocation
     if (managerDetails.availableAllocation <= 0) {
-      return res.status(400).json({ message: "Manager has no available allocation" });
+      return res.status(400).json({ 
+        message: `Manager at level ${managerLevel} has no available allocation` 
+      });
     }
 
     // Calculate end date based on start date and internship period
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + parseInt(internshipPeriod));
 
-    // Prepare update data
+    // Prepare comprehensive update data
     const updateData = {
       $set: {
+        // Basic Assignment Info
         "schemaAssignment.schemaAssigned": true,
         "schemaAssignment.status": "schema-assigned",
         "schemaAssignment.schemeId": schemeId,
         "schemaAssignment.schemeName": scheme.schemeName,
-        "schemaAssignment.managerId": managerId,
+        
+        // Manager Information
+        "schemaAssignment.managerId": managerDetails.employeeId,
         "schemaAssignment.managerName": managerDetails.name,
-        "schemaAssignment.managerRole": managerId
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (str) => str.toUpperCase()),
+        "schemaAssignment.managerRole": `Level ${managerLevel} Manager - ${managerDetails.position}`,
+        "schemaAssignment.managerLevel": managerLevel,
+        "schemaAssignment.managerEmployeeCode": managerDetails.employeeCode,
+        "schemaAssignment.managerEmail": managerDetails.email,
+        "schemaAssignment.managerDepartment": managerDetails.department,
+        "schemaAssignment.managerPosition": managerDetails.position,
+        
+        // Assignment Details
         "schemaAssignment.internshipPeriod": internshipPeriod,
         "schemaAssignment.startDate": startDate,
         "schemaAssignment.endDate": endDate,
         "schemaAssignment.forRequest": forRequest || "no",
+        
+        // Assignment Metadata
+        "schemaAssignment.assignedDate": new Date(),
+        "schemaAssignment.assignedBy": req.user?.employeeId || "system",
+        "schemaAssignment.lastModified": new Date(),
+        "schemaAssignment.modifiedBy": req.user?.employeeId || "system",
+        
+        // Scheme Details (cached)
+        "schemaAssignment.schemeType.onRequest": scheme.onRequest,
+        "schemaAssignment.schemeType.recurring": scheme.recurring,
+        "schemaAssignment.schemeType.rotational": scheme.rotational,
+        "schemaAssignment.perHeadAllowance": scheme.perHeadAllowance,
+        "schemaAssignment.allowanceFrequency": scheme.allowanceFrequency,
+        
+        // Progress Tracking
+        "schemaAssignment.progressPercentage": 0,
+        
+        // Update main status
         currentStatus: "schema-assigned",
       },
     };
+
+    // Add milestones if provided
+    if (milestones && Array.isArray(milestones) && milestones.length > 0) {
+      updateData.$set["schemaAssignment.milestones"] = milestones.map(milestone => ({
+        ...milestone,
+        status: milestone.status || "pending"
+      }));
+    }
 
     // If scheme is rotational, set isRotational to true
     if (scheme.rotational === "yes") {
@@ -1772,59 +2244,84 @@ const assignSchemeToCV = async (req, res) => {
     scheme.totalAllocatedCount += 1;
     scheme.totalEmptyCount = scheme.totalAllocation - scheme.totalAllocatedCount;
 
-    // Update manager's assigned count
-    switch (managerId) {
-      case "generalManager":
-        scheme.generalManager.assignedCount += 1;
-        scheme.generalManager.availableAllocation =
-          scheme.generalManager.allocationCount - scheme.generalManager.assignedCount;
-        break;
-      case "deputyManager":
-        scheme.deputyManager.assignedCount += 1;
-        scheme.deputyManager.availableAllocation =
-          scheme.deputyManager.allocationCount - scheme.deputyManager.assignedCount;
-        break;
-      case "supervisor":
-        scheme.supervisor.assignedCount += 1;
-        scheme.supervisor.availableAllocation =
-          scheme.supervisor.allocationCount - scheme.supervisor.assignedCount;
-        break;
+    // Update manager's assigned count and available allocation
+    scheme[levelKey].assignedCount += 1;
+    scheme[levelKey].availableAllocation = 
+      scheme[levelKey].allocationCount - scheme[levelKey].assignedCount;
+
+    // Update assignedBy and assignedDate
+    scheme[levelKey].assignedDate = new Date();
+    if (req.user && req.user.employeeId) {
+      scheme[levelKey].assignedBy = req.user.employeeId;
     }
 
     await scheme.save();
 
-    res.status(200).json(updatedCV);
+    // Return updated CV with populated scheme details
+    const responseCV = await CV.findById(id).populate('schemaAssignment.schemeId');
+
+    res.status(200).json({
+      success: true,
+      message: "Scheme assigned successfully",
+      data: responseCV,
+      schemeInfo: {
+        totalAllocatedCount: scheme.totalAllocatedCount,
+        totalEmptyCount: scheme.totalEmptyCount,
+        utilizationPercentage: scheme.utilizationPercentage,
+        managerInfo: {
+          level: managerLevel,
+          name: managerDetails.name,
+          position: managerDetails.position,
+          availableAllocation: scheme[levelKey].availableAllocation,
+          assignedCount: scheme[levelKey].assignedCount
+        }
+      }
+    });
   } catch (error) {
     console.error('Error assigning scheme:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to assign scheme",
+      error: error.message 
+    });
   }
 };
 
-
-// Batch assign scheme to multiple CVs
+// Batch assign scheme to multiple CVs - Updated for enhanced schema
 const batchAssignScheme = async (req, res) => {
   try {
     const {
       cvIds,
       schemeId,
-      managerId,
+      managerLevel,
       internshipPeriod,
       startDate,
       forRequest,
+      milestones // Optional milestones array for all CVs
     } = req.body;
 
     // Validate input
-    if (!cvIds || !Array.isArray(cvIds)) {
-      return res.status(400).json({ message: "Invalid CV IDs" });
+    if (!cvIds || !Array.isArray(cvIds) || cvIds.length === 0) {
+      return res.status(400).json({ message: "Invalid or empty CV IDs array" });
     }
-    if (!schemeId || !managerId || !internshipPeriod || !startDate) {
+    if (!schemeId || !managerLevel || !internshipPeriod || !startDate) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    // Validate manager level (1-6)
+    if (managerLevel < 1 || managerLevel > 6) {
+      return res.status(400).json({ message: "Manager level must be between 1 and 6" });
     }
 
     // Get scheme details
     const scheme = await Scheme.findById(schemeId);
     if (!scheme) {
       return res.status(404).json({ message: "Scheme not found" });
+    }
+
+    // Check if scheme is active
+    if (!scheme.isActive) {
+      return res.status(400).json({ message: "Scheme is not active" });
     }
 
     // Check if scheme has enough available slots
@@ -1834,26 +2331,34 @@ const batchAssignScheme = async (req, res) => {
       });
     }
 
-    // Get manager details from scheme
-    let managerDetails;
-    switch (managerId) {
-      case "generalManager":
-        managerDetails = scheme.generalManager;
-        break;
-      case "deputyManager":
-        managerDetails = scheme.deputyManager;
-        break;
-      case "supervisor":
-        managerDetails = scheme.supervisor;
-        break;
-      default:
-        return res.status(400).json({ message: "Invalid manager ID" });
+    // Get manager details from scheme based on level
+    const levelKey = `level${managerLevel}Manager`;
+    const managerDetails = scheme[levelKey];
+
+    if (!managerDetails || !managerDetails.employeeId) {
+      return res.status(400).json({ 
+        message: `No manager assigned at level ${managerLevel} for this scheme` 
+      });
     }
 
     // Check if manager has enough available allocation
     if (managerDetails.availableAllocation < cvIds.length) {
       return res.status(400).json({
-        message: `Manager doesn't have enough available allocation. Available: ${managerDetails.availableAllocation}, Requested: ${cvIds.length}`,
+        message: `Manager at level ${managerLevel} doesn't have enough available allocation. Available: ${managerDetails.availableAllocation}, Requested: ${cvIds.length}`,
+      });
+    }
+
+    // Check if all CVs exist and are not already assigned
+    const existingCVs = await CV.find({ 
+      _id: { $in: cvIds },
+      'schemaAssignment.schemaAssigned': false 
+    });
+
+    if (existingCVs.length !== cvIds.length) {
+      const foundIds = existingCVs.map(cv => cv._id.toString());
+      const missingOrAssigned = cvIds.filter(id => !foundIds.includes(id));
+      return res.status(400).json({
+        message: `Some CVs not found or already assigned: ${missingOrAssigned.join(', ')}`
       });
     }
 
@@ -1861,71 +2366,223 @@ const batchAssignScheme = async (req, res) => {
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + parseInt(internshipPeriod));
 
-    // Prepare base update data
+    // Prepare comprehensive base update data
     const baseUpdateData = {
       $set: {
+        // Basic Assignment Info
         "schemaAssignment.schemaAssigned": true,
         "schemaAssignment.status": "schema-assigned",
         "schemaAssignment.schemeId": schemeId,
         "schemaAssignment.schemeName": scheme.schemeName,
-        "schemaAssignment.managerId": managerId,
+        
+        // Manager Information
+        "schemaAssignment.managerId": managerDetails.employeeId,
         "schemaAssignment.managerName": managerDetails.name,
-        "schemaAssignment.managerRole": managerId
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (str) => str.toUpperCase()),
+        "schemaAssignment.managerRole": `Level ${managerLevel} Manager - ${managerDetails.position}`,
+        "schemaAssignment.managerLevel": managerLevel,
+        "schemaAssignment.managerEmployeeCode": managerDetails.employeeCode,
+        "schemaAssignment.managerEmail": managerDetails.email,
+        "schemaAssignment.managerDepartment": managerDetails.department,
+        "schemaAssignment.managerPosition": managerDetails.position,
+        
+        // Assignment Details
         "schemaAssignment.internshipPeriod": internshipPeriod,
         "schemaAssignment.startDate": startDate,
         "schemaAssignment.endDate": endDate,
         "schemaAssignment.forRequest": forRequest || "no",
+        
+        // Assignment Metadata
+        "schemaAssignment.assignedDate": new Date(),
+        "schemaAssignment.assignedBy": req.user?.employeeId || "system",
+        "schemaAssignment.lastModified": new Date(),
+        "schemaAssignment.modifiedBy": req.user?.employeeId || "system",
+        
+        // Scheme Details (cached)
+        "schemaAssignment.schemeType.onRequest": scheme.onRequest,
+        "schemaAssignment.schemeType.recurring": scheme.recurring,
+        "schemaAssignment.schemeType.rotational": scheme.rotational,
+        "schemaAssignment.perHeadAllowance": scheme.perHeadAllowance,
+        "schemaAssignment.allowanceFrequency": scheme.allowanceFrequency,
+        
+        // Progress Tracking
+        "schemaAssignment.progressPercentage": 0,
+        
+        // Update main status
         currentStatus: "schema-assigned",
       },
     };
+
+    // Add milestones if provided
+    if (milestones && Array.isArray(milestones) && milestones.length > 0) {
+      baseUpdateData.$set["schemaAssignment.milestones"] = milestones.map(milestone => ({
+        ...milestone,
+        status: milestone.status || "pending"
+      }));
+    }
 
     // If scheme is rotational, add isRotational to the update
     if (scheme.rotational === "yes") {
       baseUpdateData.$set["rotationalAssignment.isRotational"] = true;
     }
 
-    // Update all CVs
-    const updatePromises = cvIds.map(async (cvId) => {
-      return CV.findByIdAndUpdate(cvId, baseUpdateData, { new: true });
-    });
+    // Start a transaction for batch update
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-    const updatedCVs = await Promise.all(updatePromises);
+    try {
+      // Update all CVs in batch
+      const bulkOps = cvIds.map(cvId => ({
+        updateOne: {
+          filter: { _id: cvId },
+          update: baseUpdateData
+        }
+      }));
 
-    // Update scheme allocation counts
-    scheme.totalAllocatedCount += cvIds.length;
-    scheme.totalEmptyCount =
-      scheme.totalAllocation - scheme.totalAllocatedCount;
+      const bulkResult = await CV.bulkWrite(bulkOps, { session });
 
-    // Update manager's assigned count
-    switch (managerId) {
-      case "generalManager":
-        scheme.generalManager.assignedCount += cvIds.length;
-        scheme.generalManager.availableAllocation =
-          scheme.generalManager.allocationCount -
-          scheme.generalManager.assignedCount;
-        break;
-      case "deputyManager":
-        scheme.deputyManager.assignedCount += cvIds.length;
-        scheme.deputyManager.availableAllocation =
-          scheme.deputyManager.allocationCount -
-          scheme.deputyManager.assignedCount;
-        break;
-      case "supervisor":
-        scheme.supervisor.assignedCount += cvIds.length;
-        scheme.supervisor.availableAllocation =
-          scheme.supervisor.allocationCount - scheme.supervisor.assignedCount;
-        break;
+      if (bulkResult.modifiedCount !== cvIds.length) {
+        throw new Error(`Expected to update ${cvIds.length} CVs, but only updated ${bulkResult.modifiedCount}`);
+      }
+
+      // Update scheme allocation counts
+      scheme.totalAllocatedCount += cvIds.length;
+      scheme.totalEmptyCount = scheme.totalAllocation - scheme.totalAllocatedCount;
+
+      // Update manager's assigned count and available allocation
+      scheme[levelKey].assignedCount += cvIds.length;
+      scheme[levelKey].availableAllocation = 
+        scheme[levelKey].allocationCount - scheme[levelKey].assignedCount;
+
+      // Update assignedBy and assignedDate
+      scheme[levelKey].assignedDate = new Date();
+      if (req.user && req.user.employeeId) {
+        scheme[levelKey].assignedBy = req.user.employeeId;
+      }
+
+      await scheme.save({ session });
+
+      // Commit the transaction
+      await session.commitTransaction();
+
+      // Get updated CVs for response
+      const updatedCVs = await CV.find({ _id: { $in: cvIds } })
+        .populate('schemaAssignment.schemeId');
+
+      res.status(200).json({
+        success: true,
+        message: `Successfully assigned scheme to ${cvIds.length} CVs`,
+        data: updatedCVs,
+        batchInfo: {
+          totalAssigned: cvIds.length,
+          schemeInfo: {
+            schemeName: scheme.schemeName,
+            totalAllocatedCount: scheme.totalAllocatedCount,
+            totalEmptyCount: scheme.totalEmptyCount,
+            utilizationPercentage: scheme.utilizationPercentage,
+            managerInfo: {
+              level: managerLevel,
+              name: managerDetails.name,
+              position: managerDetails.position,
+              availableAllocation: scheme[levelKey].availableAllocation,
+              assignedCount: scheme[levelKey].assignedCount
+            }
+          }
+        }
+      });
+
+    } catch (transactionError) {
+      // Rollback the transaction on error
+      await session.abortTransaction();
+      throw transactionError;
+    } finally {
+      // End the session
+      session.endSession();
     }
 
-    await scheme.save();
-
-    res.status(200).json(updatedCVs);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error in batch assign scheme:', error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to batch assign scheme",
+      error: error.message 
+    });
   }
 };
+
+// Function to update assignment progress and milestones
+const updateAssignmentProgress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      progressPercentage, 
+      milestoneUpdates, // Array of milestone updates
+      remarks 
+    } = req.body;
+
+    // Get current CV details
+    const cv = await CV.findById(id);
+    if (!cv) {
+      return res.status(404).json({ message: "CV not found" });
+    }
+
+    if (!cv.schemaAssignment.schemaAssigned) {
+      return res.status(400).json({ message: "CV is not assigned to any scheme" });
+    }
+
+    const updateData = {
+      $set: {
+        "schemaAssignment.lastModified": new Date(),
+        "schemaAssignment.modifiedBy": req.user?.employeeId || "system"
+      }
+    };
+
+    // Update progress percentage if provided
+    if (progressPercentage !== undefined) {
+      if (progressPercentage < 0 || progressPercentage > 100) {
+        return res.status(400).json({ message: "Progress percentage must be between 0 and 100" });
+      }
+      updateData.$set["schemaAssignment.progressPercentage"] = progressPercentage;
+    }
+
+    // Update milestones if provided
+    if (milestoneUpdates && Array.isArray(milestoneUpdates)) {
+      // Get current milestones
+      const currentMilestones = cv.schemaAssignment.milestones || [];
+      
+      // Apply updates
+      milestoneUpdates.forEach(update => {
+        const milestoneIndex = currentMilestones.findIndex(m => m._id.toString() === update.milestoneId);
+        if (milestoneIndex !== -1) {
+          Object.assign(currentMilestones[milestoneIndex], {
+            ...update,
+            completedBy: update.status === 'completed' ? (req.user?.employeeId || "system") : currentMilestones[milestoneIndex].completedBy,
+            completedDate: update.status === 'completed' ? new Date() : currentMilestones[milestoneIndex].completedDate
+          });
+        }
+      });
+      
+      updateData.$set["schemaAssignment.milestones"] = currentMilestones;
+    }
+
+    const updatedCV = await CV.findByIdAndUpdate(id, updateData, { new: true });
+
+    res.status(200).json({
+      success: true,
+      message: "Assignment progress updated successfully",
+      data: updatedCV.schemaAssignment
+    });
+
+  } catch (error) {
+    console.error('Error updating assignment progress:', error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to update assignment progress",
+      error: error.message 
+    });
+  }
+};
+
+
 
 //----------------------------------- Controllers for admin-institute section --------------------------------------------------------------------
 
@@ -2013,9 +2670,9 @@ const bulkUploadCV = async (req, res) => {
           institute: row["Institute"],
           userId: instituteId,
           userType: userType,
-          currentStatus: "pending",
+          currentStatus: "cv-approved",
           cvApproval: {
-            status: "pending",
+            status: "cv-approved",
           },
           // Initialize roleData
           roleData: {
@@ -2131,6 +2788,89 @@ const bulkUploadCV = async (req, res) => {
   }
 };
 
+const handleFileUpload = async (e) => {
+  e.preventDefault();
+  if (!file) {
+    setError("Please select a file to upload.");
+    return;
+  }
+
+  try {
+    await validateExcelFile(file);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("You are not authenticated. Please log in.");
+      return;
+    }
+
+    const response = await axios.post(
+      "http://localhost:5000/api/cvs/bulk-upload",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.data.errors?.length > 0) {
+      setUploadErrors(response.data.errors);
+      setError("Some CVs could not be uploaded. See details below.");
+      setSuccess(null);
+    } else {
+      setSuccess("File uploaded successfully!");
+      setError(null);
+      setUploadErrors([]);
+      
+      // Add this to trigger a refresh in the parent component
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('cvUploadSuccess'));
+      }
+    }
+  } catch (err) {
+    setError(err.message || "Error uploading file.");
+    setSuccess(null);
+    console.error("Upload error:", err);
+  }
+};
+
+const getAllCVsForInstitute = async (req, res) => {
+  try {
+    if (!req.user || req.user.userType !== "institute") {
+      return res.status(400).json({ message: "Access denied" });
+    }
+
+    const instituteId = req.user.id;
+    const cvs = await CV.find({ userId: instituteId })
+      .populate('uploadedFiles') // populate file references
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Generate missing reference numbers
+    const updatedCvs = await Promise.all(
+      cvs.map(async (cv) => {
+        if (!cv.refNo) {
+          const refNo = `REF-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+          await CV.updateOne({ _id: cv._id }, { $set: { refNo } });
+          return { ...cv, refNo };
+        }
+        return cv;
+      })
+    );
+
+    res.status(200).json(updatedCvs);
+  } catch (error) {
+    console.error("Error in getAllCVsForInstitute:", error);
+    res.status(500).json({ 
+      message: "Server error",
+      error: error.message 
+    });
+  }
+};
 module.exports = {
   createCV,
   getCVById,
@@ -2140,7 +2880,13 @@ module.exports = {
   approveCV,
   declineCV,
   updateCV,
-  deleteCV,
+  softDeleteCV,
+  restoreCV,
+  getDeletedCVs,
+  getCVByUserId,
+  getAllCVsByUserId,
+  permanentlyDeleteCV,
+  getUserDeletedCVs,
   getCVByNIC,
   scheduleInterview,
   assignInduction,
@@ -2160,8 +2906,11 @@ module.exports = {
   getInterviewPassedCVs,
   getCVsForSchemeAssignment,
   assignSchemeToCV,
+  updateAssignmentProgress,
   batchAssignScheme,
   rescheduleInterview,
   rescheduleInduction,
   upload,
+  getAllCVsForInstitute,
+  handleFileUpload,
 };

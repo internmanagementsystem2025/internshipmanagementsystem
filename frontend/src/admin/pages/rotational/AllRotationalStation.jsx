@@ -16,7 +16,7 @@ import logo from "../../../assets/logo.png";
 import ConfirmDeleteModal from "../../../components/notifications/ConfirmDeleteModal";
 import Dashboard from "./Dashboard";
 
-const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
 const AllRotationalStation = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -214,7 +214,7 @@ const AllRotationalStation = ({ darkMode }) => {
             <Button
               variant="primary"
               onClick={() => navigate("/add-new-station")}
-              className="mx-2 mb-2 mb-sm-0"
+              className="mx-0 mb-2 mb-sm-0"
             >
               Add New Station
             </Button>

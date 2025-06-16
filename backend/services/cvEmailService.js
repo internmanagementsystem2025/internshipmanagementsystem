@@ -271,51 +271,95 @@ const sendApproveEmail = async (internName, emailAddress, referenceNumber) => {
       to: emailAddress,
       subject: "CV Approved - Mobitel Intern Management System",
       html: `
-        <p>Dear ${internName},</p>
-        <p>We are pleased to inform you that your CV has been reviewed and <strong>approved</strong> by our HR team at Sri Lanka Telecom Mobitel.</p>
-        <p><strong>Application Details:</strong></p>
-        <ul>
-          <li>Reference Number: ${referenceNumber}</li>
-          <li>Application Status: <span style="color: green; font-weight: bold;">APPROVED</span></li>
-          <li>Review Date: ${new Date().toLocaleDateString()}</li>
-        </ul>
-        <p><strong>What Happens Next:</strong></p>
-        <ol>
-          <li>Your profile has been added to our Intern Database</li>
-          <li>Based on departmental needs, you may be contacted for further steps</li>
-          <li>Your application will remain active in our system for 6 months</li>
-        </ol>
-        <p><strong>Important Notes:</strong></p>
-        <ul>
-          <li>If your contact information changes, please update your profile through our portal</li>
-          <li>You can view your current application status by logging into your account</li>
-          <li>For any queries, please contact our HR support team at hr.interns@mobitel.lk</li>
-        </ul>
-        <p>Thank you for your interest in joining Sri Lanka Telecom Mobitel as an intern. We appreciate your patience throughout our selection process.</p>
-        <p>Best regards,<br>HR Department<br>Sri Lanka Telecom Mobitel</p>
-        <p>---<br>This is an automated message. Please do not reply directly to this email.</p>
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            .container { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .approval-badge { background-color: #28a745; color: white; padding: 8px 16px; border-radius: 20px; display: inline-block; font-weight: bold; }
+            .details-box { background-color: white; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745; }
+            .next-steps { background-color: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0; }
+            .footer { background-color: #333; color: white; padding: 15px; text-align: center; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Congratulations!</h1>
+              <h2>Your CV has been Approved</h2>
+            </div>
+            
+            <div class="content">
+              <p>Dear <strong>${internName}</strong>,</p>
+              
+              <p>We are delighted to inform you that your CV has been reviewed and approved by our HR team at Sri Lanka Telecom Mobitel.</p>
+              
+              <div class="details-box">
+                <h3>📋 Application Details</h3>
+                <ul>
+                  <li><strong>Reference Number:</strong> ${referenceNumber}</li>
+                  <li><strong>Status:</strong> <span class="approval-badge">APPROVED ✅</span></li>
+                  <li><strong>Review Date:</strong> ${new Date().toLocaleDateString()}</li>
+                </ul>
+              </div>
+              
+              <div class="next-steps">
+                <h3>🚀 What Happens Next</h3>
+                <ol>
+                  <li>Your profile has been added to our Intern Database</li>
+                  <li>Based on departmental needs, you may be contacted for further steps</li>
+                  <li>Your application will remain active in our system for 6 months</li>
+                  <li>You will receive updates via email</li>
+                </ol>
+              </div>
+              
+              <div class="details-box">
+                <h3>📞 Important Contact Information</h3>
+                <ul>
+                  <li>Update your profile through our portal if contact details change</li>
+                  <li>Check application status by logging into your account</li>
+                  <li>For queries: <a href="mailto:hr.interns@mobitel.lk">hr.interns@mobitel.lk</a></li>
+                </ul>
+              </div>
+              
+              <p>Thank you for your interest in joining Sri Lanka Telecom Mobitel. We appreciate your patience and look forward to potentially working with you.</p>
+            </div>
+            
+            <div class="footer">
+              <p><strong>HR Department</strong><br>
+              Sri Lanka Telecom Mobitel<br>
+              This is an automated message. Please do not reply directly to this email.</p>
+            </div>
+          </div>
+        </body>
+        </html>
       `,
       text: `
         Dear ${internName},
 
-        We are pleased to inform you that your CV has been reviewed and APPROVED by our HR team at Sri Lanka Telecom Mobitel.
+        🎉 CONGRATULATIONS! Your CV has been APPROVED!
+
+        We are pleased to inform you that your CV has been reviewed and approved by our HR team at Sri Lanka Telecom Mobitel.
 
         Application Details:
         - Reference Number: ${referenceNumber}
-        - Application Status: APPROVED
+        - Application Status: APPROVED ✅
         - Review Date: ${new Date().toLocaleDateString()}
 
         What Happens Next:
         1. Your profile has been added to our Intern Database
         2. Based on departmental needs, you may be contacted for further steps
         3. Your application will remain active in our system for 6 months
+        4. You will receive updates via email and WhatsApp
 
         Important Notes:
-        - If your contact information changes, please update your profile through our portal
-        - You can view your current application status by logging into your account
-        - For any queries, please contact our HR support team at hr.interns@mobitel.lk
+        - Update your profile through our portal if contact details change
+        - Check application status by logging into your account
+        - For queries: hr.interns@mobitel.lk
 
-        Thank you for your interest in joining Sri Lanka Telecom Mobitel as an intern. We appreciate your patience throughout our selection process.
+        Thank you for your interest in joining Sri Lanka Telecom Mobitel!
 
         Best regards,
         HR Department

@@ -33,14 +33,12 @@ const StaffInternRequests = ({ darkMode }) => {
         navigate("/login");
         return;
       }
-      
-      // Make API call to get all intern requests
-      const response = await axios.get('http://localhost:5000/api/internRequest/all-intern-requests', {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/internRequest/all-intern-requests`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-      
+
       setRequestData(response.data);
       setLoading(false);
     } catch (error) {
@@ -56,14 +54,12 @@ const StaffInternRequests = ({ darkMode }) => {
 
   const handleApprove = async () => {
     try {
-      // Make API call to approve the intern request
-      await axios.put(`http://localhost:5000/api/internRequest/intern-requests/${requestToApprove._id}/approve`, {}, {
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/api/internRequest/intern-requests/${requestToApprove._id}/approve`, {}, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
-      // Update the local state after successful approval
       const updatedData = requestData.map(item => 
         item._id === requestToApprove._id ? { ...item, adminApproved: 'Yes' } : item
       );
@@ -77,14 +73,12 @@ const StaffInternRequests = ({ darkMode }) => {
 
   const handleDecline = async () => {
     try {
-      // Make API call to decline the intern request
-      await axios.put(`http://localhost:5000/api/internRequest/intern-requests/${requestToDecline._id}/decline`, {}, {
+      await axios.put(`${import.meta.env.VITE_BASE_URL}/api/internRequest/intern-requests/${requestToDecline._id}/decline`, {}, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
-      // Update the local state after successful decline
       const updatedData = requestData.map(item => 
         item._id === requestToDecline._id ? { ...item, adminApproved: 'No' } : item
       );

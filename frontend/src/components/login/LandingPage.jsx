@@ -1,214 +1,655 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Button, Navbar, Nav } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { BsSun, BsMoon } from "react-icons/bs";
-import { BsFillPersonFill, BsFillPersonPlusFill, BsFillCheckCircleFill } from "react-icons/bs";
-import axios from "axios";
-import logo from "../../assets/logo.png";
-import { io } from "socket.io-client";
+import Logo from "../../assets/logo.png";
 
-const socket = io("http://localhost:5000"); 
+const SunIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="5"/>
+    <path d="M12 1v2"/>
+    <path d="M12 21v2"/>
+    <path d="M4.22 4.22l1.42 1.42"/>
+    <path d="M18.36 18.36l1.42 1.42"/>
+    <path d="M1 12h2"/>
+    <path d="M21 12h2"/>
+    <path d="M4.22 19.78l1.42-1.42"/>
+    <path d="M18.36 5.64l1.42-1.42"/>
+  </svg>
+);
 
-const LandingPage = ({ darkMode, toggleTheme }) => {
-  const navigate = useNavigate();
+const MoonIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+);
 
-  const [stats, setStats] = useState({
-    visitorCount: 0,
-    registeredUsers: 0,
-    recommendationPercentage: 0,
+const ArrowRightIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12h14"/>
+    <path d="M12 5l7 7-7 7"/>
+  </svg>
+);
+
+// Enhanced Animated Logo Component - Only for desktop
+const AnimatedLogo = ({ darkMode }) => {
+  const accentColor = darkMode ? "#00aaff" : "#00cc66";
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.8 }}
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        padding: '2rem'
+      }}
+    >
+      {/* Continuous floating animation for the main text */}
+      <motion.div
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ 
+          y: [0, -10, 0], 
+          opacity: 1,
+          scale: [1, 1.02, 1]
+        }}
+        transition={{ 
+          y: {
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut"
+          },
+          scale: {
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut"
+          },
+          opacity: { delay: 0.3, duration: 0.8 }
+        }}
+        style={{
+          fontSize: '3.5rem',
+          fontWeight: 'bold',
+          color: darkMode ? 'white' : '#1e293b',
+          textAlign: 'center',
+          lineHeight: 1.2
+        }}
+      >
+        SLT-Mobitel
+      </motion.div>
+      
+      {/* Subtitle with gentle fade animation */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ 
+          y: 0, 
+          opacity: [0.8, 1, 0.8]
+        }}
+        transition={{ 
+          y: { delay: 0.5, duration: 0.8 },
+          opacity: {
+            delay: 0.5,
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }
+        }}
+        style={{
+          fontSize: '1.25rem',
+          fontWeight: '600',
+          color: darkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+          marginTop: '1rem',
+          textAlign: 'center'
+        }}
+      >
+        Internship Portal
+      </motion.div>
+      
+      {/* Animated gradient line */}
+      <motion.div
+        initial={{ width: 0, opacity: 0 }}
+        animate={{ 
+          width: ['0%', '80%', '60%', '80%'],
+          opacity: 1
+        }}
+        transition={{ 
+          width: {
+            delay: 0.7,
+            duration: 4,
+            repeat: Infinity,
+            ease: "easeInOut"
+          },
+          opacity: { delay: 0.7, duration: 1 }
+        }}
+        style={{
+          height: '3px',
+          background: `linear-gradient(90deg, ${accentColor}, transparent)`,
+          marginTop: '2rem',
+          borderRadius: '2px',
+          maxWidth: '200px'
+        }}
+      />
+      
+      {/* Floating particles animation */}
+      {[...Array(6)].map((_, i) => (
+        <motion.div
+          key={i}
+          initial={{ 
+            opacity: 0,
+            x: Math.random() * 400 - 200,
+            y: Math.random() * 400 - 200
+          }}
+          animate={{ 
+            opacity: [0, 0.6, 0],
+            x: Math.random() * 400 - 200,
+            y: Math.random() * 400 - 200,
+            scale: [0, 1, 0]
+          }}
+          transition={{ 
+            duration: 4 + Math.random() * 2,
+            repeat: Infinity,
+            delay: i * 0.8,
+            ease: "easeInOut"
+          }}
+          style={{
+            position: 'absolute',
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: accentColor,
+            boxShadow: `0 0 20px ${accentColor}80`,
+            pointerEvents: 'none'
+          }}
+        />
+      ))}
+      
+      {/* Pulsing ring animation */}
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ 
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.1, 0.3]
+        }}
+        transition={{ 
+          duration: 3,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 1
+        }}
+        style={{
+          position: 'absolute',
+          width: '300px',
+          height: '300px',
+          border: `2px solid ${accentColor}`,
+          borderRadius: '50%',
+          pointerEvents: 'none'
+        }}
+      />
+    </motion.div>
+  );
+};
+
+const LandingPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => {
+  const [internalDarkMode, setInternalDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('darkMode');
+      if (savedTheme !== null) {
+        return JSON.parse(savedTheme);
+      }
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
   });
 
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+
+  const darkMode = propDarkMode !== undefined ? propDarkMode : internalDarkMode;
+
+  // Theme configurations
   const darkTheme = {
     backgroundColor: "#0a192f",
     color: "white",
     accentColor: "#00aaff",
-    textSecondary: "#cbd5e1",
+    textSecondary: "#94a3b8",
+    darkMode: true,
   };
 
   const lightTheme = {
-    backgroundColor: "#f8f9fa",
-    color: "#333",
+    backgroundColor: "#f8fafc",
+    color: "#1e293b",
     accentColor: "#00cc66",
-    textSecondary: "#555",
+    textSecondary: "#64748b",
+    darkMode: false,
   };
 
   const theme = darkMode ? darkTheme : lightTheme;
 
+  // Handle responsive design
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const { data } = await axios.get("http://localhost:5000/api/stats");
-        setStats(data);
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      }
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setIsTablet(width >= 768 && width < 1024);
     };
-
-    // Increase visitor count when user visits the page
-    axios.post("http://localhost:5000/api/stats/visit").catch((error) => {
-      console.error("Error updating visitor count:", error);
-    });
-
-    fetchStats();
-
-    // Listen for real-time updates
-    socket.on("statsUpdate", (data) => {
-      setStats(data);
-    });
-
-    return () => {
-      socket.off("statsUpdate");
-    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Handle theme persistence
+  useEffect(() => {
+    if (typeof window !== 'undefined' && propDarkMode === undefined) {
+      localStorage.setItem('darkMode', JSON.stringify(internalDarkMode));
+    }
+  }, [internalDarkMode, propDarkMode]);
+
+  // Theme toggle function
+  const toggleTheme = () => {
+    if (propToggleTheme) {
+      propToggleTheme();
+    } else {
+      const newDarkMode = !internalDarkMode;
+      setInternalDarkMode(newDarkMode);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('darkMode', JSON.stringify(newDarkMode));
+      }
+    }
+  };
+
+  // Navigation handlers
+  const handleLogin = () => {
+    window.location.href = '/login';
+  };
+
+  const handleRegister = () => {
+    window.location.href = '/register';
+  };
+
+  const handleGetStarted = () => {
+    window.location.href = '/login';
+  };
+
+  const handleLearnMore = () => {
+    window.location.href = '/learn-more';
+  };
 
   return (
     <div
-      className="d-flex flex-column align-items-center justify-content-center min-vh-100"
       style={{
         backgroundColor: theme.backgroundColor,
         color: theme.color,
-        transition: "background 0.3s ease-in-out, color 0.3s ease-in-out",
+        transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+        position: "relative",
+        overflow: "hidden",
+        minHeight: "100vh",
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
       }}
     >
-      {/* Navbar */}
-      <Navbar expand="lg" className="py-3 px-4 w-100" style={{ background: "transparent", position: "absolute", top: 0 }}>
-        <Container fluid>
-          <div className="d-flex justify-content-between align-items-center w-100">
-            <Navbar.Brand onClick={() => navigate("/")} className="p-0">
-              <img src={logo} alt="Company Logo" className="img-fluid" style={{ height: "30px", maxWidth: "100%" }} />
-            </Navbar.Brand>
-
-            <Nav className="d-flex align-items-center">
-              <Nav.Item className="me-2">
-                <Button variant="link" onClick={toggleTheme} className="p-1 d-flex align-items-center" style={{ minWidth: "auto" }}>
-                  {darkMode ? <BsSun size={20} color="#ffcc00" /> : <BsMoon size={20} color="#003366" />}
-                </Button>
-              </Nav.Item>
-              <Nav.Item className="me-2 d-none d-md-block">
-                <Button className="btn-sm border-0 px-3 py-2" style={{ background: "transparent", color: theme.color }} onClick={() => navigate("/login")}>
-                  Login
-                </Button>
-              </Nav.Item>
-              <Nav.Item className="d-none d-lg-block">
-                <Button
-                  className="btn-sm px-3 py-2 border-0"
-                  style={{ background: theme.accentColor, color: darkMode ? "black" : "white" }}
-                  onClick={() => navigate("/register")}
-                >
-                  Register
-                </Button>
-              </Nav.Item>
-            </Nav>
-          </div>
-        </Container>
-      </Navbar>
+      {/* Background Effects */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+        opacity: isMobile ? 0.03 : 0.1,
+        pointerEvents: 'none',
+        background: darkMode 
+          ? 'radial-gradient(circle at 20% 50%, #00aaff 0%, transparent 50%), radial-gradient(circle at 80% 20%, #0066ff 0%, transparent 50%)'
+          : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
+      }} />
 
       {/* Main Content */}
-      <Container className="text-center d-flex flex-column align-items-center justify-content-center">
-        <motion.h1
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fw-bold"
-          style={{ fontSize: "calc(1.5rem + 1vw)", color: theme.accentColor, textShadow: `0 0 15px ${theme.accentColor}` }}
-        >
-          WELCOME TO SLT-MOBITEL INTERNSHIP PORTAL
-        </motion.h1>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 fs-5" style={{ color: theme.textSecondary }}>
-          Manage and track your internship journey with ease.
-        </motion.p>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <Button className="mt-3 px-4 py-2 btn-lg border-0 explore-btn" style={{ color: "white", fontSize: "1rem" }} onClick={() => navigate("/login")}>
-            Explore Opportunities
-          </Button>
-        </motion.div>
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        {/* Enhanced Navbar */}
+        <nav style={{ 
+          background: "transparent", 
+          position: "fixed", 
+          top: 0,
+          width: "100%",
+          padding: isMobile ? "1rem 1.25rem" : "1rem 2rem",
+          zIndex: 10,
+          backdropFilter: 'blur(20px)',
+          borderBottom: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
+        }}>
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center",
+            maxWidth: "1200px",
+            margin: "0 auto"
+          }}>
+            {/* Logo and Company Name */}
+            <div 
+              onClick={() => window.location.reload()} 
+              style={{ 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}
+            >
+              <img 
+                src={Logo} 
+                alt="Logo" 
+                style={{ height: isMobile ? '35px' : '40px', width: 'auto' }} 
+              />
+            </div>
 
-        {/* Stats Section */}
-        <Row style={{ marginTop: "8rem" }} className="w-100 d-flex justify-content-center">
-        <Col xs={6} sm={4} md={3} className="d-flex justify-content-center">
-        <StatCard count={stats.visitorCount} label="Visitor Count" theme={theme} icon={<BsFillPersonFill size={22} color="white" />} />
-        </Col>
-        <Col xs={6} sm={4} md={3} className="d-flex justify-content-center">
-        <StatCard count={stats.registeredUsers} label="Registered Users" theme={theme} icon={<BsFillPersonPlusFill size={22} color="white" />} />
-        </Col>
-        <Col xs={6} sm={4} md={3} className="d-flex justify-content-center">
-        <StatCard count={`${stats.recommendationPercentage}%`} label="Recommended" theme={theme} icon={<BsFillCheckCircleFill size={22} color="white" />} />
-        </Col>
-        </Row>
-      </Container>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.75rem" : "1rem" }}>
+              <motion.button 
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleTheme}
+                style={{ 
+                  background: "transparent",
+                  border: "none",
+                  color: theme.color,
+                  cursor: "pointer",
+                  padding: isMobile ? "0.5rem" : "0.5rem",
+                  borderRadius: "50%",
+                  transition: "all 0.3s ease",
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {darkMode ? <SunIcon /> : <MoonIcon />}
+              </motion.button>
+              
+              {/* Only show login/register buttons on desktop */}
+              {!isMobile && !isTablet && (
+                <>
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{ 
+                      background: "transparent", 
+                      color: theme.color,
+                      border: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                      padding: "0.5rem 1rem",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      backdropFilter: 'blur(10px)',
+                      transition: "all 0.3s ease",
+                      fontSize: '0.9rem'
+                    }} 
+                    onClick={handleLogin}
+                  >
+                    Login
+                  </motion.button>
+                  
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{ 
+                      background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`, 
+                      color: "white",
+                      border: "none",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      boxShadow: `0 4px 15px ${theme.accentColor}40`,
+                      transition: "all 0.3s ease",
+                      fontSize: '0.9rem'
+                    }}
+                    onClick={handleRegister}
+                  >
+                    Register
+                  </motion.button>
+                </>
+              )}
+            </div>
+          </div>
+        </nav>
 
-      <style>{`
-        .explore-btn {
-          background: linear-gradient(45deg, #00aaff, #00cc66);
-          background-size: 400% 400%;
-          animation: gradientAnimation 3s ease infinite;
-        }
-        @keyframes gradientAnimation {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}</style>
-    </div>
-  );
-};
-
-const formatNumber = (num) => {
-  if (num >= 1_000_000_000) return (num / 1_000_000_000).toFixed(1) + "B";
-  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
-  if (num >= 1_000) return (num / 1_000).toFixed(1) + "K";
-  return num;
-};
-
-// StatCard Component
-const StatCard = ({ count, label, theme, icon }) => {
-  return (
-    <div className="stat-card d-flex align-items-center p-3">
-      <div className="icon-container" style={{ backgroundColor: theme.accentColor }}>
-        {icon}
-      </div>
-      <div className="text-container ms-3">
-        <div className="count-text" style={{ color: theme.color }}>
-          {formatNumber(count)}
+        {/* Main Content Container */}
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column", 
+          alignItems: "center", 
+          justifyContent: "center", 
+          minHeight: '100vh', 
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: isMobile ? "80px 1.25rem 2rem" : "80px 2rem 2rem"
+        }}>
+          {/* Hero Section */}
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: isMobile ? "1fr" : isTablet ? "1fr" : "1fr 1fr",
+            gap: isMobile ? "2rem" : isTablet ? "2.5rem" : "3rem",
+            alignItems: "center",
+            width: "100%"
+          }}>
+            {/* Left Content */}
+            <div style={{ 
+              textAlign: isMobile ? "center" : isTablet ? "center" : "left",
+              order: 1
+            }}>
+              <motion.h1
+                initial={{ opacity: 0, y: -50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                style={{ 
+                  fontSize: isMobile ? "2rem" : isTablet ? "2.5rem" : "3rem", 
+                  color: theme.accentColor,
+                  lineHeight: 1.2,
+                  fontWeight: "800",
+                  marginBottom: isMobile ? "1.25rem" : "1.5rem",
+                  textShadow: `0 0 15px ${theme.accentColor}40`
+                }}
+              >
+                WELCOME TO{" "}
+                <span style={{ 
+                  color: theme.color,
+                  fontWeight: "800"
+                }}>
+                  SLT-MOBITEL
+                </span>{" "}
+                INTERNSHIP PORTAL
+              </motion.h1>
+              
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.8 }}
+                style={{ 
+                  color: theme.textSecondary,
+                  fontSize: isMobile ? "1rem" : isTablet ? "1.1rem" : "1.1rem",
+                  marginBottom: isMobile ? "2rem" : "2rem",
+                  lineHeight: 1.6,
+                  maxWidth: isMobile ? "100%" : isTablet ? "100%" : "90%"
+                }}
+              >
+                Manage and track your internship journey with ease. Join our innovative program and gain real-world experience with cutting-edge technologies.
+              </motion.p>
+              
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.8 }}
+                style={{ 
+                  display: "flex", 
+                  gap: isMobile ? "1rem" : "1rem", 
+                  justifyContent: isMobile ? "center" : isTablet ? "center" : "flex-start",
+                  flexDirection: isMobile ? "column" : "row",
+                  alignItems: "center"
+                }}
+              >
+                <motion.button 
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{ 
+                    background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
+                    color: "white",
+                    border: "none",
+                    padding: isMobile ? "1rem 2.5rem" : "1rem 2rem",
+                    borderRadius: "12px",
+                    fontSize: isMobile ? "1rem" : "1rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    boxShadow: `0 8px 25px ${theme.accentColor}40`,
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                    width: isMobile ? '100%' : 'auto',
+                    maxWidth: isMobile ? '320px' : 'none'
+                  }} 
+                  onClick={handleGetStarted}
+                >
+                  Explore Opportunities <ArrowRightIcon />
+                </motion.button>
+                
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{ 
+                    background: 'transparent',
+                    color: theme.accentColor,
+                    border: `2px solid ${theme.accentColor}`,
+                    padding: isMobile ? "1rem 2.5rem" : "1rem 2rem",
+                    borderRadius: "12px",
+                    fontSize: isMobile ? "1rem" : "1rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    backdropFilter: 'blur(10px)',
+                    transition: "all 0.3s ease",
+                    width: isMobile ? '100%' : 'auto',
+                    maxWidth: isMobile ? '320px' : 'none'
+                  }}
+                  onClick={handleLearnMore}
+                >
+                  Learn More
+                </motion.button>
+              </motion.div>
+            </div>
+            
+            {/* Right Content - Animated Logo (Desktop Only) */}
+            {!isMobile && !isTablet && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.8, ease: "easeOut" }}
+                style={{
+                  width: '100%',
+                  height: '500px',
+                  borderRadius: '24px',
+                  overflow: 'hidden',
+                  boxShadow: `0 25px 50px ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
+                  background: darkMode 
+                    ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.4), rgba(15, 30, 55, 0.3))' 
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(248, 250, 252, 0.3))',
+                  backdropFilter: 'blur(20px)',
+                  border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  order: 2
+                }}
+              >
+                <AnimatedLogo darkMode={darkMode} />
+              </motion.div>
+            )}
+          </div>
         </div>
-        <div className="label-text" style={{ color: theme.textSecondary }}>
-          {label}
-        </div>
       </div>
+
+      {/* Enhanced Global Styles */}
       <style>{`
-        .stat-card {
-          width: 210px;
-          height: 90px;
-          text-align: left;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
-
-        .icon-container {
-          padding: 8px;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 40px;
-          height: 40px;
+        
+        body {
+          overflow-x: hidden;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
-
-        .text-container {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
+        
+        button:hover {
+          transform: translateY(-1px);
         }
-
-        .count-text {
-          font-size: 1.5rem;
-          font-weight: 600;
+        
+        /* Smooth scrolling */
+        html {
+          scroll-behavior: smooth;
         }
-
-        .label-text {
-          font-size: 0.9rem;
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+          background: ${darkMode ? '#0a192f' : '#f1f5f9'};
+        }
+        
+        ::-webkit-scrollbar-thumb {
+          background: ${theme.accentColor};
+          border-radius: 3px;
+        }
+        
+        /* Mobile-specific optimizations */
+        @media (max-width: 767px) {
+          body {
+            -webkit-text-size-adjust: 100%;
+            -webkit-tap-highlight-color: transparent;
+          }
+          
+          button {
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+          }
+          
+          /* Prevent zoom on input focus */
+          input, textarea, select {
+            font-size: 16px;
+          }
+        }
+        
+        /* Tablet optimizations */
+        @media (min-width: 768px) and (max-width: 1023px) {
+          button {
+            touch-action: manipulation;
+          }
+        }
+        
+        /* Focus styles for accessibility */
+        button:focus-visible {
+          outline: 2px solid ${theme.accentColor};
+          outline-offset: 2px;
+        }
+        
+        /* Ensure smooth animations on all devices */
+        @media (prefers-reduced-motion: no-preference) {
+          * {
+            scroll-behavior: smooth;
+          }
+        }
+        
+        @media (prefers-reduced-motion: reduce) {
+          * {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+          }
         }
       `}</style>
     </div>

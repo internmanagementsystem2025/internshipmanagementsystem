@@ -24,32 +24,30 @@ const AdminAddCVs = ({ darkMode }) => {
     emailAddress: "",
     institute: "",
     selectedRole: "",
-    // Use roleData structure that matches backend
     roleData: {
       dataEntry: {
-        proficiency: {
-          msWord: 0,
-          msExcel: 0,
-          msPowerPoint: 0,
-        },
-        olResults: {
-          language: "",
-          mathematics: "",
-          science: "",
-          english: "",
-          history: "",
-          religion: "",
-          optional1: "",
-          optional2: "",
-          optional3: "",
-        },
-        alResults: {
-          aLevelSubject1: "",
-          aLevelSubject2: "",
-          aLevelSubject3: "",
-          git: "",
-          gk: "",
-        },
+        // O/L Results (Required subjects) - Same structure as individual
+        language: "",
+        mathematics: "",
+        science: "",
+        english: "",
+        history: "",
+        religion: "",
+        // Optional subjects
+        optional1Name: "",
+        optional1Result: "",
+        optional2Name: "",
+        optional2Result: "",
+        optional3Name: "",
+        optional3Result: "",
+        // A/L Results
+        aLevelSubject1Name: "",
+        aLevelSubject1Result: "",
+        aLevelSubject2Name: "",
+        aLevelSubject2Result: "",
+        aLevelSubject3Name: "",
+        aLevelSubject3Result: "",
+        // Other fields
         preferredLocation: "",
         otherQualifications: "",
       },
@@ -80,7 +78,10 @@ const AdminAddCVs = ({ darkMode }) => {
     message: "",
     variant: "success",
     isLoading: false,
+    onClose: null,
   });
+  const [formModified, setFormModified] = useState(false);
+  const [showBackConfirmation, setShowBackConfirmation] = useState(false);
   const navigate = useNavigate();
   const [autoApprove, setAutoApprove] = useState(false);
 
@@ -88,7 +89,7 @@ const AdminAddCVs = ({ darkMode }) => {
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/districts");
+        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/districts`);
         if (!response.ok) throw new Error("Failed to fetch districts");
         const data = await response.json();
         setDistricts(data);
@@ -104,7 +105,7 @@ const AdminAddCVs = ({ darkMode }) => {
 
     const fetchInstitutes = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/institutes");
+        const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/institutes`);
         if (!response.ok) throw new Error("Failed to fetch institutes");
         const data = await response.json();
         setInstitutes(data.institutes);
@@ -122,6 +123,25 @@ const AdminAddCVs = ({ darkMode }) => {
     fetchInstitutes();
   }, []);
 
+  // Handle back navigation with confirmation if form is modified
+  const handleBackClick = () => {
+    if (formModified) {
+      setShowBackConfirmation(true);
+    } else {
+      navigate(-1);
+    }
+  };
+
+  // Handle confirmation dialog responses
+  const handleConfirmBack = () => {
+    setShowBackConfirmation(false);
+    navigate(-1);
+  };
+
+  const handleCancelBack = () => {
+    setShowBackConfirmation(false);
+  };
+
   // Handle Role Change
   const handleRoleChange = (event) => {
     const role = event.target.value;
@@ -130,13 +150,21 @@ const AdminAddCVs = ({ darkMode }) => {
       ...prevState,
       selectedRole: role,
     }));
+    setFormModified(true);
     // Clear role-specific errors when changing roles
-    setFormErrors({});
+    const commonErrors = {};
+    Object.entries(formErrors).forEach(([key, value]) => {
+      if (!key.includes('roleData')) {
+        commonErrors[key] = value;
+      }
+    });
+    setFormErrors(commonErrors);
   };
 
-  // Handle Input Change with improved nested object handling
+  // Handle Input Change with improved nested object handling - Same as individual
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setFormModified(true);
     
     // Handle nested paths like "roleData.dataEntry.proficiency.msWord"
     if (name.includes(".")) {
@@ -166,31 +194,59 @@ const AdminAddCVs = ({ darkMode }) => {
         
         return newState;
       });
+      
+      // Clear error for nested field if it exists
+      if (formErrors[name]) {
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     } else {
       // Handle simple fields
       setCvData(prevState => ({
         ...prevState,
         [name]: value
       }));
+      
+      // Clear error for this field if it exists
+      if (formErrors[name]) {
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     }
   };
 
   // Handle File Upload
   const handleFileChange = (e) => {
     const { name, files } = e.target;
+    setFormModified(true);
     setCvData((prevState) => ({
       ...prevState,
       [name]: files[0] || null,
     }));
+    
+    // Clear error for this field if it exists
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
-  // Validate form before submission
+  // Validate form before submission - Same as individual but without required field validation
   const validateForm = () => {
     const errors = {};
     
     // Check if a role is selected
     if (!cvData.selectedRole) {
-      errors["selectedRole"] = "Please select a role";
+      errors.selectedRole = "Please select a role";
     }
     
     // Data Entry specific validations
@@ -200,11 +256,11 @@ const AdminAddCVs = ({ darkMode }) => {
         errors["roleData.dataEntry.preferredLocation"] = "Please select a preferred location";
       }
       
-      // Check required O/L results
+      // Check required O/L results - FIXED: Access direct fields, not nested olResults
       const requiredSubjects = ["language", "mathematics", "science", "english"];
       requiredSubjects.forEach(subject => {
-        if (!cvData.roleData?.dataEntry?.olResults?.[subject]) {
-          errors[`roleData.dataEntry.olResults.${subject}`] = "This field is required";
+        if (!cvData.roleData?.dataEntry?.[subject]) {
+          errors[`roleData.dataEntry.${subject}`] = "This field is required";
         }
       });
     }
@@ -220,7 +276,7 @@ const AdminAddCVs = ({ darkMode }) => {
     return Object.keys(errors).length === 0;
   };
 
-  // Form Submission - FIXED VERSION
+  // Form Submission - Fixed to match individual version exactly
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -228,9 +284,14 @@ const AdminAddCVs = ({ darkMode }) => {
     if (!validateForm()) {
       setNotification({
         show: true,
-        message: "Please fill in all required fields.",
+        message: "Please fill in all required fields and correct any errors.",
         variant: "danger",
       });
+      
+      const firstErrorElement = document.querySelector('.is-invalid');
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
@@ -247,10 +308,9 @@ const AdminAddCVs = ({ darkMode }) => {
     // Create FormData object
     const formData = new FormData();
 
-    // Fix: Send autoApprove as a boolean value without string conversion
+    // Add admin-specific fields
     formData.append("autoApprove", autoApprove);
     formData.append("createdByAdmin", true);
-    
 
     // Add basic fields
     const basicFields = [
@@ -266,34 +326,38 @@ const AdminAddCVs = ({ darkMode }) => {
       }
     });
 
-    // Handle role-specific data with proper field names for backend
+    // Handle role-specific data with correct field names for backend - SAME AS INDIVIDUAL
     if (cvData.selectedRole === 'dataEntry') {
       const dataEntryData = cvData.roleData?.dataEntry || {};
       
-      // Add proficiency scores exactly as backend expects
-      if (dataEntryData.proficiency) {
-        Object.entries(dataEntryData.proficiency).forEach(([key, value]) => {
-          formData.append(`proficiency[${key}]`, value !== undefined ? value : 0);
-        });
+      // O/L Results - Send as flat fields (what backend expects)
+      const olSubjects = ['language', 'mathematics', 'science', 'english', 'history', 'religion'];
+      olSubjects.forEach(subject => {
+        formData.append(subject, dataEntryData[subject] || '');
+      });
+      
+      // Optional subjects
+      for (let i = 1; i <= 3; i++) {
+        formData.append(`optional${i}Name`, dataEntryData[`optional${i}Name`] || '');
+        formData.append(`optional${i}Result`, dataEntryData[`optional${i}Result`] || '');
       }
       
-      // Add O/L Results exactly as backend expects
-      if (dataEntryData.olResults) {
-        Object.entries(dataEntryData.olResults).forEach(([key, value]) => {
-          formData.append(`olResults[${key}]`, value || '');
-        });
+      // A/L Results - Send as flat fields (what backend expects)
+      for (let i = 1; i <= 3; i++) {
+        formData.append(`aLevelSubject${i}Name`, dataEntryData[`aLevelSubject${i}Name`] || '');
+        formData.append(`aLevelSubject${i}Result`, dataEntryData[`aLevelSubject${i}Result`] || '');
       }
       
-      // Add A/L Results exactly as backend expects
-      if (dataEntryData.alResults) {
-        Object.entries(dataEntryData.alResults).forEach(([key, value]) => {
-          formData.append(`alResults[${key}]`, value || '');
-        });
-      }
-      
-      // Add preferred location and other qualifications
+      // Other fields
       formData.append('preferredLocation', dataEntryData.preferredLocation || '');
       formData.append('otherQualifications', dataEntryData.otherQualifications || '');
+      
+      // Add proficiency data if it exists
+      if (dataEntryData.proficiency) {
+        formData.append('msWordProficiency', dataEntryData.proficiency.msWord || '0');
+        formData.append('msExcelProficiency', dataEntryData.proficiency.msExcel || '0');
+        formData.append('msPowerPointProficiency', dataEntryData.proficiency.msPowerPoint || '0');
+      }
     } 
     else if (cvData.selectedRole === 'internship') {
       // Internship specific fields
@@ -311,12 +375,6 @@ const AdminAddCVs = ({ darkMode }) => {
       }
     });
 
-    // Log the form data for debugging purposes
-    console.log("Form Data entries:");
-    for (let [key, value] of formData.entries()) {
-      console.log(`${key}: ${value}`);
-    }
-
     try {
       // Set loading state
       setNotification({
@@ -326,7 +384,7 @@ const AdminAddCVs = ({ darkMode }) => {
         isLoading: true,
       });
 
-      const response = await fetch("http://localhost:5000/api/cvs/addcv", {
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/cvs/addcv`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -337,20 +395,22 @@ const AdminAddCVs = ({ darkMode }) => {
       const result = await response.json();
 
       if (response.ok) {
+        setFormModified(false);
         setNotification({
           show: true,
           message: "CV successfully added!",
           variant: "success",
           isLoading: false,
+          onClose: () => {
+            navigate("/admin-home", { replace: true });
+          }
         });
-
-
+        
         setTimeout(() => {
-          navigate("/admin-home");
-        }, 2000);
+          navigate("/admin-home", { replace: true });
+        }, 1500);
       } else {
         console.error("Failed to submit CV:", result);
-        // Better error handling
         let errorMessage = "Failed to submit CV: ";
         
         if (typeof result === 'object') {
@@ -378,7 +438,7 @@ const AdminAddCVs = ({ darkMode }) => {
       console.error("Error submitting CV:", error);
       setNotification({
         show: true,
-        message: "Error submitting CV! Please check the console for details.",
+        message: `Error submitting CV: ${error.message || "Unknown error"}`,
         variant: "danger",
         isLoading: false,
       });
@@ -439,9 +499,11 @@ const AdminAddCVs = ({ darkMode }) => {
               cvData={cvData}
               darkMode={darkMode}
               handleInputChange={handleInputChange}
+              errors={formErrors}
+              setFormErrors={setFormErrors}
             />
  
-             <Form.Group className="mb-3">
+            <Form.Group className="mb-3">
               <Form.Check
                 type="switch"
                 id="auto-approve-switch"
@@ -455,18 +517,69 @@ const AdminAddCVs = ({ darkMode }) => {
               </Form.Text>
             </Form.Group>
 
-            <button type="submit" className={`btn w-100 mt-3 ${darkMode ? "btn-primary" : "btn-success"}`}>
-              Submit CV
-            </button>
+            {/* Form Navigation Buttons */}
+            <div className="d-flex flex-wrap gap-2 justify-content-between mt-4">
+              <button 
+                type="button" 
+                className={`btn ${darkMode ? "btn-outline-light" : "btn-outline-secondary"} px-5`}
+                onClick={handleBackClick}
+              >
+                Back
+              </button>
+              <button 
+                type="submit" 
+                className={`btn ${darkMode ? "btn-primary" : "btn-success"} px-5`}
+              >
+                Submit CV
+              </button>
+            </div>
           </form>
         </div>
       </main>
 
+      {/* Back Confirmation Modal */}
+      {showBackConfirmation && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1050 }}>
+          <div className={`card ${darkMode ? "bg-dark text-white" : "bg-white"}`} style={{ maxWidth: '400px' }}>
+            <div className="card-header">
+              <h5>Unsaved Changes</h5>
+            </div>
+            <div className="card-body">
+              <p>You have unsaved changes. Are you sure you want to go back?</p>
+              <div className="d-flex justify-content-end gap-2">
+                <button 
+                  className={`btn ${darkMode ? "btn-outline-light" : "btn-outline-secondary"}`}
+                  onClick={handleCancelBack}
+                >
+                  Cancel
+                </button>
+                <button 
+                  className="btn btn-danger" 
+                  onClick={handleConfirmBack}
+                >
+                  Go Back
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Notification
         show={notification.show}
-        onClose={() => setNotification({ ...notification, show: false })}
+        onClose={() => {
+          // First close the notification
+          setNotification({ ...notification, show: false });
+          
+          // Then execute any onClose callback if it exists
+          if (notification.onClose && typeof notification.onClose === 'function') {
+            notification.onClose();
+          }
+        }}
         message={notification.message}
         variant={notification.variant}
+        isLoading={notification.isLoading}
       />
     </div>
   );

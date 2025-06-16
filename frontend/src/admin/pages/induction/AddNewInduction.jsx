@@ -14,8 +14,6 @@ import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import Notification from "../../../components/notifications/Notification";
 
-const API_BASE_URL = "http://localhost:5000/api/inductions";
-
 const AddNewInduction = ({ darkMode }) => {
   const [inductionData, setInductionData] = useState({
     induction: "",
@@ -48,7 +46,7 @@ const AddNewInduction = ({ darkMode }) => {
     setSuccessMessage("");
 
     try {
-      await axios.post(API_BASE_URL, inductionData);
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/inductions`, inductionData);
       setSuccessMessage("Induction Created Successfully!");
 
       setShowSuccessNotification(true);

@@ -6,11 +6,11 @@ import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import Notification from "../../../components/notifications/Notification";
 
-const API_BASE_URL = "http://localhost:5000/api/letters";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/letters`;
 
 const AddPlacementLetter = ({ darkMode }) => {
   const [letterData, setLetterData] = useState({
-    letterName: "Placement Letter", // Added required letterName field
+    letterName: "Placement Letter",
         label1: "Talent Development Section",  
         label2: "7th Floor, Head Office, Lotus Road, Colombo 01",
         label3: "Our/My Ref:.......................",

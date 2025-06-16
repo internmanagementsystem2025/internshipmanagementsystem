@@ -21,7 +21,7 @@ const DeclineModal = ({ show, onClose, onConfirm, refNo, darkMode }) => {
         onClose();
         setSuccessMessage("");
         setDeclineReason("");
-      }, 1500); // Close after showing success message
+      }, 1500); 
     } catch (error) {
       setErrorMessage(
         error.response?.data?.message || "Failed to decline"

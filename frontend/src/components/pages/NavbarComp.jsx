@@ -12,6 +12,14 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
   const [user, setUser] = useState({ id: null, username: "User", email: "user@example.com" });
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Theme configuration matching footer
+  const theme = {
+    sidebarBackground: darkMode ? "#1E1E1E" : "rgba(255, 255, 255, 0.95)",
+    textPrimary: darkMode ? "#E1E1E1" : "#1e293b",
+    accentColor: darkMode ? "#2563eb" : "#10b981",
+    border: darkMode ? "#333333" : "rgba(0, 0, 0, 0.1)",
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -56,28 +64,28 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
   };
 
   return (
-    <Navbar expand="lg" bg={darkMode ? "dark" : "light"} variant={darkMode ? "dark" : "light"} style={navbarStyle(darkMode, scrolled)}>
+    <Navbar expand="lg" bg={darkMode ? "dark" : "light"} variant={darkMode ? "dark" : "light"} style={navbarStyle(theme, scrolled)}>
       <Container fluid>
         {/* Welcome message and profile icon for small devices */}
         <div className="d-flex d-lg-none ms-auto align-items-center">
-          <span style={welcomeStyle(darkMode)} className="me-3">
+          <span style={welcomeStyle(theme)} className="me-3">
             Welcome, {user.username}
           </span>
           
           <Dropdown align="end" show={dropdownOpen} onToggle={toggleDropdown} autoClose="outside">
             <Dropdown.Toggle as={Button} variant="link" className="p-0 border-0 d-flex align-items-center">
-              <FiUser size={20} color={darkMode ? "#fff" : "#000"} />
+              <FiUser size={20} color={theme.textPrimary} />
             </Dropdown.Toggle>
             
-            <Dropdown.Menu align="end" style={dropdownStyle(darkMode)}>
-              <div style={{ textAlign: "center", padding: "8px 12px" }}>
+            <Dropdown.Menu align="end" style={dropdownStyle(theme)}>
+              <div style={userInfoStyle(theme)}>
                 <strong>{user.username}</strong>
-                <div style={{ fontSize: "0.75rem", color: darkMode ? "#ccc" : "#333" }}>{user.email}</div>
+                <div style={userEmailStyle(theme)}>{user.email}</div>
               </div>
 
-              <div style={separatorStyle(darkMode)}></div>
+              <div style={separatorStyle(theme)}></div>
 
-              <Dropdown.Item onClick={toggleTheme} style={dropdownItemStyle(darkMode)}>
+              <Dropdown.Item onClick={toggleTheme} style={dropdownItemStyle(theme)}>
                 {darkMode ? (
                   <BsSun size={16} style={{ marginRight: "8px" }} />
                 ) : (
@@ -86,12 +94,12 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
                 Switch to {darkMode ? "Light" : "Dark"} Mode
               </Dropdown.Item>
 
-              <Dropdown.Item onClick={() => navigate(`/user-profile/${user.id}`)} style={dropdownItemStyle(darkMode)}>
+              <Dropdown.Item onClick={() => navigate(`/change-password/${user.id}`)} style={dropdownItemStyle(theme)}>
                 <FiUser size={16} style={{ marginRight: "8px" }} />
-                Profile
+                Change Password
               </Dropdown.Item>
 
-              <Dropdown.Item onClick={handleLogout} style={dropdownItemStyle(darkMode)}>
+              <Dropdown.Item onClick={handleLogout} style={dropdownItemStyle(theme)}>
                 <FiLogOut size={16} style={{ marginRight: "8px" }} />
                 Logout
               </Dropdown.Item>
@@ -102,35 +110,35 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
         {/* Original navbar content for desktop */}
         <Navbar.Collapse id="navbar-nav">
           <Nav className="ms-auto d-flex align-items-center gap-3">
-            <span className="d-none d-lg-block" style={welcomeStyle(darkMode)}>
+            <span className="d-none d-lg-block" style={welcomeStyle(theme)}>
               Welcome, {user.username}
             </span>
 
             {/* Other icons visible on desktop only */}
             <Button variant="link" onClick={toggleTheme} className="p-0 border-0 d-none d-lg-block" style={{ fontSize: "20px" }}>
-              {darkMode ? <BsSun size={20} color="#ffc107" /> : <BsMoon size={20} color="#000" />}
+              {darkMode ? <BsSun size={20} color="#ffc107" /> : <BsMoon size={20} color={theme.textPrimary} />}
             </Button>
 
             <Button variant="link" onClick={toggleFullscreen} className="p-0 border-0 d-none d-lg-block" style={{ fontSize: "20px" }}>
-              <AiOutlineScan size={22} color={darkMode ? "#fff" : "#000"} />
+              <AiOutlineScan size={22} color={theme.textPrimary} />
             </Button>
 
             {/* Profile icon aligned after AiOutlineScan for desktop */}
             <div className="d-none d-lg-block">
               <Dropdown align="end" show={dropdownOpen} onToggle={toggleDropdown} autoClose="outside">
                 <Dropdown.Toggle as={Button} variant="link" className="p-0 border-0 d-flex align-items-center" onClick={toggleDropdown}>
-                  <FiUser size={20} color={darkMode ? "#fff" : "#000"} />
+                  <FiUser size={20} color={theme.textPrimary} />
                 </Dropdown.Toggle>
 
-                <Dropdown.Menu align="end" style={dropdownStyle(darkMode)}>
-                  <div style={{ textAlign: "center", padding: "8px 12px" }}>
+                <Dropdown.Menu align="end" style={dropdownStyle(theme)}>
+                  <div style={userInfoStyle(theme)}>
                     <strong>{user.username}</strong>
-                    <div style={{ fontSize: "0.75rem", color: darkMode ? "#ccc" : "#333" }}>{user.email}</div>
+                    <div style={userEmailStyle(theme)}>{user.email}</div>
                   </div>
 
-                  <div style={separatorStyle(darkMode)}></div>
+                  <div style={separatorStyle(theme)}></div>
 
-                  <Dropdown.Item onClick={toggleTheme} style={dropdownItemStyle(darkMode)}>
+                  <Dropdown.Item onClick={toggleTheme} style={dropdownItemStyle(theme)}>
                     {darkMode ? (
                       <BsSun size={16} style={{ marginRight: "8px" }} />
                     ) : (
@@ -139,12 +147,12 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
                     Switch to {darkMode ? "Light" : "Dark"} Mode
                   </Dropdown.Item>
 
-                  <Dropdown.Item onClick={() => navigate(`/user-profile/${user.id}`)} style={dropdownItemStyle(darkMode)}>
+                  <Dropdown.Item onClick={() => navigate(`/change-password/${user.id}`)} style={dropdownItemStyle(theme)}>
                     <FiUser size={16} style={{ marginRight: "8px" }} />
-                    Profile
+                    Change Password
                   </Dropdown.Item>
 
-                  <Dropdown.Item onClick={handleLogout} style={dropdownItemStyle(darkMode)}>
+                  <Dropdown.Item onClick={handleLogout} style={dropdownItemStyle(theme)}>
                     <FiLogOut size={16} style={{ marginRight: "8px" }} />
                     Logout
                   </Dropdown.Item>
@@ -158,48 +166,60 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
   );
 };
 
-// Styles (unchanged)
-const navbarStyle = (darkMode, scrolled) => ({
+// Updated styles using theme system
+const navbarStyle = (theme, scrolled) => ({
   height: "60px",
   transition: "all 0.3s ease",
-  boxShadow: darkMode
-    ? "0px 3px 6px rgba(255, 255, 255, 0.2), inset 0px -2px 2px rgba(255, 255, 255, 0.2)"
-    : "0px 3px 6px rgba(0, 0, 0, 0.1), inset 0px -2px 2px rgba(0, 0, 0, 0.2)",
-  borderBottom: "3px solid #ccc",
-  backgroundColor: scrolled ? (darkMode ? "#343a40" : "#f8f9fa") : "transparent",
+  background: theme.sidebarBackground,
+  backdropFilter: 'blur(20px)',
+  borderBottom: `3px solid ${theme.border}`,
   position: scrolled ? "fixed" : "relative",
   top: 0,
   width: "100%",
   zIndex: 1000,
+  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
 });
 
-const welcomeStyle = (darkMode) => ({
-  color: darkMode ? "#fff" : "#000",
-  fontWeight: "bold",
+const welcomeStyle = (theme) => ({
+  color: theme.textPrimary,
+  fontWeight: "600",
   fontSize: "0.875rem",
 });
 
-const dropdownStyle = (darkMode) => ({
-  backgroundColor: darkMode ? "#343a40" : "#fff",
-  color: darkMode ? "#fff" : "#000",
+const dropdownStyle = (theme) => ({
+  backgroundColor: theme.sidebarBackground,
+  color: theme.textPrimary,
   width: "200px",
   padding: "8px 0",
-  border: darkMode ? "1px solid #555" : "1px solid #ddd",
+  border: `1px solid ${theme.border}`,
+  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
 });
 
-const separatorStyle = (darkMode) => ({
-  borderTop: "1px solid",
-  borderColor: darkMode ? "#555" : "#ccc",
+const userInfoStyle = (theme) => ({
+  textAlign: "center",
+  padding: "8px 12px",
+  color: theme.textPrimary,
+});
+
+const userEmailStyle = (theme) => ({
+  fontSize: "0.75rem",
+  color: theme.textPrimary,
+  opacity: 0.7,
+});
+
+const separatorStyle = (theme) => ({
+  borderTop: `1px solid ${theme.border}`,
   margin: "8px 0",
 });
 
-const dropdownItemStyle = (darkMode) => ({
-  backgroundColor: darkMode ? "#343a40" : "#fff",
-  color: darkMode ? "#fff" : "#000",
+const dropdownItemStyle = (theme) => ({
+  backgroundColor: theme.sidebarBackground,
+  color: theme.textPrimary,
   padding: "6px 12px",
   fontSize: "0.875rem",
   cursor: "pointer",
   transition: "background-color 0.3s ease, color 0.3s ease",
+  fontWeight: "500",
 });
 
 export default NavbarComp;

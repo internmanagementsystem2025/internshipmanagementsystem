@@ -13,7 +13,7 @@ import { FaPenFancy, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import logo from "../../../assets/logo.png";
 import ApproveModal from "../../../components/notifications/ApproveModal";
 import DeclineModal from "../../../components/notifications/DeclineModal";
-const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
 const ApproveCVs = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -82,7 +82,7 @@ const ApproveCVs = ({ darkMode }) => {
   // Add this useEffect to trigger the initial load
   useEffect(() => {
     fetchCVs();
-  }, []); // Empty dependency array means it runs once on mount
+  }, []); 
 
   // Approve CV(s)
   const handleApprove = async () => {
@@ -231,7 +231,7 @@ const ApproveCVs = ({ darkMode }) => {
     "NIC",
     "Full Name",
     "Intern Type",
-    "CV From",
+    "Category",
     "District",
     "Application Date",
     "View",
@@ -273,7 +273,7 @@ const ApproveCVs = ({ darkMode }) => {
         </h5>
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
         {/* Filter Input with Batch Buttons */}
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center mb-3">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-left mb-3">
           <div className="mb-2 mb-sm-0">
             <Form.Control
               type="text"
@@ -367,7 +367,12 @@ const ApproveCVs = ({ darkMode }) => {
                       <td>{cv.nic || "N/A"}</td>
                       <td>{cv.fullName || "N/A"}</td>
                       <td>{cv.selectedRole || "N/A"}</td>
-                      <td>{cv.userType || "N/A"}</td>
+                      <td>
+                        {cv.selectedRole === 'internship' 
+                          ? cv.roleData?.internship?.categoryOfApply || "N/A"
+                          : "-"
+                        }
+                      </td>
                       <td>{cv.district || "N/A"}</td>
                       <td>
                         {cv.applicationDate

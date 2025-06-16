@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Container, Spinner } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import logo from "../../../assets/logo.png";
@@ -33,7 +33,7 @@ const EditBankDetails = ({ darkMode }) => {
       
       setFetchingDetails(true);
       try {
-        const response = await axios.get(`http://localhost:5000/api/bankDetails/id/${id}`, {
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/bankDetails/id/${id}`, {
             headers: { 
               "Content-Type": "application/json"
             },
@@ -85,7 +85,7 @@ const EditBankDetails = ({ darkMode }) => {
     const formattedData = { ...bankData, accountNumber: bankData.accountNumber.replace(/\s/g, "") };
 
     try {
-      const response = await axios.put(`http://localhost:5000/api/bankDetails/id/${id}`, formattedData, {
+      const response = await axios.put(`${import.meta.env.VITE_BASE_URL}/api/bankDetails/id/${id}`, formattedData, {
         headers: { 
           "Content-Type": "application/json"
         },

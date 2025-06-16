@@ -3,8 +3,6 @@ import axios from "axios";
 import { CgFileDocument } from "react-icons/cg";
 import { Container, Row, Col, Button, Alert, Spinner } from "react-bootstrap";
 
-// Use the same API_BASE_URL as the rest of the application
-const API_BASE_URL = "http://localhost:5000";
 
 const ViewUploadedDocuments = ({ cvId, darkMode }) => {
   const [cvData, setCvData] = useState(null);
@@ -23,7 +21,7 @@ const ViewUploadedDocuments = ({ cvId, darkMode }) => {
           return;
         }
 
-        const response = await axios.get(`${API_BASE_URL}/api/cvs/${cvId}`, {
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/cvs/${cvId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -58,7 +56,7 @@ const ViewUploadedDocuments = ({ cvId, darkMode }) => {
     
     // Extract the file name from the path
     const fileName = filePath.split("\\").pop().split("/").pop();
-    const fileUrl = `${API_BASE_URL}/uploads/cvs/${fileName}`;
+    const fileUrl = `${import.meta.env.VITE_BASE_URL}/uploads/cvs/${fileName}`;
     window.open(fileUrl, "_blank");
   };
 

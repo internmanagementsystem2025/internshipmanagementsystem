@@ -6,6 +6,7 @@ const path = require("path");
 const http = require("http");
 const socketIo = require("socket.io");
 
+
 const authRoutes = require("./routes/authRoutes");
 const emailRoutes = require("./routes/emailRoutes");
 const bankRoutes = require("./routes/bankRoutes");
@@ -30,21 +31,24 @@ const certificate = require("./routes/Certificate");
 const letter = require("./routes/letter");
 const stationRoutes = require("./routes/stationRoutes");
 const rotationalRoutes = require("./routes/rotationalRoutes");
-const userActivityRoutes = require("./routes/userActivityRoutes");
+// const userActivityRoutes = require("./routes/userActivityRoutes");
 const certificateLetterRoutes = require("./routes/certificateLetterRoutes");
-const { passport } = require('./config/oauthStrategies');
+// const { passport } = require('./config/oauthStrategies');
+const employeeRoutes = require("./routes/employeeRoutes");
+const placementLetterRoutes = require("./routes/placementLetterRoutes");
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
 
 // Initialize passport
-app.use(passport.initialize());
+// app.use(passport.initialize());
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(errorHandler);
+app.use(express.urlencoded({ extended: true }));
 autoDeleteRejectedCVs();
 
 // Serve static files (for image uploads, etc.)
@@ -73,8 +77,13 @@ app.use("/api/interncertificates", certificate);
 app.use("/api/letters", letter);
 app.use("/api/stations", stationRoutes);
 app.use("/api/rotational", rotationalRoutes);
-app.use("/api/user-activity", userActivityRoutes);
+// app.use("/api/user-activity", userActivityRoutes);
 app.use("/api/certificate-letters", certificateLetterRoutes);
+app.use("/api/employees", employeeRoutes);
+app.use("/api/placementletters", placementLetterRoutes);
+
+
+
 // MongoDB Connection
 const connectDB = async () => {
   try {
@@ -82,7 +91,7 @@ const connectDB = async () => {
       throw new Error("MONGO_URI is not defined in .env file");
     }
 
-    await mongoose.connect(process.env.MONGO_URI); // Clean and modern
+    await mongoose.connect(process.env.MONGO_URI); 
 
     console.log("MongoDB Connected Successfully");
   } catch (err) {

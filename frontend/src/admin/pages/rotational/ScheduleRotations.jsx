@@ -17,7 +17,7 @@ import {
 import axios from "axios";
 import logo from "../../../assets/logo.png";
 
-const API_BASE_URL = import.meta.env.VITE_BASE_URL;
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
 const ScheduleRotations = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ const ScheduleRotations = ({ darkMode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [view, setView] = useState("all"); // 'all', 'pending', 'unassigned', 'assigned'
+  const [view, setView] = useState("all"); 
   const [selectedCVs, setSelectedCVs] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedStation, setSelectedStation] = useState("");
@@ -585,7 +585,7 @@ const ScheduleRotations = ({ darkMode }) => {
               value={searchTerm}
               onChange={handleSearch}
               className={darkMode ? "bg-dark text-white border-secondary" : ""}
-              style={{ width: "250px" }}
+              style={{ width: "150px",fontSize:"12px" }}
             />
           </div>
           <div className="d-flex">

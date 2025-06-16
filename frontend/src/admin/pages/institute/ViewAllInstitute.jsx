@@ -21,7 +21,7 @@ const ViewAllInstitute = ({ darkMode }) => {
     const fetchInstitutes = async () => {
       setLoading(true);
       try {
-        const { data } = await axios.get("http://localhost:5000/api/universities", {
+        const { data } = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/universities`, {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         });
 
@@ -59,7 +59,7 @@ const ViewAllInstitute = ({ darkMode }) => {
     if (!selectedInstitute) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/universities/${selectedInstitute._id}`, {
+      await axios.delete(`${import.meta.env.VITE_BASE_URL}/api/universities/${selectedInstitute._id}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setInstituteData(prevData => prevData.filter(institute => institute._id !== selectedInstitute._id));
@@ -114,7 +114,7 @@ const ViewAllInstitute = ({ darkMode }) => {
 
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
-        <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="d-flex flex-wrap gap-1 justify-content-between align-items-center mb-3">
           <Form.Group controlId="filterInput" className="mb-0 me-2" style={{ flexGrow: 1 }}>
             <Form.Control
               type="text"

@@ -148,7 +148,7 @@ const emailTemplates = {
   }),
 
   // Password Reset OTP (Updated)
-  passwordResetOTP: (username, otp) => ({
+     passwordResetOTP: (username, otp) => ({
     subject: 'Password Reset Code - Mobitel Intern Management System',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
@@ -166,7 +166,7 @@ const emailTemplates = {
         <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 15px 0;">
           <p><strong>Security Information:</strong></p>
           <ul>
-            <li>This code expires in 30 minutes</li>
+            <li>This code expires in 3 minutes</li>
             <li>Do not share this code with anyone</li>
             <li>If you didn't request this, contact support immediately</li>
           </ul>
@@ -181,7 +181,7 @@ const emailTemplates = {
     `
   }),
 
-  // Password Reset Confirmation (Updated)
+  // Password Reset Confirmation Template
   passwordResetConfirmation: (username) => ({
     subject: 'Password Changed Successfully - Mobitel Intern Management System',
     html: `
@@ -214,6 +214,8 @@ const emailTemplates = {
 
 // Email Service
 const EmailService = {
+  createTransporter,
+
   async sendEmail(to, template, options = {}) {
     try {
       if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
@@ -270,17 +272,38 @@ const EmailService = {
   },
 
   async sendPasswordResetOTP(email, username, otp) {
-    return this.sendEmail(
-      email,
-      emailTemplates.passwordResetOTP(username, otp)
-    );
+    try {
+      const template = emailTemplates.passwordResetOTP(username, otp);
+      const result = await this.sendEmail(email, template);
+      
+      console.log(`OTP email sent successfully to ${email}:`, result.messageId);
+      
+      return { 
+        success: true, 
+        messageId: result.messageId 
+      };
+
+    } catch (error) {
+      console.error('Error sending OTP email:', error);
+      throw new Error(`Failed to send OTP email: ${error.message}`);
+    }
   },
 
   async sendPasswordResetConfirmation(email, username) {
-    return this.sendEmail(
-      email,
-      emailTemplates.passwordResetConfirmation(username)
-    );
+    try {
+      const template = emailTemplates.passwordResetConfirmation(username);
+      const result = await this.sendEmail(email, template);
+      
+      console.log(`Password reset confirmation email sent to ${email}:`, result.messageId);
+      
+      return { 
+        success: true, 
+        messageId: result.messageId 
+      };
+    } catch (error) {
+      console.error('Error sending confirmation email:', error);
+      throw new Error(`Failed to send confirmation email: ${error.message}`);
+    }
   }
 };
 

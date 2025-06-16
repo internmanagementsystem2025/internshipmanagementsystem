@@ -4,6 +4,57 @@ import axios from "axios";
 import { FaCalendarAlt } from "react-icons/fa";
 import { motion } from "framer-motion";
 
+// Create axios instance
+const api = axios.create({
+  baseURL: import.meta.env.VITE_BASE_URL || '',
+});
+
+// Add request interceptor
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = localStorage.getItem("refreshToken");
+        const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/refresh`, {
+          refreshToken,
+        });
+
+        const { token } = response.data;
+        localStorage.setItem("token", token);
+
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        return api(originalRequest);
+      } catch (err) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/login";
+        return Promise.reject(err);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 const RescheduleInductionModal = ({
   show,
   onClose,
@@ -23,8 +74,6 @@ const RescheduleInductionModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState("");
   const [localSuccess, setLocalSuccess] = useState("");
-  const API_BASE_URL = import.meta.env.VITE_BASE_URL;
-  const token = localStorage.getItem("token");
 
   // Clear messages when modal closes or when parent clears them
   useEffect(() => {
@@ -54,18 +103,20 @@ const RescheduleInductionModal = ({
     setLocalSuccess("");
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/inductions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
+      const response = await api.get("/api/inductions");
+
       if (response.data && Array.isArray(response.data)) {
-        // Filter out past inductions and the current induction being rescheduled
         const currentDate = new Date();
-        currentDate.setHours(0, 0, 0, 0); // Set to beginning of today
+        currentDate.setHours(0, 0, 0, 0); 
         
         const availableInductions = response.data.filter(induction => {
-          // Handle date formats
-          const inductionStartDate = new Date(induction.inductionStartDate || induction.startDate);
+          const inductionStartDate = new Date(
+            induction.inductionStartDate || 
+            induction.startDate || 
+            induction.inductionStart ||
+            induction.start
+          );
+          
           return inductionStartDate >= currentDate && induction._id !== currentInductionId;
         });
         
@@ -78,8 +129,12 @@ const RescheduleInductionModal = ({
         throw new Error("Unexpected response format");
       }
     } catch (err) {
-      setLocalError("Failed to fetch inductions. Please try again.");
       console.error("Fetch error:", err);
+      if (err.response?.status === 401) {
+        setLocalError("Session expired. Please login again.");
+      } else {
+        setLocalError("Failed to fetch inductions. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -102,13 +157,12 @@ const RescheduleInductionModal = ({
 
     setSubmitting(true);
     setLocalError("");
-    onClearMessages(); // Clear any existing messages before new submission
+    onClearMessages(); 
 
     try {
-      // Pass the current induction ID and the new induction ID along with reason
       await onConfirm(selectedInduction, currentInductionId, rescheduleReason);
-      // Success message will come from the parent component
     } catch (err) {
+      console.error("Reschedule error:", err);
       setLocalError(err.message || "Failed to reschedule induction");
     } finally {
       setSubmitting(false);
@@ -120,6 +174,32 @@ const RescheduleInductionModal = ({
     setLocalSuccess("");
     onClearMessages();
     onClose();
+  };
+
+  const formatInductionDisplay = (induction) => {
+    const name = induction.induction || 
+                 induction.inductionName || 
+                 induction.name || 
+                 "Unnamed Induction";
+    
+    const startDate = induction.inductionStartDate || 
+                     induction.startDate || 
+                     induction.inductionStart ||
+                     induction.start;
+    
+    const endDate = induction.inductionEndDate || 
+                   induction.endDate || 
+                   induction.inductionEnd ||
+                   induction.end;
+    
+    let dateRange = "No Date Range";
+    if (startDate && endDate) {
+      dateRange = `${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`;
+    } else if (startDate) {
+      dateRange = `From ${new Date(startDate).toLocaleDateString()}`;
+    }
+    
+    return `${name} - ${dateRange}`;
   };
 
   return (
@@ -156,7 +236,7 @@ const RescheduleInductionModal = ({
         </div>
 
         {/* Show success/error messages from either local state or props */}
-        {localSuccess && (
+        {(localSuccess || successMessage) && (
           <Alert
             variant="success"
             dismissible
@@ -165,11 +245,11 @@ const RescheduleInductionModal = ({
               onClearMessages();
             }}
           >
-            {localSuccess}
+            {localSuccess || successMessage}
           </Alert>
         )}
 
-        {localError && (
+        {(localError || errorMessage) && (
           <Alert
             variant="danger"
             dismissible
@@ -178,7 +258,7 @@ const RescheduleInductionModal = ({
               onClearMessages();
             }}
           >
-            {localError}
+            {localError || errorMessage}
             <Button
               size="sm"
               variant="outline-danger"
@@ -196,7 +276,7 @@ const RescheduleInductionModal = ({
             <p>Loading available induction sessions...</p>
           </div>
         ) : (
-          !localSuccess && (
+          !(localSuccess || successMessage) && (
             <Form>
               <Form.Group className="mb-3">
                 <Form.Label>Select New Induction Session</Form.Label>
@@ -210,17 +290,15 @@ const RescheduleInductionModal = ({
                   <option value="">Select a New Induction Session</option>
                   {inductions.map((induction) => (
                     <option key={induction._id} value={induction._id}>
-                      {induction.induction || induction.name || "Unnamed Induction"} - {" "}
-                      {induction.inductionStartDate
-                        ? new Date(induction.inductionStartDate).toLocaleDateString() + " to " + 
-                          new Date(induction.inductionEndDate || induction.endDate).toLocaleDateString()
-                        : induction.startDate 
-                          ? new Date(induction.startDate).toLocaleDateString() + " to " + 
-                            new Date(induction.endDate).toLocaleDateString()
-                          : "No Date Range"}
+                      {formatInductionDisplay(induction)}
                     </option>
                   ))}
                 </Form.Control>
+                {inductions.length === 0 && !loading && (
+                  <Form.Text className="text-danger">
+                    No available induction sessions found.
+                  </Form.Text>
+                )}
               </Form.Group>
 
               <Form.Group className="mb-3">
@@ -253,11 +331,17 @@ const RescheduleInductionModal = ({
         >
           Cancel
         </Button>
-        {!localSuccess && (
+        {!(localSuccess || successMessage) && (
           <Button
             variant="warning"
             onClick={handleConfirm}
-            disabled={!selectedInduction || !rescheduleReason.trim() || submitting || loading}
+            disabled={
+              !selectedInduction || 
+              !rescheduleReason.trim() || 
+              submitting || 
+              loading ||
+              inductions.length === 0
+            }
           >
             {submitting ? (
               <>

@@ -44,7 +44,7 @@ const ScheduleInterviews = ({ darkMode }) => {
   const token = localStorage.getItem("token");
 
   const api = axios.create({
-    baseURL: `${API_BASE_URL}/cvs`,
+    baseURL: `${API_BASE_URL}/api/cvs`,
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -342,7 +342,7 @@ const ScheduleInterviews = ({ darkMode }) => {
 
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
         {/* Filter Input with Batch Buttons */}
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center mb-3">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-left mb-3">
           <div className="mb-2 mb-sm-0">
             <Form.Control
               type="text"
@@ -362,7 +362,7 @@ const ScheduleInterviews = ({ darkMode }) => {
                 setShowScheduleModal(true);
               }}
               disabled={selectedRows.length === 0}
-              style={{ marginLeft: "10px", marginTop: "5px" }}
+              style={{ marginLeft: "2px", marginTop: "5px" }}
             >
               Schedule Interview
             </Button>

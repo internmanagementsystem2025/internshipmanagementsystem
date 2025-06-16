@@ -2,16 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Alert, Button } from 'react-bootstrap';
 
 const ConnectivityNotification = () => {
-  // Connection states: 'online', 'poor', 'offline'
   const [connectionState, setConnectionState] = useState(navigator.onLine ? 'online' : 'offline');
   const [showNotification, setShowNotification] = useState(false);
   
   useEffect(() => {
-    // Set up event listeners for online/offline status
     const handleOnline = () => {
       setConnectionState('online');
       setShowNotification(true);
-      // Hide the "online" notification after 5 seconds
       setTimeout(() => setShowNotification(false), 5000);
     };
     
@@ -64,7 +61,6 @@ const ConnectivityNotification = () => {
     if (!navigator.onLine) {
       setShowNotification(true);
     } else {
-      // Check connection quality immediately
       checkConnectionQuality();
     }
     
@@ -77,14 +73,11 @@ const ConnectivityNotification = () => {
   }, []);
   
   const handleClose = () => {
-    // Only allow closing if not completely offline
     if (connectionState !== 'offline') {
       setShowNotification(false);
     }
   };
   
-  // Return null if we shouldn't show the notification
-  // Only hide if online/poor AND showNotification is false
   if (!showNotification && connectionState !== 'offline') return null;
   
   // Configuration for different connection states

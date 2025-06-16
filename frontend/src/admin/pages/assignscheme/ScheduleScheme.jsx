@@ -25,58 +25,161 @@ const ScheduleScheme = ({ darkMode }) => {
   const [internToAssign, setInternToAssign] = useState(null);
   const [batchAssign, setBatchAssign] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [selectedCvId, setSelectedCvId] = useState(null);
-  const token = localStorage.getItem("token");
+  const [token, setToken] = useState(null);
 
+  // Initialize token on component mount
+  useEffect(() => {
+    const authToken = localStorage.getItem("token");
+    if (!authToken) {
+      navigate("/login");
+      return;
+    }
+    setToken(authToken);
+  }, [navigate]);
+
+  // Create axios instance with proper configuration
   const api = axios.create({
-    baseURL: "http://localhost:5000/api",
-    headers: { Authorization: `Bearer ${token}` },
+    baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
   });
 
+  // Add request interceptor to always include current token
+  api.interceptors.request.use(
+    (config) => {
+      const currentToken = localStorage.getItem("token");
+      if (currentToken) {
+        config.headers.Authorization = `Bearer ${currentToken}`;
+      }
+      return config;
+    },
+    (error) => {
+      return Promise.reject(error);
+    }
+  );
+
+  // Add response interceptor to handle auth errors
+  api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        navigate("/login");
+      }
+      return Promise.reject(error);
+    }
+  );
+
   const fetchInterns = async () => {
+    if (!token) return;
+    
     setLoading(true);
     setError("");
+    setSuccessMessage("");
+    
     try {
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
+      // FIXED: Updated API endpoint to match backend
       const response = await api.get("/cvs/get-cvs-for-scheme-assignment");
-      setInternData(response.data);
+      
+      // Handle different response structures
+      const internDataResponse = response.data?.data || response.data || [];
+      
+      if (Array.isArray(internDataResponse)) {
+        setInternData(internDataResponse);
+      } else {
+        console.error("Unexpected intern data structure:", internDataResponse);
+        setInternData([]);
+        setError("Failed to load intern data: Invalid data format");
+      }
     } catch (error) {
-      setError("Failed to fetch intern data.");
-      console.error("Error fetching interns:", error.message);
+      console.error("Error fetching interns:", error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          "Failed to fetch intern data";
+      setError(errorMessage);
+      setInternData([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchInterns();
-  }, []);
+    if (token) {
+      fetchInterns();
+    }
+  }, [token]);
 
-  // Assign scheme
+  // FIXED: Assign scheme with proper data mapping
   const handleAssignScheme = async (schemeData) => {
     try {
+      setError("");
+      setSuccessMessage("");
+      
+      // FIXED: Prepare the request data with correct field mapping
+      const requestData = {
+        schemeId: schemeData.schemeId,
+        managerLevel: parseInt(schemeData.managerLevel), 
+        internshipPeriod: parseInt(schemeData.internshipPeriod),
+        startDate: schemeData.startDate,
+        forRequest: schemeData.forRequest === "yes" ? "yes" : "no", 
+        milestones: schemeData.milestones || []
+      };
+
+      console.log("Request data being sent:", requestData); // Debug log
+
+      let response;
+      
       if (batchAssign) {
-        // Batch assignment
-        const response = await api.post(`/cvs/batch-assign-scheme`, {
+        // FIXED: Batch assignment endpoint
+        response = await api.post(`/cvs/batch-assign-scheme`, {
           cvIds: selectedRows,
-          ...schemeData,
+          ...requestData
         });
-        return response.data;
+        
+        const assignedCount = response.data?.data?.assignedCount || selectedRows.length;
+        setSuccessMessage(`Successfully assigned scheme to ${assignedCount} candidate(s)`);
+        
+        setSelectedRows([]);
       } else {
-        // Single assignment
-        const response = await api.post(
+        response = await api.post(
           `/cvs/${internToAssign._id}/assign-scheme`,
-          schemeData
+          requestData
         );
-        return response.data;
+        
+        setSuccessMessage(`Successfully assigned scheme to ${internToAssign.fullName}`);
       }
+
+      await fetchInterns();
+      
+      return response.data;
     } catch (error) {
       console.error("Error assigning scheme:", error);
-      throw new Error(error.response?.data?.message || error.message);
+      
+      let errorMessage = "Failed to assign scheme";
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Add specific error context for common issues
+      if (error.response?.status === 400) {
+        if (error.response.data?.message?.includes("Missing required fields")) {
+          errorMessage = "Please fill in all required fields before assigning the scheme.";
+        } else if (error.response.data?.message?.includes("already assigned")) {
+          errorMessage = "One or more selected candidates are already assigned to a scheme.";
+          await fetchInterns();
+        }
+      } else if (error.response?.status === 404) {
+        errorMessage = "The selected scheme or candidate was not found.";
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
@@ -89,19 +192,38 @@ const ScheduleScheme = ({ darkMode }) => {
     );
   };
 
-  // Select all rows
+  // Select all rows on current page
   const handleSelectAll = () => {
-    setSelectedRows(
-      selectedRows.length === currentInterns.length
-        ? []
-        : currentInterns.map((intern) => intern._id)
-    );
+    const currentPageIds = currentInterns.map((intern) => intern._id);
+    const allCurrentSelected = currentPageIds.every(id => selectedRows.includes(id));
+    
+    if (allCurrentSelected) {
+      // Deselect all on current page
+      setSelectedRows(prev => prev.filter(id => !currentPageIds.includes(id)));
+    } else {
+      // Select all on current page
+      setSelectedRows(prev => {
+        const newSelected = [...prev];
+        currentPageIds.forEach(id => {
+          if (!newSelected.includes(id)) {
+            newSelected.push(id);
+          }
+        });
+        return newSelected;
+      });
+    }
   };
 
+  // FIXED: Enhanced filter logic to handle more fields
   const filteredInterns = internData.filter(
     (intern) =>
       intern.fullName?.toLowerCase().includes(filter.toLowerCase()) ||
-      intern.nic?.toLowerCase().includes(filter.toLowerCase())
+      intern.nic?.toLowerCase().includes(filter.toLowerCase()) ||
+      intern.emailAddress?.toLowerCase().includes(filter.toLowerCase()) ||
+      intern.refNo?.toLowerCase().includes(filter.toLowerCase()) ||
+      intern.selectedRole?.toLowerCase().includes(filter.toLowerCase()) ||
+      intern.district?.toLowerCase().includes(filter.toLowerCase()) ||
+      intern.institute?.toLowerCase().includes(filter.toLowerCase())
   );
 
   const indexOfLastIntern = currentPage * itemsPerPage;
@@ -114,6 +236,7 @@ const ScheduleScheme = ({ darkMode }) => {
 
   const columns = [
     "Select",
+    "Ref No",
     "NIC",
     "Full Name",
     "Intern Type",
@@ -123,6 +246,58 @@ const ScheduleScheme = ({ darkMode }) => {
     "Institute",
     "Assign Scheme",
   ];
+
+  const handleModalClose = () => {
+    setShowAssignModal(false);
+    setBatchAssign(false);
+    setInternToAssign(null);
+    setSelectedCvId(null);
+  };
+
+  const handleBatchAssign = () => {
+    if (selectedRows.length === 0) {
+      setError("Please select at least one candidate for batch assignment.");
+      return;
+    }
+    setError("");
+    setBatchAssign(true);
+    setShowAssignModal(true);
+  };
+
+  const handleSingleAssign = (intern) => {
+    setError("");
+    setInternToAssign(intern);
+    setSelectedCvId(intern._id);
+    setBatchAssign(false);
+    setShowAssignModal(true);
+  };
+
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError("");
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  if (!token) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <Spinner animation="border" />
+        <span className="ms-2">Loading...</span>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -159,37 +334,55 @@ const ScheduleScheme = ({ darkMode }) => {
         <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
         {/* Filter Input with Batch Button */}
-        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-center mb-3">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-left mb-3">
           <div className="mb-2 mb-sm-0">
             <Form.Control
               type="text"
-              placeholder="Filter by Full Name or NIC"
+              placeholder="Search by Name, NIC, Email, Ref No, etc."
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
-              style={{ maxWidth: "250px", width: "100%" }}
+              style={{ maxWidth: "350px", width: "100%" }}
             />
           </div>
           <div className="d-flex justify-content-start flex-wrap">
             <Button
               variant="info"
               size="sm"
-              onClick={() => {
-                setBatchAssign(true);
-                setShowAssignModal(true);
-              }}
+              onClick={handleBatchAssign}
               disabled={selectedRows.length === 0}
-              style={{ marginLeft: "10px", marginTop: "5px" }}
+              style={{ marginLeft: "2px", marginTop: "5px" }}
             >
-              Batch Assign Scheme
+              Batch Assign Scheme {selectedRows.length > 0 && `(${selectedRows.length} selected)`}
             </Button>
           </div>
         </div>
 
-        {error && <Alert variant="danger">{error}</Alert>}
+        {/* Success Message */}
+        {successMessage && (
+          <Alert 
+            variant="success" 
+            dismissible 
+            onClose={() => setSuccessMessage("")}
+          >
+            {successMessage}
+          </Alert>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <Alert 
+            variant="danger" 
+            dismissible 
+            onClose={() => setError("")}
+          >
+            {error}
+          </Alert>
+        )}
 
         {loading ? (
           <div className="text-center">
             <Spinner animation="border" variant={darkMode ? "light" : "dark"} />
+            <p className="mt-2">Loading candidates...</p>
           </div>
         ) : (
           <>
@@ -206,8 +399,12 @@ const ScheduleScheme = ({ darkMode }) => {
                     <Form.Check
                       type="checkbox"
                       checked={
-                        selectedRows.length === currentInterns.length &&
-                        currentInterns.length > 0
+                        currentInterns.length > 0 &&
+                        currentInterns.every(intern => selectedRows.includes(intern._id))
+                      }
+                      indeterminate={
+                        currentInterns.some(intern => selectedRows.includes(intern._id)) &&
+                        !currentInterns.every(intern => selectedRows.includes(intern._id))
                       }
                       onChange={handleSelectAll}
                     />
@@ -228,23 +425,45 @@ const ScheduleScheme = ({ darkMode }) => {
                           onChange={() => handleSelectRow(intern._id)}
                         />
                       </td>
+                      <td>{intern.refNo || "N/A"}</td>
                       <td>{intern.nic || "N/A"}</td>
                       <td>{intern.fullName || "N/A"}</td>
                       <td>{intern.selectedRole || "N/A"}</td>
-                      <td>{intern.emailAddress || "N/A"}</td>
+                      <td>
+                        <span 
+                          title={intern.emailAddress}
+                          style={{ 
+                            display: 'inline-block', 
+                            maxWidth: '150px', 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {intern.emailAddress || "N/A"}
+                        </span>
+                      </td>
                       <td>{intern.mobileNumber || "N/A"}</td>
                       <td>{intern.district || "N/A"}</td>
-                      <td>{intern.institute || "N/A"}</td>
+                      <td>
+                        <span 
+                          title={intern.institute}
+                          style={{ 
+                            display: 'inline-block', 
+                            maxWidth: '120px', 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {intern.institute || "N/A"}
+                        </span>
+                      </td>
                       <td>
                         <Button
                           size="sm"
                           variant="outline-info"
-                          onClick={() => {
-                            setInternToAssign(intern);
-                            setSelectedCvId(intern._id);
-                            setBatchAssign(false);
-                            setShowAssignModal(true);
-                          }}
+                          onClick={() => handleSingleAssign(intern)}
                           className="fw-semibold"
                         >
                           Assign
@@ -255,8 +474,10 @@ const ScheduleScheme = ({ darkMode }) => {
                 ) : (
                   <tr>
                     <td colSpan={columns.length} className="text-center">
-                      No induction-completed candidates found for scheme
-                      assignment
+                      {filter ? 
+                        "No candidates found matching your search criteria" : 
+                        "No induction-completed candidates found for scheme assignment"
+                      }
                     </td>
                   </tr>
                 )}
@@ -273,47 +494,49 @@ const ScheduleScheme = ({ darkMode }) => {
                     >
                       <div className="flex-grow-1 text-center">
                         <span>
-                          {filteredInterns.length} candidate(s) in total •{" "}
+                          {filteredInterns.length} candidate(s) found •{" "}
                           {selectedRows.length} selected
                         </span>
                       </div>
-                      <div className="d-flex align-items-center">
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() =>
-                            setCurrentPage((prev) => Math.max(prev - 1, 1))
-                          }
-                          disabled={currentPage === 1}
-                          style={{
-                            color: darkMode ? "white" : "black",
-                            padding: 0,
-                            margin: 0,
-                          }}
-                        >
-                          <FaChevronLeft />
-                          <FaChevronLeft />
-                        </Button>
-                        <span className="mx-2">{`Page ${currentPage} of ${totalPages}`}</span>
-                        <Button
-                          variant="link"
-                          size="sm"
-                          onClick={() =>
-                            setCurrentPage((prev) =>
-                              Math.min(prev + 1, totalPages)
-                            )
-                          }
-                          disabled={currentPage === totalPages}
-                          style={{
-                            color: darkMode ? "white" : "black",
-                            padding: 0,
-                            margin: 0,
-                          }}
-                        >
-                          <FaChevronRight />
-                          <FaChevronRight />
-                        </Button>
-                      </div>
+                      {totalPages > 1 && (
+                        <div className="d-flex align-items-center">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() =>
+                              setCurrentPage((prev) => Math.max(prev - 1, 1))
+                            }
+                            disabled={currentPage === 1}
+                            style={{
+                              color: darkMode ? "white" : "black",
+                              padding: 0,
+                              margin: 0,
+                            }}
+                          >
+                            <FaChevronLeft />
+                            <FaChevronLeft />
+                          </Button>
+                          <span className="mx-2">{`Page ${currentPage} of ${totalPages}`}</span>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            onClick={() =>
+                              setCurrentPage((prev) =>
+                                Math.min(prev + 1, totalPages)
+                              )
+                            }
+                            disabled={currentPage === totalPages}
+                            style={{
+                              color: darkMode ? "white" : "black",
+                              padding: 0,
+                              margin: 0,
+                            }}
+                          >
+                            <FaChevronRight />
+                            <FaChevronRight />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -326,20 +549,16 @@ const ScheduleScheme = ({ darkMode }) => {
       {/* Assign Scheme Modal */}
       <AssignSchemeModal
         show={showAssignModal}
-        onClose={() => {
-          setShowAssignModal(false);
-          setBatchAssign(false);
-          setInternToAssign(null);
-          setSelectedRows([]);
-          fetchInterns(); // Refresh data after closing
-        }}
+        onClose={handleModalClose}
         onConfirm={handleAssignScheme}
         refNo={
           batchAssign
             ? `${selectedRows.length} selected candidates`
-            : internToAssign?.refNo
+            : internToAssign?.refNo || internToAssign?.fullName || "Selected Candidate"
         }
         darkMode={darkMode}
+        isBatch={batchAssign}
+        selectedCount={selectedRows.length}
       />
     </div>
   );

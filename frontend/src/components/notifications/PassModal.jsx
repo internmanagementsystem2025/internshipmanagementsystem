@@ -21,7 +21,7 @@ const PassModal = ({ show, onClose, onConfirm, refNo, isBulk, darkMode }) => {
       setTimeout(() => {
         onClose();
         setSuccessMessage("");
-      }, 1500); // Close after showing success message
+      }, 1500); 
     } catch (error) {
       setErrorMessage(
         error.response?.data?.message || "Failed to mark as passed"

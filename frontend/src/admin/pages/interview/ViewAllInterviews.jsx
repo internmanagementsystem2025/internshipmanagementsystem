@@ -13,7 +13,7 @@ import axios from "axios";
 import logo from "../../../assets/logo.png";
 import ConfirmDeleteModal from "../../../components/notifications/ConfirmDeleteModal";
 
-const API_BASE_URL = "http://localhost:5000/api/interviews";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/interviews`;
 
 const ViewAllInterviews = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -119,18 +119,18 @@ const ViewAllInterviews = ({ darkMode }) => {
           </Form.Group>
 
           {/* Buttons for Adding and Scheduling Interviews */}
-          <div className="d-flex flex-wrap justify-content-end align-items-center mt-2 mt-sm-0">
+          <div className="d-flex flex-wrap justify-content-left align-items-center mt-2 mt-sm-0">
             <Button
               variant="primary"
               onClick={() => navigate("/add-new-interview")}
-              className="mx-2 mb-2 mb-sm-0"
+              className="mx-0 mb-2 mb-sm-0"
             >
               Add New Interview
             </Button>
             <Button
               variant="success"
               onClick={() => navigate("/schedule-interview")}
-              className="mx-2 mb-2 mb-sm-0"
+              className="mx-0 mb-2 mb-sm-0"
             >
               Schedule Interview
             </Button>

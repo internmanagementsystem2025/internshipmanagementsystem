@@ -29,7 +29,7 @@ const AllPlacementLetters = ({ darkMode }) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get("http://localhost:5000/api/letters");
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/letters`);
       console.log("Fetched Placement Letters:", response.data);
       setLetters(response.data);
     } catch (err) {
@@ -39,7 +39,7 @@ const AllPlacementLetters = ({ darkMode }) => {
     }
   };
 
-  // Fetch letters on component mount or when location state changes
+
   useEffect(() => {
     refetchLetters();
   }, [location.state?.refresh]);
@@ -54,7 +54,7 @@ const AllPlacementLetters = ({ darkMode }) => {
     if (!letterToDelete) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/letters/${letterToDelete._id}`);
+      await axios.delete(`${import.meta.env.VITE_BASE_URL}/api/letters/${letterToDelete._id}`);
       setShowDeleteModal(false);
 
       // Show success notification
@@ -125,7 +125,7 @@ const AllPlacementLetters = ({ darkMode }) => {
           </Form.Group>
 
           <div className="d-flex flex-wrap justify-content-end align-items-center mt-2 mt-sm-0">
-            <Button variant="primary" onClick={() => navigate("/add-new-placement-letter")} className="mx-2 mb-2 mb-sm-0">
+            <Button variant="primary" onClick={() => navigate("/add-new-placement-letter")} className="mx-0 mb-2 mb-sm-0">
               New Letter
             </Button>
           </div>

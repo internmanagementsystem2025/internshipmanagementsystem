@@ -6,14 +6,13 @@ import {
   useNavigationType,
 } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Row, Col, Navbar, Container } from "react-bootstrap";
+import { Row, Col} from "react-bootstrap";
 import NavbarComp from "./components/pages/NavbarComp";
 import IndividualSidebar from "./individual/components/IndividualSidebar";
 import InstituteSidebar from "./institute/components/InstituteSidebar";
 import AdminSidebar from "./admin/components/AdminSidebar";
 import StaffSidebar from "./staff/components/StaffSidebar";
 import { Footer } from "./components/pages/Footer";
-import UserProfile from "./components/login/UserProfile";
 import ConnectivityNotification from "./components/notifications/ConnectivityNotification";
 import LandingPage from "./components/login/LandingPage";
 import ProtectedRoute from "./components/login/ProtectedRoute";
@@ -31,9 +30,9 @@ import InstituteAddCV from "./institute/pages/requestinternship/InstituteAddCV";
 import ViewCV from "./components/pages/ViewCV";
 import EditCV from "./components/pages/EditCV";
 import InstituteHelp from "./institute/pages/help/InstituteHelp";
-
 import AdminHome from "./admin/pages/home/AdminHome";
 import ViewAllCVs from "./admin/pages/managecv/ViewAllCVs";
+import DeletedCVsPage  from "./admin/pages/managecv/DeletedCVsPage";
 import AdminAddCVs from "./admin/pages/managecv/AdminAddCVs";
 import ApproveCVs from "./admin/pages/managecv/ApproveCVs";
 import ViewAllInterviews from "./admin/pages/interview/ViewAllInterviews";
@@ -54,6 +53,8 @@ import ViewAllSchemes from "./admin/pages/scheme/ViewAllSchemes";
 import ViewInductionDetails from "./admin/pages/induction/ViewInductionDetails";
 import EditInduction from "./admin/pages/induction/EditInduction";
 import AddNewScheme from "./admin/pages/scheme/AddNewScheme";
+import AddEmployee from './admin/pages/scheme/AddEmployee';
+import ViewEmployees from './admin/pages/scheme/ViewEmployee';
 import ViewScheme from "./admin/pages/scheme/ViewScheme";
 import AddStaff from "./admin/pages/scheme/AddStaff";
 import EditScheme from "./admin/pages/scheme/EditScheme";
@@ -62,10 +63,8 @@ import VerifyOTPPage from "./components/login/VerifyOTPPage";
 import ScheduleInduction from "./admin/pages/induction/ScheduleInduction";
 import ScheduleScheme from "./admin/pages/assignscheme/ScheduleScheme";
 import InternLifeCycle from "./admin/pages/lifecycle/InternLifeCycle";
-import AcceptanceLetterRequest from "./admin/pages/lifecycle/AcceptanceLetterRequest";
-import ViewAcceptanceLetter from "./admin/pages/lifecycle/ViewAcceptanceLetter";
 import StaffHome from "./staff/pages/home/StaffHome";
-import ApproveExecutiveInternRequests from "./staff/pages/executiveinternrequests/ApproveExecutiveInternRequests";
+
 import InternPendingRequests from "./staff/pages/internpendingrequests/InternPendingRequests";
 import CertificateRequests from "./staff/pages/certificaterequest/CertificateRequests";
 import InternPlacements from "./staff/pages/internplacements/InternPlacements";
@@ -76,8 +75,7 @@ import CreateInternRequest from "./staff/pages/internrequests/CreateInternReques
 import ViewInternRequest from "./staff/pages/internrequests/ViewInternRequest";
 import EditInternRequest from "./staff/pages/internrequests/EditInternRequest";
 import StaffInternRequest from "./admin/pages/internrequest/StaffInternRequest";
-import CreateDetails from "./staff/pages/details/CreateDetails";
-import MyViewDetails from "./staff/pages/details/MyViewDetails";
+
 import AllCertificate from "./admin/pages/templates/AllCertificate";
 import AllCertificateLetters from "./admin/pages/templates/AllCertificateLetters";
 import AllPlacementLetters from "./admin/pages/templates/AllPlacementLetters";
@@ -104,6 +102,17 @@ import EmailVerification  from "./components/login/EmailVerification";
 import InternCertificateRequest  from "./admin/pages/certificaterequest/InternCertificateRequest";
 import ViewCertificateRequest  from "./components/pages/ViewCertificateRequest";
 import DownloadCertificate  from "./individual/pages/certificaterequest/DownloadCertificate";
+import AdminReports  from "./admin/pages/reports/AdminReports";
+import LearnMorePage from "./components/login/LearnMorePage";
+import ChangePassword  from "./components/login/ChangePassword";
+import InternPlacement from "./admin/pages/internplacement/InternPlacement";
+import InternAllocations from "./staff/pages/internallocation/MyInternsAllocation";
+import GeneratePlacementLetter  from "./admin/pages/lifecycle/GeneratePlacementLetter";
+import ViewGeneratePlacementLetter  from "./admin/pages/lifecycle/ViewGeneratePlacementLetter";
+import PlacementLetterManagement  from "./admin/pages/others/PlacementLetterManagement";
+import AddNewUniversity  from "./admin/pages/others/AddNewUniversity";
+
+
 
 function App() {
   const [darkMode, setDarkMode] = useState(
@@ -166,11 +175,12 @@ function App() {
     "/edit-cv/:cvId",
     "/institute-help-support",
     "/bulk-cv-upload"
-
   ];
+
   const adminRoutes = [
     "/admin-home",
     "/view-all-cvs",
+    "/delete-cv",
     "/admin-add-cv",
     "/admin-approve-cvs",
     "/view-all-interviews",
@@ -225,11 +235,19 @@ function App() {
     "/add-new-station",
     "/view-rotational-stations/:id",
     "/edit-rotational-stations/:id",
+    "/admin-reports" ,
+    "/add-employees",
+    "/view-employees",
+    "/intern-placement",
+    "/placement-letter-management",
+    "/add-new-university",
+    "/generate-placement-letter",
+    "/view-generate-placement-letter/preview",
   ];
 
   const staffRoutes = [
     "/staff-home",
-    "/executive-intern-request",
+
     "/my-interns-pending",
     "/my-certificate-request",
     "/my-interns-placement",
@@ -238,8 +256,8 @@ function App() {
     "/create-intern-request",
     "/view-intern-request/:id",
     "/edit-intern-request/:id",
-    "/create-details",
-    "/view-my-details",
+
+    "/my-interns-allocations",
   ];
 
   // Logic to determine which sidebar to show
@@ -254,7 +272,8 @@ function App() {
     "/register",
     "/forgot-password/email-confirm",
     "/forgot-password/verify-otp",
-    "/email-verification"
+    "/email-verification",
+    "/learn-more",
   ].includes(location.pathname);
   const hideFooter = hideNavAndSidebar;
 
@@ -299,12 +318,13 @@ function App() {
       <Row className="flex-grow-1 no-gutters" style={{ margin: 0 }}>
         <Col className="p-0">
         <Routes>
-  <Route path="/" element={<LandingPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/login" element={<LoginPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/register" element={<RegisterPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/forgot-password/email-confirm" element={<EmailConfirmPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/forgot-password/verify-otp" element={<VerifyOTPPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
-  <Route path="/email-verification" element={<EmailVerification darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/" element={<LandingPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/login" element={<LoginPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/register" element={<RegisterPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/forgot-password/email-confirm" element={<EmailConfirmPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/forgot-password/verify-otp" element={<VerifyOTPPage darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/email-verification" element={<EmailVerification darkMode={darkMode} toggleTheme={toggleTheme} />} />
+    <Route path="/learn-more" element={<LearnMorePage darkMode={darkMode} toggleTheme={toggleTheme} />} />
 
   {/* Protected Routes */}
   <Route element={<ProtectedRoute />}>
@@ -316,7 +336,7 @@ function App() {
     <Route path="/status-report" element={<StatusReport darkMode={darkMode} />} />
     <Route path="/request-certificate" element={<TrainingCertificateRequest darkMode={darkMode} />} />
     <Route path="/download-certificate" element={<DownloadCertificate darkMode={darkMode} />} />
-    <Route path="/user-profile/:id" element={<UserProfile darkMode={darkMode} />} />
+    <Route path="/change-password/:id" element={<ChangePassword darkMode={darkMode} />} />
 
     {/* Institute */}
     <Route path="/institute-home" element={<InstituteHome darkMode={darkMode} />} />
@@ -325,12 +345,12 @@ function App() {
     <Route path="/view-cv/:cvId" element={<ViewCV darkMode={darkMode} />} />
     <Route path="/edit-cv/:cvId" element={<EditCV darkMode={darkMode} />} />
     <Route path="/institute-help-support" element={<InstituteHelp darkMode={darkMode} />} />
-    
     <Route path="/bulk-cv-upload" element={<BulkCVUploadForm darkMode={darkMode} />} />
 
     {/* Admin */}
     <Route path="/admin-home" element={<AdminHome darkMode={darkMode} />} />
     <Route path="/view-all-cvs" element={<ViewAllCVs darkMode={darkMode} />} />
+    <Route path="/delete-cv" element={<DeletedCVsPage darkMode={darkMode} />} />
     <Route path="/admin-add-cv" element={<AdminAddCVs darkMode={darkMode} />} />
     <Route path="/admin-approve-cvs" element={<ApproveCVs darkMode={darkMode} />} />
     <Route path="/view-all-interviews" element={<ViewAllInterviews darkMode={darkMode} />} />
@@ -351,14 +371,17 @@ function App() {
     <Route path="/edit-induction/:id" element={<EditInduction darkMode={darkMode} />} />
     <Route path="/induction-results" element={<InductionResults darkMode={darkMode} />} />
     <Route path="/view-all-scheme" element={<ViewAllSchemes darkMode={darkMode} />} />
+    <Route path="/add-employees" element={<AddEmployee darkMode={darkMode} />} />
+    <Route path="/view-employees" element={<ViewEmployees darkMode={darkMode} />} />
     <Route path="/add-new-scheme" element={<AddNewScheme darkMode={darkMode} />} />
     <Route path="/view-scheme/:schemeId" element={<ViewScheme darkMode={darkMode} />} />
     <Route path="/add-staff" element={<AddStaff darkMode={darkMode} />} />
     <Route path="/edit-scheme/:schemeId" element={<EditScheme darkMode={darkMode} />} />
     <Route path="/schedule-scheme" element={<ScheduleScheme darkMode={darkMode} />} />
     <Route path="/life-cycle" element={<InternLifeCycle darkMode={darkMode} />} />
-    <Route path="/acceptance-letter/:nic" element={<AcceptanceLetterRequest darkMode={darkMode} />} />
-    <Route path="/view-acceptance-letter/:nic" element={<ViewAcceptanceLetter darkMode={darkMode} />} />
+    <Route path="/generate-placement-letter" element={<GeneratePlacementLetter darkMode={darkMode} />} />
+    <Route path="/view-generate-placement-letter/:id" element={<ViewGeneratePlacementLetter darkMode={darkMode} />} />
+    <Route path="/view-generate-placement-letter/preview" element={<ViewGeneratePlacementLetter darkMode={darkMode} isPreview />} />
     <Route path="/admin-help-support" element={<AdminHelp darkMode={darkMode} />} />
     <Route path="/staff-intern-request" element={<StaffInternRequest darkMode={darkMode} />} />
     <Route path="/all-certificate" element={<AllCertificate darkMode={darkMode} />} />
@@ -384,10 +407,14 @@ function App() {
     <Route path="/schedule-rotations" element={<ScheduleRotations darkMode={darkMode} />} />
     <Route path="/intern-certificate-request" element={<InternCertificateRequest darkMode={darkMode} />} />
     <Route path="/view-certificate-request/:id" element={<ViewCertificateRequest darkMode={darkMode} />} />
+    <Route path="/admin-reports" element={<AdminReports darkMode={darkMode} />} />
+    <Route path="/intern-placement" element={<InternPlacement darkMode={darkMode} />} />
+    <Route path="/placement-letter-management" element={<PlacementLetterManagement darkMode={darkMode} />} />
+    <Route path="/add-new-university" element={<AddNewUniversity darkMode={darkMode} />} />
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />
-    <Route path="/executive-intern-request" element={<ApproveExecutiveInternRequests darkMode={darkMode} />} />
+    
     <Route path="/my-interns-pending" element={<InternPendingRequests darkMode={darkMode} />} />
     <Route path="/my-certificate-request" element={<CertificateRequests darkMode={darkMode} />} />
     <Route path="/my-interns-placement" element={<InternPlacements darkMode={darkMode} />} />
@@ -396,8 +423,8 @@ function App() {
     <Route path="/create-intern-request" element={<CreateInternRequest darkMode={darkMode} />} />
     <Route path="/view-intern-request/:id" element={<ViewInternRequest darkMode={darkMode} />} />
     <Route path="/edit-intern-request/:id" element={<EditInternRequest darkMode={darkMode} />} />
-    <Route path="/create-details" element={<CreateDetails darkMode={darkMode} />} />
-    <Route path="/view-my-details" element={<MyViewDetails darkMode={darkMode} />} />
+    
+    <Route path="/my-interns-allocations" element={<InternAllocations darkMode={darkMode} />} />
   </Route>
 </Routes>
 

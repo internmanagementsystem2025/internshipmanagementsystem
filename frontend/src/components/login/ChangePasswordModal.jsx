@@ -11,7 +11,7 @@ const ChangePasswordModal = ({ show, onHide, darkMode, triggerNotification }) =>
   });
   const [passwordError, setPasswordError] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
-  const backendUrl = "http://localhost:5000"; 
+
   
   // Password visibility states
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -21,7 +21,6 @@ const ChangePasswordModal = ({ show, onHide, darkMode, triggerNotification }) =>
   // Handle password form changes
   const handlePasswordChange = (e) => {
     setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
-    // Clear error when user starts typing again
     if (passwordError) setPasswordError("");
   };
 
@@ -33,7 +32,6 @@ const ChangePasswordModal = ({ show, onHide, darkMode, triggerNotification }) =>
       confirmNewPassword: "",
     });
     setPasswordError("");
-    // Reset password visibility states
     setShowCurrentPassword(false);
     setShowNewPassword(false);
     setShowConfirmPassword(false);
@@ -73,7 +71,7 @@ const ChangePasswordModal = ({ show, onHide, darkMode, triggerNotification }) =>
       }
 
       await axios.put(
-        `${backendUrl}/api/auth/change-password`,
+        `${import.meta.env.VITE_BASE_URL}/api/auth/change-password`,
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,

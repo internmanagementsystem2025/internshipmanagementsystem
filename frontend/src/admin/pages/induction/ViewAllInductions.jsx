@@ -13,7 +13,7 @@ import axios from "axios";
 import logo from "../../../assets/logo.png";
 import ConfirmDeleteModal from "../../../components/notifications/ConfirmDeleteModal";
 
-const API_BASE_URL = "http://localhost:5000/api/inductions";
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/inductions`;
 
 const ViewAllInductions = ({ darkMode }) => {
   const navigate = useNavigate();
@@ -137,18 +137,18 @@ const ViewAllInductions = ({ darkMode }) => {
           </Form.Group>
 
           {/* Buttons for Adding and Scheduling Inductions */}
-          <div className="d-flex flex-wrap justify-content-end align-items-center mt-2 mt-sm-0">
+          <div className="d-flex flex-wrap justify-left align-items-center mt-2 mt-sm-0">
             <Button
               variant="primary"
               onClick={() => navigate("/add-new-induction")}
-              className="mx-2 mb-2 mb-sm-0"
+              className="mx-1 mb-2 mb-sm-0"
             >
               Add New Induction
             </Button>
             <Button
               variant="success"
               onClick={() => navigate("/induction-results")}
-              className="mx-2 mb-2 mb-sm-0"
+              className="mx-1 mb-2 mb-sm-0"
             >
               Induction Results
             </Button>

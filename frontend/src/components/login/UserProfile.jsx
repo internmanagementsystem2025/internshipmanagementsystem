@@ -1,161 +1,197 @@
-import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Card, Button, Form, Alert, Spinner, Table, Tabs, Tab, Badge } from "react-bootstrap";
+/* import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+ import { Container, Card, Button, Form, Alert, Spinner, InputGroup } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { FiLock, FiEye, FiEyeOff, FiUser, FiCheck, FiX } from "react-icons/fi";
 import axios from "axios";
 import logo from "../../assets/logo.png";
-import defaultProfilePic from "../../assets/user-profile.png";
 import Notification from "../notifications/Notification";
-import ChangePasswordModal from "./ChangePasswordModal";
-import ForgotPassword from "./ForgotPassword";
-import { FaDesktop, FaMobile, FaTablet, FaQuestionCircle, FaGoogle } from "react-icons/fa";
+
+const PasswordInput = React.memo(React.forwardRef(({ 
+  type, 
+  name, 
+  value, 
+  onChange, 
+  placeholder, 
+  required, 
+  icon: Icon, 
+  showPassword, 
+  togglePassword,
+  theme,
+  darkMode
+}, ref) => {
+  const [isFocused, setIsFocused] = useState(false);
+  const internalRef = useRef(null);
+  const inputRef = ref || internalRef;
+
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+  }, []);
+
+  const handleTogglePassword = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (togglePassword) {
+      togglePassword();
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 0);
+    }
+  }, [togglePassword]);
+
+  const containerStyle = useMemo(() => ({
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    background: theme.inputBackground,
+    border: `2px solid ${isFocused ? theme.accentColor : theme.inputBorder}`,
+    borderRadius: '12px',
+    transition: 'all 0.3s ease',
+    backdropFilter: 'blur(10px)',
+    boxShadow: isFocused ? `0 0 0 3px ${theme.accentColor}20` : 'none',
+    cursor: 'text'
+  }), [isFocused, theme]);
+
+  const inputStyle = useMemo(() => ({
+    flex: 1,
+    border: 'none',
+    background: 'transparent',
+    outline: 'none',
+    fontSize: '1rem',
+    color: theme.textPrimary,
+    fontFamily: 'inherit',
+    padding: '0.75rem 0.5rem',
+    margin: 0,
+    minWidth: 0,
+    width: '100%',
+    height: 'auto',
+    lineHeight: '1.5'
+  }), [theme.textPrimary]);
+
+  return (
+    <div className="position-relative mb-3">
+      <div 
+        style={containerStyle}
+        onClick={() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+          }
+        }}
+      >
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: '1rem',
+          flexShrink: 0,
+          pointerEvents: 'none'
+        }}>
+          <Icon size={20} color={isFocused ? theme.accentColor : theme.textSecondary} />
+        </div>
+        
+        <input
+          ref={inputRef}
+          type={showPassword ? "text" : "password"}
+          name={name}
+          value={value || ''}
+          onChange={onChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          required={required}
+          style={inputStyle}
+          autoComplete="new-password"
+          spellCheck="false"
+        />
+        
+        {togglePassword && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            paddingRight: '1rem',
+            flexShrink: 0
+          }}>
+            <button
+              type="button"
+              onClick={handleTogglePassword}
+              onMouseDown={(e) => e.preventDefault()}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: theme.textSecondary,
+                cursor: 'pointer',
+                padding: '0.5rem',
+                borderRadius: '6px',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '32px',
+                minHeight: '32px'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = darkMode ? '#404040' : '#f1f5f9';
+                e.currentTarget.style.color = theme.textPrimary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.textSecondary;
+              }}
+            >
+              {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}));
 
 const UserProfile = ({ darkMode }) => {
   const navigate = useNavigate();
-  const [user, setUser] = useState({
-    fullName: "",
-    email: "",
-    contactNumber: "",
-    userType: "",
-    department: "",
-    profileImage: "",
-    googleId: null,
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmNewPassword: "",
   });
-
-  const [imageFile, setImageFile] = useState(null);
+  const [passwordError, setPasswordError] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
   const [notification, setNotification] = useState("");
   const [showNotification, setShowNotification] = useState(false);
   const [notificationVariant, setNotificationVariant] = useState("success");
-  const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
   
-  // Password change state
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  
-  // New state for user activity history
-  const [loginHistory, setLoginHistory] = useState([]);
-  const [loginDevices, setLoginDevices] = useState([]);
-  const [passwordHistory, setPasswordHistory] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
+  // Password visibility states
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const backendUrl = "http://localhost:5000"; 
+  // Refs for input fields
+  const currentPasswordRef = useRef(null);
+  const newPasswordRef = useRef(null);
+  const confirmPasswordRef = useRef(null);
 
-  const fetchUserProfile = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        triggerNotification("Unauthorized: Please log in.", "danger");
-        setLoading(false);
-        return;
-      }
-  
-      const response = await axios.get(`${backendUrl}/api/auth/profile`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-  
-      const { fullName, email, contactNumber, userType, department, profileImage, googleId } = response.data;
-  
-      // Set default profile image
-      let displayImage = defaultProfilePic;
-      
-      // Handle profile image for Google users
-      if (googleId) {
-        try {
-          // Always try to fetch the latest Google profile image
-          const googleProfileResponse = await axios.get(`${backendUrl}/api/auth/google-profile`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          
-          if (googleProfileResponse.data && googleProfileResponse.data.picture) {
-            // Use the Google profile image if available
-            let googleImage = googleProfileResponse.data.picture;
-            
-            // Fix for incomplete URLs in the frontend
-            if (!googleImage.includes('=s') && !googleImage.endsWith('.jpg') && !googleImage.endsWith('.png')) {
-              googleImage = `${googleImage}=s400-c`;
-            }
-            
-            displayImage = googleImage;
-          } else if (profileImage) {
-            // Fall back to stored profile image
-            displayImage = profileImage.startsWith('http') 
-              ? profileImage 
-              : `${backendUrl}${profileImage}`;
-          }
-        } catch (googleError) {
-          console.error("Failed to fetch Google profile image:", googleError);
-          // Fall back to existing profile image or default
-          if (profileImage) {
-            displayImage = profileImage.startsWith('http') 
-              ? profileImage 
-              : `${backendUrl}${profileImage}`;
-          }
-        }
-      } else if (profileImage) {
-        // For non-Google users, use their uploaded profile image
-        displayImage = profileImage.startsWith('http') 
-          ? profileImage 
-          : `${backendUrl}${profileImage}`;
-      }
-  
-      setUser({
-        fullName,
-        email,
-        contactNumber: contactNumber || "",
-        userType,
-        department: department || "",
-        profileImage: displayImage,
-        googleId,
-      });
-    } catch (error) {
-      triggerNotification("Error fetching profile.", "danger");
-    } finally {
-      setLoading(false);
-    }
+
+  // Theme configuration
+  const theme = {
+    backgroundColor: darkMode ? "#000000" : "#f8fafc",
+    cardBackground: darkMode ? "#1E1E1E" : "rgba(255, 255, 255, 0.4)",
+    accentColor: darkMode ? "#2563eb" : "#10b981", 
+    textPrimary: darkMode ? "#E1E1E1" : "#1e293b",
+    textSecondary: darkMode ? "#A0A0A0" : "#64748b",
+    border: darkMode ? "#333333" : "rgba(0, 0, 0, 0.1)",
+    gradientStart: darkMode ? "#2563eb" : "#10b981",
+    gradientEnd: darkMode ? "#1e40af" : "#059669", 
+    buttonHover: darkMode ? "#1d4ed8" : "#047857",
+    inputBackground: darkMode ? "#2d2d2d" : "#ffffff",
+    inputBorder: darkMode ? "#404040" : "#e2e8f0",
+    danger: darkMode ? "#ef4444" : "#dc3545",
+    success: darkMode ? "#10b981" : "#198754"
   };
-  useEffect(() => {
-    fetchUserProfile();
-  }, []);
-
-  // Fetch user activity history
-  const fetchUserHistory = async () => {
-    if (activeTab !== "profile" && (loginHistory.length === 0 || loginDevices.length === 0)) {
-      setLoadingHistory(true);
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        // Fetch login history
-        const loginResponse = await axios.get(`${backendUrl}/api/user-activity/login-history`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setLoginHistory(loginResponse.data || []);
-
-        // Fetch login devices
-        const devicesResponse = await axios.get(`${backendUrl}/api/user-activity/login-devices`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setLoginDevices(devicesResponse.data || []);
-
-        if (!user.googleId) {
-          const passwordResponse = await axios.get(`${backendUrl}/api/user-activity/password-history`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          setPasswordHistory(passwordResponse.data || []);
-        }
-      } catch (error) {
-        console.error("Error fetching user history:", error);
-        triggerNotification("Error fetching user activity history.", "danger");
-      } finally {
-        setLoadingHistory(false);
-      }
-    }
-  };
-
-  useEffect(() => {
-    fetchUserHistory();
-  }, [activeTab, loginHistory.length, loginDevices.length, user.googleId]);
 
   // Function to trigger notifications
   const triggerNotification = (message, variant = "success") => {
@@ -164,549 +200,474 @@ const UserProfile = ({ darkMode }) => {
     setShowNotification(true);
   };
 
-  // Handle input changes for text fields
-  const handleChange = (e) => {
-    setUser({ ...user, [e.target.name]: e.target.value });
+  // Handle password form changes
+  const handlePasswordChange = (e) => {
+    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+    if (passwordError) setPasswordError("");
   };
 
-  // Handle profile image change
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUser((prevUser) => ({ ...prevUser, profileImage: reader.result }));
-      };
-      reader.readAsDataURL(file);
-    }
+  // Password strength indicator
+  const getPasswordStrength = (password) => {
+    if (password.length === 0) return { strength: 0, text: "", color: theme.textSecondary };
+    if (password.length < 6) return { strength: 25, text: "Too short", color: theme.danger };
+    if (password.length < 8) return { strength: 50, text: "Fair", color: "#f59e0b" };
+    if (password.length < 12) return { strength: 75, text: "Good", color: theme.accentColor };
+    return { strength: 100, text: "Strong", color: theme.success };
   };
 
-  // Handle profile update (only fullName & contactNumber)
-  const handleUpdateProfile = async (e) => {
+  const passwordStrength = getPasswordStrength(passwordData.newPassword);
+
+  // Handle password change submission
+  const handleSubmitPasswordChange = async (e) => {
     e.preventDefault();
-    setUpdating(true);
+    setPasswordError("");
 
-    try {
-      const token = localStorage.getItem("token");
-      const updateData = {
-        fullName: user.fullName,
-        contactNumber: user.contactNumber,
-      };
-
-      const response = await axios.put(`${backendUrl}/api/auth/profile`, updateData, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      });
-
-      setUser((prevUser) => ({
-        ...prevUser,
-        fullName: response.data.fullName,
-        contactNumber: response.data.contactNumber || "",
-      }));
-
-      triggerNotification("Profile updated successfully!", "success");
-      
-      setTimeout(() => {
-        fetchUserProfile();
-      }, 1000);
-    } catch (error) {
-      triggerNotification("Error updating profile.", "danger");
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  // Handle profile image upload separately
-  const handleUpdateProfileImage = async (e) => {
-    e.preventDefault();
-    if (!imageFile) {
-      triggerNotification("Please select an image first.", "warning");
+    // Validate passwords
+    if (passwordData.newPassword !== passwordData.confirmNewPassword) {
+      setPasswordError("New passwords do not match");
       return;
     }
 
-    setUpdating(true);
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setPasswordError("New password must be different from current password");
+      return;
+    }
+
+    setChangingPassword(true);
+
     try {
       const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("profileImage", imageFile);
+      if (!token) {
+        setPasswordError("Unauthorized: Please log in again.");
+        setChangingPassword(false);
+        return;
+      }
 
-      const response = await axios.put(`${backendUrl}/api/auth/profile`, formData, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      await axios.put(
+        `${import.meta.env.VITE_BASE_URL}/api/auth/change-password`,
+        {
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Reset form
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmNewPassword: "",
       });
 
-      // Clear the file input after successful upload
-      setImageFile(null);
-      document.getElementById('profile-image-input').value = '';
-      
-      triggerNotification("Profile image updated successfully!", "success");
+      // Reset password visibility states
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
+      setShowConfirmPassword(false);
+
+      triggerNotification("Password changed successfully!", "success");
       
       setTimeout(() => {
-        fetchUserProfile();
-      }, 1000);
+        navigate(-1);
+      }, 2000);
+
     } catch (error) {
-      triggerNotification("Error updating profile image.", "danger");
+      console.error("Password change error:", error);
+      const errorMessage = error.response?.data?.message || "Error changing password";
+      setPasswordError(errorMessage);
+      triggerNotification(errorMessage, "danger");
     } finally {
-      setUpdating(false);
+      setChangingPassword(false);
     }
   };
 
-  // Get device icon based on device type
-  const getDeviceIcon = (deviceType) => {
-    switch (deviceType.toLowerCase()) {
-      case 'desktop':
-        return <FaDesktop />;
-      case 'mobile':
-        return <FaMobile />;
-      case 'tablet':
-        return <FaTablet />;
-      default:
-        return <FaQuestionCircle />;
-    }
+  const handleCancel = () => {
+    navigate(-1);
   };
 
-  if (loading) {
-    return (
-      <Container className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" variant="primary" />
-      </Container>
-    );
-  }
 
-  if (showForgotPassword) {
-    return <ForgotPassword darkMode={darkMode} onBack={() => setShowForgotPassword(false)} />;
-  }
-
-  const renderProfileSidebar = () => (
-    <Col md={4} className="text-center">
-      {/* Profile Image */}
-      <Card className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}>
-        <Card.Body>
-          <img
-            src={user.profileImage}
-            alt="Profile"
-            className="rounded-circle mb-3"
-            style={{ width: "150px", height: "150px", objectFit: "cover", border: "2px solid #ccc" }}
-          />
-          
-          {user.googleId && (
-            <div className="mb-3">
-              <Badge bg="primary" className="p-2">
-                <FaGoogle className="me-1" /> Google Account
-              </Badge>
-              <div className="mt-2 small">
-                Profile image synced with your Google account
-              </div>
-            </div>
-          )}
-          
-          {!user.googleId && (
-            <>
-              <Form.Group>
-                <Form.Control 
-                  id="profile-image-input"
-                  type="file" 
-                  accept="image/*" 
-                  onChange={handleImageChange} 
-                />
-              </Form.Group>
-              <Button
-                className="mt-2 w-100"
-                variant="primary"
-                onClick={handleUpdateProfileImage}
-                disabled={updating}
-              >
-                {updating ? <Spinner animation="border" size="sm" /> : "Update Image"}
-              </Button>
-            </>
-          )}
-        </Card.Body>
-      </Card>
-
-      {!user.googleId && (
-        <Card className={`mt-3 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
-          <Card.Header>Password Management</Card.Header>
-          <Card.Body>
-            <Button
-              className="w-100 mb-2"
-              variant="outline-secondary"
-              onClick={() => setShowPasswordModal(true)}
-            >
-              Change Password
-            </Button>
-            
-            <Button
-              className="w-100"
-              variant="outline-secondary"
-              onClick={() => navigate("/forgot-password/email-confirm")}
-            >
-              Reset Password with OTP
-            </Button>
-          </Card.Body>
-        </Card>
-      )}
-
-      {/* Google account info box - Only for Google users */}
-      {user.googleId && (
-        <Card className={`mt-3 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
-          <Card.Header>Google Account</Card.Header>
-          <Card.Body>
-            <p className="mb-2">Your profile is linked to your Google account.</p>
-            <small>
-              Password management is handled through your Google account settings.
-            </small>
-          </Card.Body>
-        </Card>
-      )}
-
-      {/* Notification Box */}
-      {notification && (
-        <Alert variant={darkMode ? "info" : "success"} className="mt-3">
-          {notification}
-        </Alert>
-      )}
-    </Col>
-  );
-
-  const renderLoginHistory = () => (
-    <Card className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}>
-      <Card.Header className="d-flex justify-content-between align-items-center">
-        <h5 className="mb-0">Login History</h5>
-        {loginHistory.length > 0 && (
-          <Badge bg="info">{loginHistory.length} records</Badge>
-        )}
-      </Card.Header>
-      <Card.Body>
-        {loadingHistory ? (
-          <div className="text-center py-3">
-            <Spinner animation="border" variant="primary" />
-          </div>
-        ) : loginHistory.length > 0 ? (
-          <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-            <Table responsive striped bordered hover variant={darkMode ? "dark" : "light"}>
-              <thead style={{ position: "sticky", top: 0, background: darkMode ? "#343a40" : "white" }}>
-                <tr>
-                  <th>Date & Time</th>
-                  <th>Device</th>
-                  <th>Browser</th>
-                  <th>Location</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loginHistory.map((login, idx) => (
-                  <tr key={idx} className={idx < 5 ? "fw-bold" : ""}>
-                    <td>{new Date(login.timestamp).toLocaleString()}</td>
-                    <td>
-                      {getDeviceIcon(login.deviceType)} {login.deviceName}
-                    </td>
-                    <td>{login.browser}</td>
-                    <td>{login.location || 'Unknown'}</td>
-                    <td>
-                      <span className={`badge ${login.status === 'Success' ? 'bg-success' : 'bg-danger'}`}>
-                        {login.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-        ) : (
-          <Alert variant="info">No login history available.</Alert>
-        )}
-      </Card.Body>
-      {loginHistory.length > 5 && (
-        <Card.Footer className={`${darkMode ? "text-white" : "text-muted"}`}>
-          <small>The most recent 5 entries are highlighted. Scroll to see older entries.</small>
-        </Card.Footer>
-      )}
-    </Card>
-  );
-
-  const renderLoginDevices = () => (
-    <Card className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}>
-      <Card.Header className="d-flex justify-content-between align-items-center">
-        <h5 className="mb-0">Active Login Devices</h5>
-        {loginDevices.length > 0 && (
-          <Badge bg="info">{loginDevices.length} devices</Badge>
-        )}
-      </Card.Header>
-      <Card.Body>
-        {loadingHistory ? (
-          <div className="text-center py-3">
-            <Spinner animation="border" variant="primary" />
-          </div>
-        ) : loginDevices.length > 0 ? (
-          <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-            <Table responsive striped bordered hover variant={darkMode ? "dark" : "light"}>
-              <thead style={{ position: "sticky", top: 0, background: darkMode ? "#343a40" : "white" }}>
-                <tr>
-                  <th>Device</th>
-                  <th>Last Active</th>
-                  <th>Browser</th>
-                  <th>Location</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loginDevices.map((device, idx) => (
-                  <tr key={idx} className={idx < 5 || device.isCurrent ? "fw-bold" : ""}>
-                    <td>
-                      {getDeviceIcon(device.deviceType)} {device.deviceName}
-                    </td>
-                    <td>{new Date(device.lastActive).toLocaleString()}</td>
-                    <td>{device.browser}</td>
-                    <td>{device.location || 'Unknown'}</td>
-                    <td>
-                      {device.isCurrent ? (
-                        <Badge bg="success">Current Device</Badge>
-                      ) : (
-                        <Button size="sm" variant="danger">
-                          Revoke Access
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-        ) : (
-          <Alert variant="info">No active devices found.</Alert>
-        )}
-      </Card.Body>
-      {loginDevices.length > 5 && (
-        <Card.Footer className={`${darkMode ? "text-white" : "text-muted"}`}>
-          <small>The most recent 5 devices and your current device are highlighted. Scroll to see more devices.</small>
-        </Card.Footer>
-      )}
-    </Card>
-  );
-
-  const renderPasswordHistory = () => (
-    <Card className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}>
-      <Card.Header className="d-flex justify-content-between align-items-center">
-        <h5 className="mb-0">Password Change History</h5>
-        {passwordHistory.length > 0 && (
-          <Badge bg="info">{passwordHistory.length} records</Badge>
-        )}
-      </Card.Header>
-      <Card.Body>
-        {loadingHistory ? (
-          <div className="text-center py-3">
-            <Spinner animation="border" variant="primary" />
-          </div>
-        ) : passwordHistory.length > 0 ? (
-          <div style={{ maxHeight: "400px", overflowY: "auto" }}>
-            <Table responsive striped bordered hover variant={darkMode ? "dark" : "light"}>
-              <thead style={{ position: "sticky", top: 0, background: darkMode ? "#343a40" : "white" }}>
-                <tr>
-                  <th>Date & Time</th>
-                  <th>Method</th>
-                  <th>Device</th>
-                  <th>Location</th>
-                </tr>
-              </thead>
-              <tbody>
-                {passwordHistory.map((event, idx) => (
-                  <tr key={idx} className={idx < 5 ? "fw-bold" : ""}>
-                    <td>{new Date(event.timestamp).toLocaleString()}</td>
-                    <td>{event.method}</td>
-                    <td>
-                      {getDeviceIcon(event.deviceType)} {event.deviceName}
-                    </td>
-                    <td>{event.location || 'Unknown'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-        ) : (
-          <Alert variant="info">No password change history available.</Alert>
-        )}
-      </Card.Body>
-      {passwordHistory.length > 5 && (
-        <Card.Footer className={`${darkMode ? "text-white" : "text-muted"}`}>
-          <small>The most recent 5 password changes are highlighted. Scroll to see older entries.</small>
-        </Card.Footer>
-      )}
-    </Card>
-  );
-
-  // Render user info component
-  const renderUserInfo = () => (
-    <Card className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}>
-      <Card.Body>
-        <Form onSubmit={handleUpdateProfile}>
-          <Form.Group className="mb-3">
-            <Form.Label>Full Name</Form.Label>
-            <Form.Control
-              type="text"
-              name="fullName"
-              value={user.fullName}
-              onChange={handleChange}
-              className={darkMode ? "bg-dark text-white" : ""}
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="email"
-              name="email"
-              value={user.email}
-              disabled
-              className={darkMode ? "bg-dark text-white" : ""}
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label>Contact Number</Form.Label>
-            <Form.Control
-              type="text"
-              name="contactNumber"
-              value={user.contactNumber}
-              onChange={handleChange}
-              className={darkMode ? "bg-dark text-white" : ""}
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label>User Type</Form.Label>
-            <Form.Control
-              type="text"
-              value={user.userType}
-              disabled
-              className={darkMode ? "bg-dark text-white" : ""}
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label>Department</Form.Label>
-            <Form.Control
-              type="text"
-              value={user.department}
-              disabled
-              className={darkMode ? "bg-dark text-white" : ""}
-            />
-          </Form.Group>
-
-          <Button variant={darkMode ? "primary" : "success"} type="submit" disabled={updating}>
-            {updating ? <Spinner animation="border" size="sm" /> : "Update Profile"}
-          </Button>
-        </Form>
-      </Card.Body>
-    </Card>
-  );
-
-  const tabStyle = {
-    color: darkMode ? "white" : "inherit",
-    fontWeight: "bold"
-  };
-
-  const getTabs = () => {
-    const tabs = [
-      <Tab 
-        key="profile"
-        eventKey="profile" 
-        title={<span style={tabStyle}>Profile Info</span>}
-      >
-        {renderUserInfo()}
-      </Tab>,
-      <Tab 
-        key="loginHistory"
-        eventKey="loginHistory" 
-        title={<span style={tabStyle}>Login History</span>}
-      >
-        {renderLoginHistory()}
-      </Tab>,
-      <Tab 
-        key="devices"
-        eventKey="devices" 
-        title={<span style={tabStyle}>Login Devices</span>}
-      >
-        {renderLoginDevices()}
-      </Tab>
-    ];
-
-    if (!user.googleId) {
-      tabs.push(
-        <Tab 
-          key="passwordHistory"
-          eventKey="passwordHistory" 
-          title={<span style={tabStyle}>Password History</span>}
-        >
-          {renderPasswordHistory()}
-        </Tab>
-      );
-    }
-
-    return tabs;
-  };
 
   return (
-    <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
-      <Notification 
-        show={showNotification} 
-        onClose={() => setShowNotification(false)} 
-        message={notification} 
-        variant={notificationVariant} 
-      />
-      
-      {/* Header */}
-      <Container className="text-center mt-4 mb-3">
-        <img src={logo} alt="SLT Mobitel Logo" className="mx-auto d-block" style={{ height: "50px" }} />
-        <h3 className="mt-3">USER PROFILE</h3>
-      </Container>
+    <div
+      style={{
+        backgroundColor: theme.backgroundColor,
+        color: theme.textPrimary,
+        minHeight: "100vh",
+        position: "relative",
+        overflow: "hidden",
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        transition: 'background-color 0.3s ease'
+      }}
+    >
 
-      {/* Profile Section */}
-      <Container className={`p-4 rounded shadow ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"} mb-5`}>
-        <Row>
-          {renderProfileSidebar()}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 0,
+        opacity: darkMode ? 0.05 : 0.1,
+        pointerEvents: 'none',
+        background: darkMode 
+          ? 'radial-gradient(circle at 20% 50%, #0ea5e9 0%, transparent 50%), radial-gradient(circle at 80% 20%, #1d4ed8 0%, transparent 50%)'
+          : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
+      }} />
 
-          <Col md={8}>
-            <Tabs
-              activeKey={activeTab}
-              onSelect={(k) => setActiveTab(k)}
-              className={`mb-3 ${darkMode ? "dark-mode-tabs" : ""}`}
-              fill
-            >
-              {getTabs()}
-            </Tabs>
-          </Col>
-        </Row>
-      </Container>
-      
-      {!user.googleId && (
-        <ChangePasswordModal 
-          show={showPasswordModal}
-          onHide={() => setShowPasswordModal(false)}
-          darkMode={darkMode}
-          triggerNotification={triggerNotification}
-        />
-      )}
 
-      {/* Add custom CSS for dark mode tabs */}
-      <style jsx>{`
-        /* Custom CSS for dark mode tabs */
-        .dark-mode-tabs .nav-link {
-          color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .dark-mode-tabs .nav-link.active {
-          color: white;
-          font-weight: bold;
-          background-color: #343a40;
-          border-color: #dee2e6 #dee2e6 #343a40;
-        }
-        
-        .dark-mode-tabs .nav-link:hover:not(.active) {
-          color: white;
-          border-color: rgba(255, 255, 255, 0.2);
-        }
-      `}</style>
+      <div style={{ position: 'relative', zIndex: 1, padding: "2rem 0" }}>
+        <Container>
+          <Notification 
+            show={showNotification} 
+            onClose={() => setShowNotification(false)} 
+            message={notification} 
+            variant={notificationVariant} 
+          />
+          
+
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-5"
+          >
+            <img src={logo} alt="SLT Mobitel Logo" className="mx-auto d-block" style={{ height: "50px" }} />
+            <h3 className="mt-3">CHANGE PASSWORD</h3>
+            
+            <p style={{ 
+              fontSize: '1.2rem',
+              color: theme.textSecondary,
+              maxWidth: '600px',
+              margin: '0 auto',
+              lineHeight: 1.6
+            }}>
+              Update your account password to keep your profile secure
+            </p>
+          </motion.div>
+
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            className="d-flex justify-content-center"
+          >
+            <div style={{ maxWidth: "600px", width: "100%" }}>
+              <Card
+                style={{
+                  border: "none",
+                  borderRadius: "24px",
+                  background: theme.cardBackground,
+                  backdropFilter: 'blur(20px)',
+                  boxShadow: `0 20px 40px ${darkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)'}`,
+                  overflow: 'hidden'
+                }}
+              >
+
+                <div style={{
+                  background: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
+                  padding: '2rem',
+                  textAlign: 'center'
+                }}>
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.4, type: "spring", stiffness: 200 }}
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 1rem',
+                      backdropFilter: 'blur(10px)'
+                    }}
+                  >
+                    <FiLock size={40} color="white" />
+                  </motion.div>
+                  <h3 style={{ 
+                    color: 'white',
+                    margin: 0,
+                    fontSize: '1.5rem',
+                    fontWeight: '600'
+                  }}>
+                    Update Your Password
+                  </h3>
+                </div>
+
+                <Card.Body style={{ padding: '2.5rem' }}>
+                  <Form onSubmit={handleSubmitPasswordChange}>
+                    {passwordError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{
+                          background: `${theme.danger}20`,
+                          border: `1px solid ${theme.danger}`,
+                          borderRadius: '12px',
+                          padding: '1rem',
+                          marginBottom: '1.5rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <FiX size={20} color={theme.danger} />
+                        <span style={{ color: theme.danger }}>{passwordError}</span>
+                      </motion.div>
+                    )}
+
+                    <Form.Group className="mb-4">
+                      <Form.Label style={{ 
+                        color: theme.textPrimary,
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        marginBottom: '0.75rem'
+                      }}>
+                        Current Password
+                      </Form.Label>
+                      <PasswordInput
+                        ref={currentPasswordRef}
+                        name="currentPassword"
+                        value={passwordData.currentPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="Enter your current password"
+                        required={true}
+                        icon={FiLock}
+                        showPassword={showCurrentPassword}
+                        togglePassword={() => setShowCurrentPassword(!showCurrentPassword)}
+                        theme={theme}
+                        darkMode={darkMode}
+                      />
+                    </Form.Group>
+
+                    <Form.Group className="mb-4">
+                      <Form.Label style={{ 
+                        color: theme.textPrimary,
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        marginBottom: '0.75rem'
+                      }}>
+                        New Password
+                      </Form.Label>
+                      <PasswordInput
+                        ref={newPasswordRef}
+                        name="newPassword"
+                        value={passwordData.newPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="Enter your new password"
+                        required={true}
+                        icon={FiLock}
+                        showPassword={showNewPassword}
+                        togglePassword={() => setShowNewPassword(!showNewPassword)}
+                        theme={theme}
+                        darkMode={darkMode}
+                      />
+
+                      {passwordData.newPassword && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          style={{ marginTop: '0.75rem' }}
+                        >
+                          <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '0.5rem'
+                          }}>
+                            <span style={{ 
+                              fontSize: '0.875rem',
+                              color: theme.textSecondary
+                            }}>
+                              Password Strength
+                            </span>
+                            <span style={{ 
+                              fontSize: '0.875rem',
+                              color: passwordStrength.color,
+                              fontWeight: '600'
+                            }}>
+                              {passwordStrength.text}
+                            </span>
+                          </div>
+                          <div style={{
+                            width: '100%',
+                            height: '4px',
+                            background: darkMode ? '#333' : '#e2e8f0',
+                            borderRadius: '2px',
+                            overflow: 'hidden'
+                          }}>
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${passwordStrength.strength}%` }}
+                              transition={{ duration: 0.3 }}
+                              style={{
+                                height: '100%',
+                                background: passwordStrength.color,
+                                borderRadius: '2px'
+                              }}
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                      
+                      <div style={{ 
+                        fontSize: '0.875rem',
+                        color: theme.textSecondary,
+                        marginTop: '0.5rem'
+                      }}>
+                        Password must be at least 6 characters long and different from your current password.
+                      </div>
+                    </Form.Group>
+
+                    <Form.Group className="mb-4">
+                      <Form.Label style={{ 
+                        color: theme.textPrimary,
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        marginBottom: '0.75rem'
+                      }}>
+                        Confirm New Password
+                      </Form.Label>
+                      <PasswordInput
+                        ref={confirmPasswordRef}
+                        name="confirmNewPassword"
+                        value={passwordData.confirmNewPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="Confirm your new password"
+                        required={true}
+                        icon={FiLock}
+                        showPassword={showConfirmPassword}
+                        togglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
+                        theme={theme}
+                        darkMode={darkMode}
+                      />
+                      
+     
+                      {passwordData.confirmNewPassword && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            marginTop: '0.5rem',
+                            fontSize: '0.875rem'
+                          }}
+                        >
+                          {passwordData.newPassword === passwordData.confirmNewPassword ? (
+                            <>
+                              <FiCheck size={16} color={theme.success} />
+                              <span style={{ color: theme.success }}>Passwords match</span>
+                            </>
+                          ) : (
+                            <>
+                              <FiX size={16} color={theme.danger} />
+                              <span style={{ color: theme.danger }}>Passwords do not match</span>
+                            </>
+                          )}
+                        </motion.div>
+                      )}
+                    </Form.Group>
+
+                    <div className="d-grid gap-3">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="submit"
+                        disabled={changingPassword}
+                        style={{
+                          background: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
+                          border: "none",
+                          color: "white",
+                          padding: '1rem 2rem',
+                          borderRadius: '12px',
+                          fontSize: '1.1rem',
+                          fontWeight: '600',
+                          cursor: changingPassword ? 'not-allowed' : 'pointer',
+                          boxShadow: `0 10px 25px ${theme.accentColor}40`,
+                          transition: 'all 0.3s ease',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          opacity: changingPassword ? 0.8 : 1
+                        }}
+                      >
+                        {changingPassword ? (
+                          <>
+                            <Spinner size="sm" animation="border" />
+                            Changing Password...
+                          </>
+                        ) : (
+                          <>
+                            <FiCheck size={20} />
+                            Change Password
+                          </>
+                        )}
+                      </motion.button>
+                      
+                      <Button 
+                        variant="outline-secondary"
+                        onClick={handleCancel}
+                        disabled={changingPassword}
+                        style={{
+                          borderColor: theme.border,
+                          color: theme.textSecondary,
+                          background: 'transparent',
+                          padding: '1rem 2rem',
+                          borderRadius: '12px',
+                          fontSize: '1rem',
+                          fontWeight: '600',
+                          transition: 'all 0.3s ease',
+                          borderWidth: '2px'
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </Form>
+                </Card.Body>
+              </Card>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                style={{
+                  background: theme.cardBackground,
+                  backdropFilter: 'blur(20px)',
+                  borderRadius: '16px',
+                  padding: '1.5rem',
+                  marginTop: '2rem',
+                  border: `1px solid ${theme.border}`,
+                  textAlign: 'center'
+                }}
+              >
+                <FiUser size={24} color={theme.accentColor} style={{ marginBottom: '0.5rem' }} />
+                <div style={{ 
+                  fontSize: '0.9rem',
+                  color: theme.textSecondary,
+                  lineHeight: 1.5
+                }}>
+                  <strong style={{ color: theme.textPrimary }}>Security Note:</strong> After changing your password, you may need to log in again on other devices for security purposes.
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </Container>
+      </div>
     </div>
   );
 };
 
-export default UserProfile;
+export default UserProfile; */

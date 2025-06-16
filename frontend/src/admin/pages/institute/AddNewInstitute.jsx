@@ -29,7 +29,7 @@ const AddNewInstitute = ({ darkMode }) => {
   useEffect(() => {
     const fetchInstitutes = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/api/institutes");
+        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/institutes`);
         setInstitutes(response.data.institutes || []);
       } catch (error) {
         console.error("Error fetching institutes:", error);
@@ -50,7 +50,7 @@ const AddNewInstitute = ({ darkMode }) => {
     setSuccess("");
 
     try {
-      await axios.post("http://localhost:5000/api/auth/register", instituteData, {
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/register`, instituteData, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setSuccess("Institute added successfully!");
