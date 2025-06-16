@@ -9,7 +9,7 @@ const UserSchema = new mongoose.Schema(
     password: { type: String, required: true },
     userType: { 
       type: String, 
-      enum: ["individual", "institute", "admin", "staff", "senior_staff"], 
+      enum: ["individual", "institute", "admin", "staff", "executive_staff"], 
       required: true 
     },
     postalAddress: String,

@@ -35,6 +35,7 @@ const rotationalRoutes = require("./routes/rotationalRoutes");
 const certificateLetterRoutes = require("./routes/certificateLetterRoutes");
 // const { passport } = require('./config/oauthStrategies');
 const employeeRoutes = require("./routes/employeeRoutes");
+const placementLetterRoutes = require("./routes/placementLetterRoutes");
 
 const app = express();
 const server = http.createServer(app);
@@ -79,6 +80,10 @@ app.use("/api/rotational", rotationalRoutes);
 // app.use("/api/user-activity", userActivityRoutes);
 app.use("/api/certificate-letters", certificateLetterRoutes);
 app.use("/api/employees", employeeRoutes);
+app.use("/api/placementletters", placementLetterRoutes);
+
+
+
 // MongoDB Connection
 const connectDB = async () => {
   try {
@@ -86,7 +91,7 @@ const connectDB = async () => {
       throw new Error("MONGO_URI is not defined in .env file");
     }
 
-    await mongoose.connect(process.env.MONGO_URI); // Clean and modern
+    await mongoose.connect(process.env.MONGO_URI); 
 
     console.log("MongoDB Connected Successfully");
   } catch (err) {

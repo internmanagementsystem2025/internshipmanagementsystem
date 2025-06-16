@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from "react";
 import axios from "axios";
-import { Container, Row, Col, Card, Form, Button, Spinner, Badge} from "react-bootstrap";
+import { useNavigate } from "react-router-dom";
+import { Container, Row, Col, Card, Form, Button, Spinner, Badge } from "react-bootstrap";
 import { 
   BookOpen, School, MapPin, Award, Users, Target,
-  Search, User, Calendar, Phone, Mail, FileText, 
+  Search, User, Calendar, Phone, Mail, FileText, File,
   CheckCircle, XCircle, Clock, AlertCircle,
   ChevronDown, ChevronRight
 } from "lucide-react";
@@ -22,6 +23,8 @@ const InternLifeCycle = ({ darkMode }) => {
     induction: false,
     assignment: false
   });
+
+  const navigate = useNavigate();
 
   const handleSearch = async () => {
     if (!nic.trim()) {
@@ -47,6 +50,48 @@ const InternLifeCycle = ({ darkMode }) => {
     }
   };
 
+  const viewPlacementLetter = () => {
+    if (userData?.induction?.placementLetterUrl) {
+      window.open(userData.induction.placementLetterUrl, '_blank');
+    }
+  };
+
+  const generatePlacementLetter = () => {
+    const { fullName, nic, institute, refNo } = userData;
+    
+    return {
+      letterName: "Placement Letter",
+      label1: "Talent Development Section",
+      label2: "7th Floor, Head Office, Lotus Road, Colombo 01",
+      label3: `Our/My Ref: ${refNo.replace('REF-', 'TRPS-FTP-')}`,
+      label4: `Your Ref: ${refNo}`,
+      label5: "Telephone: 011-2021359",
+      label6: "Fax: 011-2478627",
+      label7: "Email: hiroshim@slt.com",
+      label8: `To: .......................`,
+      label9: "From: Engineer Talent Development",
+      label10: `Date: ${format(new Date(), 'yyyy-MM-dd')}`,
+      label11: "Subject - Assignment of Internship",
+      label12: `Following student from ${institute || "[Institute]"} has been assigned to`,
+      label13: `you to undergo the Intern Program under your supervision from ................. to ......................`,
+      label14: "",
+      label15: "Please arrange to accommodate the Intern. Please note that the induction programme is",
+      label16: "compulsory for all interns.",
+      label17: "Please arrange to release the interns for the next induction training.",
+      label18: "Please do not expose any confidential information to the Intern and strictly follow the information",
+      label19: "Security guideline currently prevailing at SLT when assigning duties to the Intern.",
+      label20: "Details of the Intern as follows:",
+      label21: `Name: ${fullName}`,
+      label22: `NIC: ${nic}`,
+      label23: "",
+      label24: "Intern has signed the following documents - Police report, Duration check, Agreement, and NDA",
+      label25: "...........................",
+      label26: "Engineer/Talent Development",
+      label27: ".................",
+      label28: "Signature",
+    };
+  };
+
   const handleNicChange = useCallback((e) => {
     setNic(e.target.value);
     if (error) setError("");
@@ -69,9 +114,10 @@ const InternLifeCycle = ({ darkMode }) => {
   };
 
   const getStatusColor = (status) => {
-    if (status?.includes("passed") || status?.includes("completed")) return "success";
-    if (status?.includes("failed") || status?.includes("rejected") || status === "terminated") return "danger";
-    if (status?.includes("progress") || status?.includes("pending")) return "info";
+    if (!status) return "secondary";
+    if (status.includes("passed") || status.includes("completed")) return "success";
+    if (status.includes("failed") || status.includes("rejected") || status === "terminated") return "danger";
+    if (status.includes("progress") || status.includes("pending")) return "info";
     return "secondary";
   };
 
@@ -89,48 +135,52 @@ const InternLifeCycle = ({ darkMode }) => {
   );
 
   const SectionHeader = ({ title, icon: Icon, section, count }) => (
-    <div
-      onClick={() => toggleSection(section)}
-      className={`d-flex align-items-center justify-content-between p-4 ${
-        darkMode ? "text-white" : "text-dark"
-      }`}
-      style={{ 
-        cursor: 'pointer', 
-        borderRadius: '1.5rem 1.5rem 0 0',
-        transition: 'background-color 0.2s ease'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = 'transparent';
-      }}
-    >
-      <div className="d-flex align-items-center">
-        <div className={`p-2 rounded-3 me-3 ${
-          darkMode 
-            ? "bg-primary bg-opacity-25" 
-            : "bg-primary bg-opacity-10"
-        }`}>
-          <Icon size={20} className="text-primary" />
-        </div>
-        <div>
-          <h5 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
-            {title}
-          </h5>
-          {count && (
-            <small className={darkMode ? "text-light" : "text-muted"}>
-              {count}
-            </small>
-          )}
-        </div>
+  <div
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleSection(section);
+    }}
+    className={`d-flex align-items-center justify-content-between p-4 ${
+      darkMode ? "text-white" : "text-dark"
+    }`}
+    style={{ 
+      cursor: 'pointer', 
+      borderRadius: '1.5rem 1.5rem 0 0',
+      transition: 'background-color 0.2s ease'
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.backgroundColor = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.backgroundColor = 'transparent';
+    }}
+  >
+    <div className="d-flex align-items-center">
+      <div className={`p-2 rounded-3 me-3 ${
+        darkMode 
+          ? "bg-primary bg-opacity-25" 
+          : "bg-primary bg-opacity-10"
+      }`}>
+        <Icon size={20} className="text-primary" />
       </div>
-      {expandedSections[section] ? 
-        <ChevronDown size={20} className={darkMode ? "text-light" : "text-muted"} /> : 
-        <ChevronRight size={20} className={darkMode ? "text-light" : "text-muted"} />
-      }
+      <div>
+        <h5 className={`mb-0 ${darkMode ? "text-white" : "text-dark"}`}>
+          {title}
+        </h5>
+        {count && (
+          <small className={darkMode ? "text-light" : "text-muted"}>
+            {count}
+          </small>
+        )}
+      </div>
     </div>
-  );
+    {expandedSections[section] ? 
+      <ChevronDown size={20} className={darkMode ? "text-light" : "text-muted"} /> : 
+      <ChevronRight size={20} className={darkMode ? "text-light" : "text-muted"} />
+    }
+  </div>
+);
 
   const InfoItem = ({ icon: Icon, label, value, className = "" }) => (
     <div className={`p-3 rounded-3 ${
@@ -593,7 +643,45 @@ const InternLifeCycle = ({ darkMode }) => {
                   </div>
                 )}
               </div>
+              {userData.induction?.placementLetterUrl ? (
+                <div className="mt-4 d-flex gap-2">
+                  <Button
+                    variant={darkMode ? "outline-light" : "outline-primary"}
+                    onClick={viewPlacementLetter}
+                    className="d-flex align-items-center gap-2"
+                  >
+                    <File size={18} />
+                    View Placement Letter
+                  </Button>
+                  <Button
+                    variant={darkMode ? "outline-info" : "outline-secondary"}
+                    onClick={() => {
+                      const letterData = generatePlacementLetter();
+                      navigate('/generate-placement-letter', { state: { prefilledData: letterData } });
+                    }}
+                    className="d-flex align-items-center gap-2"
+                  >
+                    <File size={18} />
+                    Generate New Placement Letter
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <Button
+                    variant={darkMode ? "outline-info" : "outline-primary"}
+                    onClick={() => {
+                      const letterData = generatePlacementLetter();
+                      navigate('/generate-placement-letter', { state: { prefilledData: letterData } });
+                    }}
+                    className="d-flex align-items-center gap-2"
+                  >
+                    <File size={18} />
+                    Generate Placement Letter
+                  </Button>
+                </div>
+              )}
             </div>
+            
           ) : (
             <div className="text-center py-5">
               <Clock size={48} className={`${darkMode ? "text-light" : "text-muted"} mb-3`} />
@@ -685,6 +773,7 @@ const InternLifeCycle = ({ darkMode }) => {
       )}
     </ModernCard>
   );
+
 
   return (
     <div 

@@ -6,10 +6,9 @@ import {
   FiCheckCircle, FiCalendar, FiAward, FiUsers, FiRepeat, 
   FiLayers, FiMail, FiClipboard, FiBriefcase, FiDatabase, 
   FiCodepen, FiCreditCard, FiBarChart, FiHelpCircle, FiChevronDown,
-  FiFile, FiUpload, FiCheck, FiLayout, FiUserPlus, FiClock,
-  FiBook, FiBookOpen, FiFileMinus, FiFilePlus as FiFilePlusAlt,
-  FiUserCheck, FiUserX, FiMapPin, FiSettings, FiTruck, FiDollarSign,
-  FiPieChart, FiMessageSquare, FiGrid, FiPackage, FiPlus
+  FiFile,  FiCheck, FiUserPlus, FiClock, FiBook, FiBookOpen, 
+   FiFilePlus as FiFilePlusAlt, FiMapPin,  FiGrid, FiPlus, FiFileMinus,
+   FiCircle
 } from "react-icons/fi";
 import { FaBuildingColumns } from "react-icons/fa6";
 import logo from "../../assets/logo.png";
@@ -263,6 +262,17 @@ const AdminSidebar = ({ darkMode }) => {
       icon: FiBarChart,
       route: "/admin-reports",
       key: "reports"
+    },
+
+    {
+            title: "Others",
+            icon: FiCircle,
+            key: "others",
+            hasDropdown: true,
+            dropdownItems: [
+            { title: "University Management", route: "/add-new-university", icon: FiBookOpen },
+            { title: "Placement Letter Management", route: "/placement-letter-management", icon: FiFileMinus },
+            ]
     },
     {
       title: "Help & Support",

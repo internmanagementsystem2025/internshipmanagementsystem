@@ -261,7 +261,6 @@ const InternAllocations = ({ darkMode }) => {
                           <span>{filteredAllocation.length} allocation(s) in total</span>
                         </div>
                         <div className="d-flex align-items-center">
-                            
                           <Button
                             variant="link"
                             size="sm"

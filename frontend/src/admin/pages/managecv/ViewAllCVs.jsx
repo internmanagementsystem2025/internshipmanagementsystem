@@ -30,9 +30,7 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaFileCode,
-  FaChartBar,
   FaCalendarAlt,
-  FaUsers,
   FaUserTie,
   FaBriefcase,
 } from "react-icons/fa";
@@ -134,7 +132,7 @@ const calculateColumnWidths = () => {
   const internTypeValues = [...filteredData.map(cv => cv.selectedRole), "Intern Type"];
   columnWidths["internType"] = calculateWidth(internTypeValues, 100, 160);
 
-  columnWidths["applicationDate"] = 150; // Fixed for date consistency
+  columnWidths["applicationDate"] = 150; 
 
   const districtValues = [...filteredData.map(cv => cv.district), "District"];
   columnWidths["district"] = calculateWidth(districtValues, 100, 180);
