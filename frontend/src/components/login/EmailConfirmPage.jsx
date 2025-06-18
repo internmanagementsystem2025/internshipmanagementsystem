@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Container, Card, Button, Form, Spinner } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -6,6 +6,7 @@ import { FiMail, FiArrowLeft, FiSend, FiX, FiCheck } from "react-icons/fi";
 import axios from "axios";
 import logo from "../../assets/logo.png";
 import Notification from "../notifications/Notification";
+import LoadingSpinner from './LoadingSpinner';
 
 const EmailInput = React.memo(React.forwardRef(({ 
   type, 
@@ -98,6 +99,8 @@ const EmailInput = React.memo(React.forwardRef(({
   );
 }));
 
+EmailInput.displayName = 'EmailInput';
+
 const EmailConfirmPage = ({ darkMode }) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -107,11 +110,10 @@ const EmailConfirmPage = ({ darkMode }) => {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationVariant, setNotificationVariant] = useState("success");
   const [success, setSuccess] = useState("");
-
+  const [pageLoading, setPageLoading] = useState(true);
   const emailRef = useRef(null);
 
-
-  const theme = {
+  const theme = useMemo(() => ({
     backgroundColor: darkMode ? "#000000" : "#f8fafc",
     cardBackground: darkMode ? "#1E1E1E" : "rgba(255, 255, 255, 0.4)",
     accentColor: darkMode ? "#2563eb" : "#10b981", 
@@ -125,98 +127,114 @@ const EmailConfirmPage = ({ darkMode }) => {
     inputBorder: darkMode ? "#404040" : "#e2e8f0",
     danger: darkMode ? "#ef4444" : "#dc3545",
     success: darkMode ? "#10b981" : "#198754"
-  };
+  }), [darkMode]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Function to trigger notifications
-  const triggerNotification = (message, variant = "success") => {
+  const triggerNotification = useCallback((message, variant = "success") => {
     setNotification(message);
     setNotificationVariant(variant);
     setShowNotification(true);
-  };
+  }, []);
 
   // Handle email input change
-const handleEmailChange = (e) => {
-  setEmail(e.target.value.trim());
-  if (error) setError("");
-  if (success) setSuccess("");
-};
+  const handleEmailChange = useCallback((e) => {
+    setEmail(e.target.value.trim());
+    if (error) setError("");
+    if (success) setSuccess("");
+  }, [error, success]);
 
   // Email validation
-const isValidEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email.trim());
-};
+  const isValidEmail = useCallback((email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  }, []);
 
   // Handle form submission
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  
-  // Validate email before sending
-  if (!email || !isValidEmail(email)) {
-    setError("Please enter a valid email address");
-    return;
-  }
-  
-  setLoading(true);
-  setError("");
-  setSuccess("");
-
-  try {
-    console.log('Submitting email:', email); 
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
     
-    const response = await axios.post(
-      `${import.meta.env.VITE_BASE_URL}/api/auth/request-password-reset-otp`,
-      { email },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        timeout: 10000, 
-      }
-    );
-
-    console.log('Response:', response.data);
-    
-    if (response.status === 200) {
-      triggerNotification("Password reset code sent to your email!", "success");
-      setSuccess("Password reset code sent to your email!");
-      
-      // Log OTP in development mode
-      if (response.data.debug && response.data.debug.otp) {
-        console.log('Development OTP:', response.data.debug.otp);
-      }
-      
-      setTimeout(() => {
-        navigate(`/forgot-password/verify-otp?email=${encodeURIComponent(email)}`);
-      }, 2000);
+    // Validate email before sending
+    if (!email || !isValidEmail(email)) {
+      setError("Please enter a valid email address");
+      return;
     }
-  } catch (err) {
-    console.error("Email confirmation error:", err);
     
-    if (err.response) {
-      const errorMessage = err.response.data?.message || "Failed to send reset code";
-      setError(errorMessage);
-      triggerNotification(errorMessage, "error");
-    } else if (err.request) {
-      const errorMsg = "No response from server. Please check your connection.";
-      setError(errorMsg);
-      triggerNotification(errorMsg, "error");
-    } else {
-      const errorMsg = "An unexpected error occurred. Please try again.";
-      setError(errorMsg);  
-      triggerNotification(errorMsg, "error");
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      console.log('Submitting email:', email); 
+      
+      const response = await axios.post(
+        `${import.meta.env.VITE_BASE_URL}/api/auth/request-password-reset-otp`,
+        { email },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          timeout: 10000, 
+        }
+      );
+
+      console.log('Response:', response.data);
+      
+      if (response.status === 200) {
+        triggerNotification("Password reset code sent to your email!", "success");
+        setSuccess("Password reset code sent to your email!");
+        
+        // Log OTP in development mode
+        if (response.data.debug && response.data.debug.otp) {
+          console.log('Development OTP:', response.data.debug.otp);
+        }
+        
+        setTimeout(() => {
+          navigate(`/forgot-password/verify-otp?email=${encodeURIComponent(email)}`);
+        }, 2000);
+      }
+    } catch (err) {
+      console.error("Email confirmation error:", err);
+      
+      if (err.response) {
+        const errorMessage = err.response.data?.message || "Failed to send reset code";
+        setError(errorMessage);
+        triggerNotification(errorMessage, "error");
+      } else if (err.request) {
+        const errorMsg = "No response from server. Please check your connection.";
+        setError(errorMsg);
+        triggerNotification(errorMsg, "error");
+      } else {
+        const errorMsg = "An unexpected error occurred. Please try again.";
+        setError(errorMsg);  
+        triggerNotification(errorMsg, "error");
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  }, [email, isValidEmail, triggerNotification, navigate]);
 
-
-  const handleBackToLogin = () => {
+  const handleBackToLogin = useCallback(() => {
     navigate("/login");
-  };
+  }, [navigate]);
 
-  
+  if (pageLoading) {
+    return (
+      <LoadingSpinner 
+        darkMode={darkMode}
+        message="Loading Reset Password"
+        subMessage="Setting up your password reset form..."
+        size="medium"
+      />
+    );
+  }
 
   return (
     <div
@@ -244,8 +262,6 @@ const isValidEmail = (email) => {
           ? 'radial-gradient(circle at 20% 50%, #0ea5e9 0%, transparent 50%), radial-gradient(circle at 80% 20%, #1d4ed8 0%, transparent 50%)'
           : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
       }} />
-
-      
 
       {/* Main Content */}
       <div style={{ position: 'relative', zIndex: 1, padding: "2rem 0" }}>
@@ -480,4 +496,4 @@ const isValidEmail = (email) => {
   );
 };
 
-export default EmailConfirmPage;
+export default EmailConfirmPage

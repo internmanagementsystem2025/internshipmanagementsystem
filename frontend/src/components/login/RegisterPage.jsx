@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Logo from "../../assets/logo.png";
+import LoadingSpinner from './LoadingSpinner';
 
 // Fixed Icons as React components
 const SunIcon = () => (
@@ -57,6 +58,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   const [registrationMessage, setRegistrationMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   const darkMode = propDarkMode !== undefined ? propDarkMode : internalDarkMode;
 
@@ -78,6 +80,14 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   };
 
   const theme = darkMode ? darkTheme : lightTheme;
+
+  useEffect(() => {
+  const timer = setTimeout(() => {
+    setPageLoading(false);
+  }, 3000);
+
+  return () => clearTimeout(timer);
+}, []);
 
   const [formData, setFormData] = useState({
     username: "",
@@ -221,31 +231,40 @@ useEffect(() => {
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: theme.backgroundColor,
-        color: theme.color,
-        transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-        position: "relative",
-        overflow: "hidden",
-        minHeight: "100vh",
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-      }}
-    >
+  <>
+    {pageLoading ? (
+      <LoadingSpinner 
+        darkMode={darkMode}
+        message="Loading Registration..."
+        subMessage="Please wait while we process your request"
+        size="medium"
+      />
+    ) : (
+      <div
+        style={{
+          backgroundColor: theme.backgroundColor,
+          color: theme.color,
+          transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+          position: "relative",
+          overflow: "hidden",
+          minHeight: "100vh",
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+        }}
+      >
       {/* Background Effects */}
       <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: 0,
-        opacity: 0.1,
-        pointerEvents: 'none',
-        background: darkMode 
-          ? 'radial-gradient(circle at 20% 50%, #00aaff 0%, transparent 50%), radial-gradient(circle at 80% 20%, #0066ff 0%, transparent 50%)'
-          : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
-      }} />
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 0,
+          opacity: 0.1,
+          pointerEvents: 'none',
+          background: darkMode 
+            ? 'radial-gradient(circle at 20% 50%, #00aaff 0%, transparent 50%), radial-gradient(circle at 80% 20%, #0066ff 0%, transparent 50%)'
+            : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
+        }} />
 
       {/* Main Content */}
       <div style={{ position: 'relative', zIndex: 1 }}>
@@ -327,34 +346,34 @@ useEffect(() => {
         </nav>
 
         {/* Main Content Container */}
-<div style={{ 
-  display: "flex", 
-  alignItems: "center", 
-  justifyContent: "center", 
-  minHeight: '100vh', 
-  paddingTop: '80px',
-  maxWidth: "1400px", 
-  margin: "0 auto",
-  padding: isMobile ? "80px 1rem 2rem" : "80px 3rem 2rem" 
-}}>
+             <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  minHeight: '100vh', 
+                  paddingTop: '80px',
+                  maxWidth: "1400px", 
+                  margin: "0 auto",
+                  padding: isMobile ? "80px 1rem 2rem" : "80px 3rem 2rem" 
+              }}>
 
           {/* Register Form Container - Now full width */}
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  style={{
-    background: darkMode 
-      ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.6), rgba(15, 30, 55, 0.4))' 
-      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.6))',
-    backdropFilter: 'blur(20px)',
-    border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-    borderRadius: '24px',
-    padding: isMobile ? '2rem' : window.innerWidth > 1200 ? '4rem' : '3rem', 
-    boxShadow: `0 25px 50px ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
-    width: '100%',
-    maxWidth: window.innerWidth > 1400 ? '1400px' : '1000px'
-  }}
->
+               <motion.div
+                   initial={{ opacity: 0, y: 20 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   style={{
+                   background: darkMode 
+                   ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.6), rgba(15, 30, 55, 0.4))' 
+                   : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.6))',
+                   backdropFilter: 'blur(20px)',
+                   border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                   borderRadius: '24px',
+                   padding: isMobile ? '2rem' : window.innerWidth > 1200 ? '4rem' : '3rem', 
+                   boxShadow: `0 25px 50px ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
+                   width: '100%',
+                   maxWidth: window.innerWidth > 1400 ? '1400px' : '1000px'
+               }}
+             >
             {loading ? (
               <div
                 style={{
@@ -1099,6 +1118,11 @@ useEffect(() => {
             </motion.div>
           </div>
         </div>
+        
+
+        
+        
+        
 
 
       {/* Enhanced Global Styles */}
@@ -1140,6 +1164,8 @@ useEffect(() => {
         }
       `}</style>
     </div>
+    )}
+  </>
   );
 };
 
