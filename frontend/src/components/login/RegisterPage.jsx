@@ -109,26 +109,32 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    const fetchDistricts = async () => {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/districts`);
-        setDistricts(response.data);
-      } catch (error) {
-        console.error("Error fetching districts:", error);
-        setError("Failed to load districts");
-      }
-    };
+useEffect(() => {
+  const fetchDistricts = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/districts`);
+      const sortedDistricts = response.data.sort((a, b) => 
+        a.district_name.localeCompare(b.district_name)
+      );
+      setDistricts(sortedDistricts);
+    } catch (error) {
+      console.error("Error fetching districts:", error);
+      setError("Failed to load districts");
+    }
+  };
 
-    const fetchInstitutes = async () => {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/institutes`);
-        setInstitutes(response.data.institutes || []);
-      } catch (error) {
-        console.error("Error fetching institutes:", error);
-        setError("Failed to load institutes");
-      }
-    };
+  const fetchInstitutes = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/institutes`);
+      const sortedInstitutes = (response.data.institutes || []).sort((a, b) => 
+        a.name.localeCompare(b.name)
+      );
+      setInstitutes(sortedInstitutes);
+    } catch (error) {
+      console.error("Error fetching institutes:", error);
+      setError("Failed to load institutes");
+    }
+  };
 
     fetchDistricts();
     fetchInstitutes();

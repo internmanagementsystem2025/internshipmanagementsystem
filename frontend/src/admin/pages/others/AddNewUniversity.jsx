@@ -137,7 +137,7 @@ const AddNewInstitute = ({ darkMode }) => {
                       required
                     >
                       <option value="">Select Institute Type</option>
-                      <option value="Public">Public</option>
+                      <option value="Public">Government</option>
                       <option value="Private">Private</option>
                     </Form.Select>
                   </Form.Group>

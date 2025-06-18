@@ -530,6 +530,38 @@ const getUserProfileByNic = async (req, res) => {
   }
 };
 
+
+const getGoogleProfile = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized access" });
+    }
+
+    const user = await User.findById(req.user.id).select("googleId profileImage");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.googleId) {
+      return res.status(404).json({ message: "Not a Google user" });
+    }
+
+    if (user.profileImage) {
+      let profilePicture = user.profileImage;
+      if (!profilePicture.includes('=s') && !profilePicture.endsWith('.jpg') && !profilePicture.endsWith('.png')) {
+        profilePicture = `${profilePicture}=s400-c`;
+      }
+      return res.json({ picture: profilePicture });
+    }
+    
+    res.status(404).json({ message: "Profile picture not found" });
+  } catch (error) {
+    console.error("Error fetching Google profile:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = { 
   registerUser, 
   loginUser, 
@@ -541,5 +573,6 @@ module.exports = {
   verifyOTPAndResetPassword,
   getUserProfileByNic,
   verifyEmail,
+  getGoogleProfile,
   upload 
 };

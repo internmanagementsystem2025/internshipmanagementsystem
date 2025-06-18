@@ -345,19 +345,21 @@ const UserInfoSection = ({
             required
             disabled={readOnly}
           >
-            <option value="">Select District</option>
-            {districts?.length > 0 ? (
-              districts.map((district) => (
-                <option
-                  key={district.id || district.district_name}
-                  value={district.id}
-                >
-                  {district.district_name}
-                </option>
-              ))
-            ) : (
-              <option value="">No districts available</option>
-            )}
+<option value="">Select District</option>
+{districts?.length > 0 ? (
+  districts
+    .sort((a, b) => a.district_name.localeCompare(b.district_name))
+    .map((district) => (
+      <option
+        key={district.id || district.district_name}
+        value={district.id}
+      >
+        {district.district_name}
+      </option>
+    ))
+) : (
+  <option value="">No districts available</option>
+)}
           </select>
           {errors.district && (
             <div className="invalid-feedback">{errors.district}</div>
@@ -503,19 +505,21 @@ const UserInfoSection = ({
             required
             disabled={readOnly}
           >
-            <option value="">Select Institute</option>
-            {institutes?.length > 0 ? (
-              institutes.map((institute) => (
-                <option
-                  key={institute.id || institute.name}
-                  value={institute.id}
-                >
-                  {institute.name}
-                </option>
-              ))
-            ) : (
-              <option value="">No institutes available</option>
-            )}
+<option value="">Select Institute</option>
+{institutes?.length > 0 ? (
+  institutes
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((institute) => (
+      <option
+        key={institute.id || institute.name}
+        value={institute.id}
+      >
+        {institute.name}
+      </option>
+    ))
+) : (
+  <option value="">No institutes available</option>
+)}
           </select>
           {errors.institute && (
             <div className="invalid-feedback">{errors.institute}</div>
