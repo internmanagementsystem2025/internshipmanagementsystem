@@ -242,12 +242,10 @@ function App() {
     "/placement-letter-management",
     "/add-new-university",
     "/generate-placement-letter",
-    "/view-generate-placement-letter/preview",
   ];
 
   const staffRoutes = [
     "/staff-home",
-
     "/my-interns-pending",
     "/my-certificate-request",
     "/my-interns-placement",

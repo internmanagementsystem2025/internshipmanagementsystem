@@ -4,7 +4,6 @@ import Logo from "../../assets/logo.png";
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '../../authconfig';
 
-
 // Fixed Icons as React components
 const SunIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -46,7 +45,49 @@ const MicrosoftIcon = () => (
   </svg>
 );
 
-// Enhanced Animated Logo Component with continuous animation
+const GoogleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+);
+
+const GoogleLoginButton = () => {
+  const handleGoogleLogin = () => {
+    window.location.href = `${import.meta.env.VITE_BASE_URL}/api/auth/google`;
+  };
+
+  return (
+    <motion.button
+      whileHover={{ scale: 1.02, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={handleGoogleLogin}
+      style={{
+        background: "white",
+        color: "#5f6368",
+        border: "1px solid #dadce0",
+        padding: "0.75rem 1.5rem",
+        borderRadius: "12px",
+        fontSize: "1rem",
+        fontWeight: "600",
+        cursor: "pointer",
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.5rem',
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        transition: "all 0.3s ease"
+      }}
+    >
+      <GoogleIcon />
+      Continue with Google
+    </motion.button>
+  );
+};
+
 const AnimatedLogo = ({ darkMode }) => {
   const accentColor = darkMode ? "#00aaff" : "#00cc66";
   
@@ -65,7 +106,6 @@ const AnimatedLogo = ({ darkMode }) => {
         position: 'relative'
       }}
     >
-      {/* Continuous floating animation for the main text */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ 
@@ -97,7 +137,6 @@ const AnimatedLogo = ({ darkMode }) => {
         Welcome Back!
       </motion.div>
       
-      {/* Subtitle with gentle fade animation */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ 
@@ -124,7 +163,6 @@ const AnimatedLogo = ({ darkMode }) => {
         Sign in to access your internship portal
       </motion.div>
       
-      {/* Animated gradient line with continuous movement */}
       <motion.div
         initial={{ width: 0, opacity: 0 }}
         animate={{ 
@@ -148,7 +186,6 @@ const AnimatedLogo = ({ darkMode }) => {
         }}
       />
       
-      {/* Floating particles animation */}
       {[...Array(6)].map((_, i) => (
         <motion.div
           key={i}
@@ -181,7 +218,6 @@ const AnimatedLogo = ({ darkMode }) => {
         />
       ))}
       
-      {/* Pulsing ring animation */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ 
@@ -228,10 +264,10 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const { instance } = useMsal();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const darkMode = propDarkMode !== undefined ? propDarkMode : internalDarkMode;
 
-  // Theme configurations
   const darkTheme = {
     backgroundColor: "#0a192f",
     color: "white",
@@ -250,7 +286,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
 
   const theme = darkMode ? darkTheme : lightTheme;
 
-  // Handle responsive design
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
@@ -264,14 +299,12 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Check for messages from other pages
   useEffect(() => {
     if (window.location.state?.message) {
       setRegistrationMessage(window.location.state.message);
     }
   }, []);
 
-  // Handle URL parameters for authentication callbacks
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
@@ -280,6 +313,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     
     if (errorParam) {
       const errorMessages = {
+        'google_auth_failed': 'Google authentication failed.',
         'azure_auth_failed': 'Microsoft Azure authentication failed.',
         'oauth_individual_only': 'OAuth login is only available for individual users.',
         'unauthorized_organization': 'You are not authorized to access this system.',
@@ -302,8 +336,8 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
       }
     }
   }, []);
+  
 
-  // Theme toggle function
   const toggleTheme = () => {
     if (propToggleTheme) {
       propToggleTheme();
@@ -320,7 +354,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
       institute: "/institute-home",
       admin: "/admin-home",
       staff: "/staff-home",
-      executive_staff: "/executive-staff-home"
     };
 
     const route = routes[userType];
@@ -367,6 +400,14 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     }
   };
 
+  
+
+  const handleGoogleLogin = () => {
+    setIsOAuthLoading(true);
+    setError("");
+    window.location.href = `${import.meta.env.VITE_BASE_URL}/api/auth/google`;
+  };
+
   const handleAzureLogin = async () => {
     try {
       setIsOAuthLoading(true);
@@ -377,7 +418,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     }
   };
   
-
   const toggleStaffNotification = () => {
     setShowStaffNotification(!showStaffNotification);
   };
@@ -386,7 +426,8 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     window.location.href = '/';
   };
 
-  const showAzureLogin = ["staff", "executive_staff"].includes(userType);
+  const showAzureLogin = userType === "staff";
+  const showGoogleLogin = userType === "individual";
 
   return (
     <div
@@ -400,7 +441,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
       }}
     >
-      {/* Background Effects */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -415,9 +455,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
           : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
       }} />
 
-      {/* Main Content */}
       <div style={{ position: 'relative', zIndex: 1 }}>
-        {/* Enhanced Navbar */}
         <nav style={{ 
           background: "transparent", 
           position: "fixed", 
@@ -494,7 +532,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
           </div>
         </nav>
 
-        {/* Main Content Container */}
         <div style={{ 
           display: "flex", 
           alignItems: "center", 
@@ -505,7 +542,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
           margin: "0 auto",
           padding: isMobile ? "80px 1rem 2rem" : "80px 2rem 2rem"
         }}>
-          {/* Login Container */}
           <div style={{ 
             display: "grid", 
             gridTemplateColumns: (isMobile || isTablet) ? "1fr" : "1fr 1fr",
@@ -514,7 +550,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
             width: "100%",
             maxWidth: "1000px"
           }}>
-            {/* Left Content - Animated Logo */}
             {!isMobile && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.8 }}
@@ -524,7 +559,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                   width: '100%',
                   height: '500px',
                   overflow: 'hidden',
-
                   backdropFilter: 'blur(20px)',
                   position: 'relative',
                   display: 'flex',
@@ -536,7 +570,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
               </motion.div>
             )}
 
-            {/* Right Content - Login Form */}
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
@@ -580,7 +613,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                 </div>
               ) : (
                 <>
-                  {/* Header */}
                   <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -601,7 +633,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                     </p>
                   </motion.div>
 
-                  {/* Registration success message */}
                   {registrationMessage && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
@@ -619,7 +650,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                     </motion.div>
                   )}
 
-                  {/* Error message */}
                   {error && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
@@ -637,7 +667,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                     </motion.div>
                   )}
 
-                  {/* Azure Login Card for Staff/Executive */}
                   {showAzureLogin && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -663,13 +692,12 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                       }}>
                         Employee Login
                       </h3>
-                      <p style={{ 
-                        marginBottom: "1.5rem", 
-                        color: theme.textSecondary,
-                        fontSize: "0.95rem"
-                      }}>
-                        {userType === 'executive_staff' ? 'Executive' : 'Staff'} members must use 
-                        Microsoft Azure Active Directory to login with your company credentials.
+                     <p style={{ 
+                         marginBottom: "1.5rem", 
+                         color: theme.textSecondary,
+                         fontSize: "0.95rem"
+                         }}>
+                         Staff members must use Microsoft Azure Active Directory to login with your company credentials.
                       </p>
                       <motion.button
                         whileHover={{ scale: 1.02, y: -2 }}
@@ -700,7 +728,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                     </motion.div>
                   )}
 
-                  {/* Traditional Login Form - Hidden for staff/executive_staff */}
                   {!showAzureLogin && (
                     <motion.form
                       onSubmit={handleSubmit}
@@ -708,7 +735,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.4, duration: 0.6 }}
                     >
-                      {/* User Type Selection */}
                       <div style={{ marginBottom: "1.5rem" }}>
                         <label style={{ 
                           display: "block", 
@@ -739,11 +765,9 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                           <option value="institute">Institute</option>
                           <option value="admin">Admin</option>
                           <option value="staff">Staff</option>
-                          <option value="executive_staff">Executive Staff</option>
                         </select>
                       </div>
 
-                      {/* Username Field */}
                       <div style={{ marginBottom: "1.5rem" }}>
                         <label style={{ 
                           display: "block", 
@@ -775,7 +799,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                         />
                       </div>
 
-                      {/* Password Field */}
                       <div style={{ marginBottom: "1.5rem" }}>
                         <label style={{ 
                           display: "block", 
@@ -831,7 +854,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                         </div>
                       </div>
 
-                      {/* Forgot Password Link */}
                       <div style={{ 
                         display: "flex", 
                         justifyContent: "flex-end", 
@@ -850,7 +872,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                         </a>
                       </div>
 
-                      {/* Submit Button */}
                       <motion.button
                         whileHover={{ scale: 1.02, y: -2 }}
                         whileTap={{ scale: 0.98 }}
@@ -873,7 +894,68 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                         Login
                       </motion.button>
 
-                      {/* Registration Link */}
+                      {showGoogleLogin && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3, duration: 0.6 }}
+                          style={{
+                            background: darkMode 
+                              ? 'linear-gradient(135deg, rgba(15, 30, 55, 0.6), rgba(20, 35, 60, 0.4))' 
+                              : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(240, 255, 240, 0.6))',
+                            border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                            borderRadius: '16px',
+                            padding: '1.5rem',
+                            marginBottom: '1.5rem'
+                          }}
+                        >
+                          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                            <h3 style={{ 
+                              fontWeight: "600", 
+                              marginBottom: "0.5rem",
+                              color: theme.color,
+                              fontSize: '1.1rem'
+                            }}>
+                              Quick Sign In
+                            </h3>
+                            <p style={{ 
+                              color: theme.textSecondary,
+                              fontSize: "0.9rem",
+                              lineHeight: 1.4
+                            }}>
+                              Sign in with your Google account for faster access
+                            </p>
+                          </div>
+                          
+                          <GoogleLoginButton />
+                          
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            margin: '1rem 0',
+                            gap: '1rem'
+                          }}>
+                            <div style={{
+                              flex: 1,
+                              height: '1px',
+                              background: darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+                            }} />
+                            <span style={{
+                              color: theme.textSecondary,
+                              fontSize: '0.85rem',
+                              fontWeight: '500'
+                            }}>
+                              or continue with email
+                            </span>
+                            <div style={{
+                              flex: 1,
+                              height: '1px',
+                              background: darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+                            }} />
+                          </div>
+                        </motion.div>
+                      )}
+
                       <div style={{ 
                         textAlign: "center", 
                         marginTop: "1rem" 
@@ -898,7 +980,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                     </motion.form>
                   )}
 
-                  {/* Staff Login Info Button */}
                   <div style={{ 
                     textAlign: "center", 
                     marginTop: "1.5rem" 
@@ -925,7 +1006,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
         </div>
       </div>
 
-      {/* Staff Notification Modal */}
       {showStaffNotification && (
         <div style={{
           position: "fixed",
@@ -995,7 +1075,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                 fontSize: "0.95rem",
                 lineHeight: 1.6
               }}>
-                Company employees must use Microsoft Azure Active Directory login with their corporate credentials. Select "Staff" or "Executive" from the role dropdown and use the Azure login button.
+                Company staff must use Microsoft Azure Active Directory login with their corporate credentials. Select "Staff" from the role dropdown and use the Azure login button.
               </p>
             </div>
             
@@ -1027,7 +1107,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
         </div>
       )}
 
-      {/* Enhanced Global Styles */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
@@ -1046,12 +1125,10 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
           transform: translateY(-1px);
         }
         
-        /* Smooth scrolling */
         html {
           scroll-behavior: smooth;
         }
         
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
           width: 6px;
         }
