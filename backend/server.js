@@ -33,7 +33,7 @@ const stationRoutes = require("./routes/stationRoutes");
 const rotationalRoutes = require("./routes/rotationalRoutes");
 // const userActivityRoutes = require("./routes/userActivityRoutes");
 const certificateLetterRoutes = require("./routes/certificateLetterRoutes");
-// const { passport } = require('./config/oauthStrategies');
+const { passport } = require('./config/oauthStrategies');
 const employeeRoutes = require("./routes/employeeRoutes");
 const placementLetterRoutes = require("./routes/placementLetterRoutes");
 
@@ -42,7 +42,7 @@ const server = http.createServer(app);
 const io = socketIo(server, { cors: { origin: "*" } });
 
 // Initialize passport
-// app.use(passport.initialize());
+app.use(passport.initialize());
 
 // Middleware
 app.use(cors());
