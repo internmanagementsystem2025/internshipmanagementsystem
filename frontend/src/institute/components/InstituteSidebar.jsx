@@ -144,6 +144,12 @@ const InstituteSidebar = ({ darkMode }) => {
       key: "bulk-cv-upload"
     },
     {
+      title: "Rotational",
+      icon: FiList,
+      route: "/institute-rotational",
+      key: "institute-rotational"
+    },
+    {
       title: "Help",
       icon: FiHelpCircle,
       route: "/institute-help-support",
