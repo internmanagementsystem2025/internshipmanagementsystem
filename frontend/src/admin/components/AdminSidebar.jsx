@@ -233,10 +233,10 @@ const AdminSidebar = ({ darkMode }) => {
       key: "rotations",
       hasDropdown: true,
       dropdownItems: [
-        { title: "Stations", route:"/all-rotational-stations", icon: FiMapPin },
-        { title: "Schedule", route:"/schedule-rotations", icon: FiClock },
-        { title: "For API page 1", route:"/rotation-api1", icon: FiList },
-        { title: "For API page 2", route:"/rotation-api2", icon: FiFilePlus },
+        /*{ title: "Stations", route:"/all-rotational-stations", icon: FiMapPin },
+        { title: "Schedule", route:"/schedule-rotations", icon: FiClock },*/
+        { title: "Stations", route:"/rotation-api1", icon: FiMapPin },
+        { title: "Schedule", route:"/rotation-api2", icon: FiClock },
       ]
     },
     {
