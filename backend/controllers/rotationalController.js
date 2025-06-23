@@ -702,6 +702,34 @@ const getCVsForStation = async (req, res) => {
   }
 };
 
+// Get all available stations
+const getAllStations = async (req, res) => {
+  try {
+    const stations = await Station.find({ activeStatus: true })
+      .select('_id stationName displayName maxStudents timePeriod currentStudents')
+      .lean();
+
+    // Calculate available seats for each station
+    const stationsWithAvailability = stations.map(station => ({
+      ...station,
+      availableSeats: Math.max(0, station.maxStudents - (station.currentStudents?.length || 0))
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: stationsWithAvailability.length,
+      data: stationsWithAvailability
+    });
+  } catch (error) {
+    console.error("Error fetching stations:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch stations",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getAllRotationalCVs,
   getPendingRotationalCVs,
@@ -714,5 +742,6 @@ module.exports = {
   reassignCVToNewStation,
   removeFromStation,
   getCVsForStation,
-  assignCVsToMultipleStations
+  assignCVsToMultipleStations,
+  getAllStations
 };
