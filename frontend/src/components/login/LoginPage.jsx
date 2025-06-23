@@ -6,7 +6,7 @@ import { loginRequest } from '../../authconfig';
 import LoadingSpinner from './LoadingSpinner'; 
 import { useNavigation, handleAuthSuccess, checkAuthAndRedirect } from '../../utils/navigationUtils';
 
-
+// Icon components
 const SunIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="5"/>
@@ -271,6 +271,9 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [accountLocked, setAccountLocked] = useState(false);
+  const [remainingTime, setRemainingTime] = useState(0);
   const { instance } = useMsal();
   const { isNavigating, navigationMessage, navigateToUserDashboard, clearNavigation } = useNavigation();
   const darkMode = propDarkMode !== undefined ? propDarkMode : internalDarkMode;
@@ -357,6 +360,26 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     }
   }, [navigateToUserDashboard]);
 
+  useEffect(() => {
+  let timer;
+  if (accountLocked && remainingTime > 0) {
+    timer = setInterval(() => {
+      setRemainingTime(prev => {
+        const newTime = prev - 1;
+        if (newTime <= 0) {
+          clearInterval(timer);
+          setAccountLocked(false);
+          setFailedAttempts(0);
+          setError(""); // Clear the error message when lock expires
+          return 0;
+        }
+        return newTime;
+      });
+    }, 1000);
+  }
+  return () => clearInterval(timer);
+}, [accountLocked, remainingTime]);
+
   const toggleTheme = () => {
     if (propToggleTheme) {
       propToggleTheme();
@@ -368,37 +391,53 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  e.preventDefault();
+  
+  if (accountLocked) {
+    setError(`Account locked. Please try again in ${remainingTime} seconds.`);
+    return;
+  }
 
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password, userType }),
-      });
+  setLoading(true);
+  setError("");
 
-      const data = await response.json();
+  try {
+    const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password, userType }),
+    });
 
-      if (response.ok) {
-        handleAuthSuccess(data, navigateToUserDashboard);
+    const data = await response.json();
+
+    if (response.ok) {
+      handleAuthSuccess(data, navigateToUserDashboard);
+      setFailedAttempts(0);
+    } else {
+      const newFailedAttempts = failedAttempts + 1;
+      setFailedAttempts(newFailedAttempts);
+      
+      if (newFailedAttempts >= 5) {
+        setAccountLocked(true);
+        setRemainingTime(60);
+        setError("Too many failed attempts. Account locked for 1 minute.");
       } else {
-        setLoading(false);
         if (data.useAzureLogin) {
           setError("Staff and Executive members must use Microsoft Azure login. Please click the Azure login button below.");
         } else {
-          setError(data.message || "Invalid credentials or user type.");
+          setError(data.message || `Invalid credentials or user type. ${5 - newFailedAttempts} attempts remaining.`);
         }
       }
-    } catch (err) {
-      console.error("Error during login:", err);
-      setError("An error occurred. Please try again.");
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error("Error during login:", err);
+    setError("An error occurred. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleGoogleLogin = () => {
     setIsOAuthLoading(true);
@@ -563,7 +602,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
             width: "100%",
             maxWidth: "1000px"
           }}>
-            {!isMobile && (
+           {!isMobile && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -732,6 +771,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                     <select
                       value={userType}
                       onChange={(e) => setUserType(e.target.value)}
+                      disabled={accountLocked}
                       style={{
                         width: "100%",
                         padding: "0.75rem 1rem",
@@ -743,7 +783,9 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                         color: theme.color,
                         fontSize: "1rem",
                         backdropFilter: 'blur(10px)',
-                        transition: "all 0.3s ease"
+                        transition: "all 0.3s ease",
+                        opacity: accountLocked ? 0.6 : 1,
+                        cursor: accountLocked ? "not-allowed" : "pointer"
                       }}
                     >
                       <option value="individual">Individual</option>
@@ -766,6 +808,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
+                      disabled={accountLocked}
                       style={{
                         width: "100%",
                         padding: "0.75rem 1rem",
@@ -777,7 +820,9 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                         color: theme.color,
                         fontSize: "1rem",
                         backdropFilter: 'blur(10px)',
-                        transition: "all 0.3s ease"
+                        transition: "all 0.3s ease",
+                        opacity: accountLocked ? 0.6 : 1,
+                        cursor: accountLocked ? "not-allowed" : "auto"
                       }}
                       required
                       placeholder="Enter your username"
@@ -802,6 +847,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                         type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        disabled={accountLocked}
                         style={{
                           width: "100%",
                           padding: "0.75rem 1rem",
@@ -813,7 +859,9 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                           color: theme.color,
                           fontSize: "1rem",
                           backdropFilter: 'blur(10px)',
-                          transition: "all 0.3s ease"
+                          transition: "all 0.3s ease",
+                          opacity: accountLocked ? 0.6 : 1,
+                          cursor: accountLocked ? "not-allowed" : "auto"
                         }}
                         required
                         placeholder="Enter your password"
@@ -821,17 +869,19 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                       <button
                         type="button" 
                         onClick={() => setShowPassword(!showPassword)}
+                        disabled={accountLocked}
                         style={{
                           position: "absolute",
                           right: "0.75rem",
                           background: "transparent",
                           border: "none",
                           color: theme.textSecondary,
-                          cursor: "pointer",
+                          cursor: accountLocked ? "not-allowed" : "pointer",
                           padding: "0.5rem",
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "center"
+                          justifyContent: "center",
+                          opacity: accountLocked ? 0.6 : 1
                         }}
                       >
                         {showPassword ? <EyeOffIcon /> : <EyeIcon />}
@@ -839,45 +889,55 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                     </div>
                   </div>
 
-                  <div style={{ 
-                    display: "flex", 
-                    justifyContent: "flex-end", 
-                    marginBottom: "1.5rem" 
-                  }}>
-                    <a
-                      href="/forgot-password/email-confirm"
-                      style={{ 
-                        color: theme.accentColor,
-                        textDecoration: "none",
-                        fontSize: "0.9rem",
-                        fontWeight: "500"
-                      }}
-                    >
-                      Forgot your password?
-                    </a>
-                  </div>
-
                   <motion.button
-                    whileHover={{ scale: 1.02, y: -2 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={!accountLocked ? { scale: 1.02, y: -2 } : {}}
+                    whileTap={!accountLocked ? { scale: 0.98 } : {}}
                     type="submit"
+                    disabled={accountLocked}
                     style={{
                       width: "100%",
-                      background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
+                      background: accountLocked 
+                        ? "#cccccc" 
+                        : `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
                       color: "white",
                       border: "none",
                       padding: "0.75rem 1.5rem",
                       borderRadius: "12px",
                       fontSize: "1rem",
                       fontWeight: "600",
-                      cursor: "pointer",
-                      marginBottom: "1.5rem",
-                      boxShadow: `0 8px 25px ${theme.accentColor}40`,
-                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                      cursor: accountLocked ? "not-allowed" : "pointer",
+                      marginBottom: "0.75rem",
+                      boxShadow: accountLocked ? "none" : `0 8px 25px ${theme.accentColor}40`,
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      opacity: accountLocked ? 0.6 : 1
                     }}
                   >
-                    Login
+                    {accountLocked ? `Account Locked (${remainingTime}s)` : "Login"}
                   </motion.button>
+
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "flex-end",
+                    marginBottom: "1.5rem",
+                    marginTop: "0.25rem"
+                  }}>
+                    <a
+                      href="/forgot-password/email-confirm"
+                      style={{ 
+                        color: theme.accentColor,
+                        textDecoration: "underline",
+                        textUnderlineOffset: "3px",
+                        fontSize: "0.9rem",
+                        fontWeight: "500",
+                        transition: "opacity 0.2s ease",
+                        ":hover": {
+                          opacity: 0.8
+                        }
+                      }}
+                    >
+                      Forgot your password?
+                    </a>
+                  </div>
 
                   {showGoogleLogin && (
                     <motion.div
@@ -929,7 +989,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                         href="/register"
                         style={{ 
                           color: theme.accentColor,
-                          textDecoration: "none",
+                          textDecoration: "underline",
                           fontWeight: "600"
                         }}
                       >
@@ -1107,3 +1167,4 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
 };
 
 export default LoginPage;
+

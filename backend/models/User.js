@@ -31,6 +31,17 @@ const UserSchema = new mongoose.Schema(
     emailVerificationTokenExpiry: Date,
     isEmailVerified: { type: Boolean, default: false },
     googleId: String,
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+      select: false
+    },
+    accountLockedUntil: {
+      type: Date,
+      default: null,
+      select: false
+    },
+
   },
   { timestamps: true }
 );
