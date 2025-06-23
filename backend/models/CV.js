@@ -116,6 +116,7 @@ interview: {
       "interview-re-scheduled",  
       "interview-no-show",
       "interview-skipped",
+      "interview-passed"
     ],
     default: "interview-not-scheduled",
   },
