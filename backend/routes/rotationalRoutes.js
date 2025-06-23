@@ -12,7 +12,8 @@ const {
   reassignCVToNewStation,
   removeFromStation,
   getCVsForStation,
-  assignCVsToMultipleStations
+  assignCVsToMultipleStations,
+  getAllStations
 } = require("../controllers/rotationalController");
 
 // Rotational CVs
@@ -29,5 +30,6 @@ router.get("/get-cvs/:stationId", getCVsForStation);
 router.get("/assignment-history/:cvId", getCVAssignmentHistory);
 router.post("/reassign-cv", reassignCVToNewStation);
 router.delete("/remove-from-station/:cvId", removeFromStation);
+router.get("/stations", getAllStations);
 
 module.exports = router;
