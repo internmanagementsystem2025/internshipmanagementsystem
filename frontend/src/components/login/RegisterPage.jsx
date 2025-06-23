@@ -100,6 +100,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
    // district: "",
    // preferredLanguage: "",
     password: "",
+    confirmPassword: "",
     instituteContactNumber: "",
     instituteContactEmail: "",
     instituteName: "",
@@ -120,19 +121,6 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   }, []);
 
 useEffect(() => {
-  const fetchDistricts = async () => {
-    try {
-      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/districts`);
-      const sortedDistricts = response.data.sort((a, b) => 
-        a.district_name.localeCompare(b.district_name)
-      );
-      setDistricts(sortedDistricts);
-    } catch (error) {
-      console.error("Error fetching districts:", error);
-      setError("Failed to load districts");
-    }
-  }; 
-
   const fetchInstitutes = async () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/institutes`);
@@ -146,7 +134,6 @@ useEffect(() => {
     }
   };
 
-    fetchDistricts();
     fetchInstitutes();
   }, []);
 
@@ -589,7 +576,7 @@ useEffect(() => {
                   </div>
 
                   {/* Full Name and Name with Initials */}
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                  <div style={{ marginBottom: "1.5rem" }}>
                     <div>
                       <label style={{ 
                         display: "block", 
@@ -868,62 +855,118 @@ useEffect(() => {
                       </>
                     )}
 
-                    {/* Password */}
-                    <div style={{ marginBottom: "1.5rem" }}>
-                      <label style={{ 
-                        display: "block", 
-                        marginBottom: "0.5rem", 
-                        fontWeight: "600", 
-                        color: theme.color 
-                      }}>
-                        Password
-                      </label>
-                      <div style={{ 
-                        display: "flex", 
-                        alignItems: "center",
-                        position: "relative"
-                      }}>
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="password"
-                          value={formData.password}
-                          onChange={handleChange}
-                          required
-                          placeholder="Enter a strong password"
-                          style={{
-                            width: "100%",
-                            padding: "0.75rem 1rem",
-                            borderRadius: "12px",
-                            border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                            background: darkMode 
-                              ? 'rgba(15, 30, 55, 0.3)' 
-                              : 'rgba(255, 255, 255, 0.8)',
-                            color: theme.color,
-                            fontSize: "1rem",
-                            backdropFilter: 'blur(10px)',
-                            transition: "all 0.3s ease"
-                          }}
-                        />
-                        <button
-                          type="button" 
-                          onClick={() => setShowPassword(!showPassword)}
-                          style={{
-                            position: "absolute",
-                            right: "0.75rem",
-                            background: "transparent",
-                            border: "none",
-                            color: theme.textSecondary,
-                            cursor: "pointer",
-                            padding: "0.5rem",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                          }}
-                        >
-                          {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                        </button>
-                      </div>
-                    </div>
+                    {/* Password and Confirm Password */}
+<div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+  {/* Password Field */}
+  <div>
+    <label style={{ 
+      display: "block", 
+      marginBottom: "0.5rem", 
+      fontWeight: "600", 
+      color: theme.color 
+    }}>
+      Password
+    </label>
+    <div style={{ position: "relative" }}>
+      <input
+        type={showPassword ? "text" : "password"}
+        name="password"
+        value={formData.password}
+        onChange={handleChange}
+        required
+        placeholder="Enter password"
+        style={{
+          width: "100%",
+          padding: "0.75rem 1rem",
+          borderRadius: "12px",
+          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+          background: darkMode 
+            ? 'rgba(15, 30, 55, 0.3)' 
+            : 'rgba(255, 255, 255, 0.8)',
+          color: theme.color,
+          fontSize: "1rem",
+          backdropFilter: 'blur(10px)',
+          transition: "all 0.3s ease"
+        }}
+      />
+      <button
+        type="button" 
+        onClick={() => setShowPassword(!showPassword)}
+        style={{
+          position: "absolute",
+          right: "0.75rem",
+          top: "50%",
+          transform: "translateY(-50%)",
+          background: "transparent",
+          border: "none",
+          color: theme.textSecondary,
+          cursor: "pointer",
+          padding: "0.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  </div>
+
+  {/* Confirm Password Field */}
+  <div>
+    <label style={{ 
+      display: "block", 
+      marginBottom: "0.5rem", 
+      fontWeight: "600", 
+      color: theme.color 
+    }}>
+      Confirm Password
+    </label>
+    <div style={{ position: "relative" }}>
+      <input
+        type={showPassword ? "text" : "password"}
+        name="confirmPassword"
+        value={formData.confirmPassword}
+        onChange={handleChange}
+        required
+        placeholder="Confirm password"
+        style={{
+          width: "100%",
+          padding: "0.75rem 1rem",
+          borderRadius: "12px",
+          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+          background: darkMode 
+            ? 'rgba(15, 30, 55, 0.3)' 
+            : 'rgba(255, 255, 255, 0.8)',
+          color: theme.color,
+          fontSize: "1rem",
+          backdropFilter: 'blur(10px)',
+          transition: "all 0.3s ease"
+        }}
+      />
+      <button
+        type="button" 
+        onClick={() => setShowPassword(!showPassword)}
+        style={{
+          position: "absolute",
+          right: "0.75rem",
+          top: "50%",
+          transform: "translateY(-50%)",
+          background: "transparent",
+          border: "none",
+          color: theme.textSecondary,
+          cursor: "pointer",
+          padding: "0.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  </div>
+</div>
 
                     {/* Submit Button */}
                     <motion.button
