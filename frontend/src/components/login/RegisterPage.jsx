@@ -53,7 +53,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState("individual");
   const [error, setError] = useState("");
-  const [districts, setDistricts] = useState([]);
+  //const [districts, setDistricts] = useState([]);
   const [institutes, setInstitutes] = useState([]);
   const [registrationMessage, setRegistrationMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -93,12 +93,12 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
     username: "",
     email: "",
     fullName: "",
-    nameWithInitials: "",
-    postalAddress: "",
+   // nameWithInitials: "",
+    //postalAddress: "",
     contactNumber: "",
     nic: "",
-    district: "",
-    preferredLanguage: "",
+   // district: "",
+   // preferredLanguage: "",
     password: "",
     instituteContactNumber: "",
     instituteContactEmail: "",
@@ -131,7 +131,7 @@ useEffect(() => {
       console.error("Error fetching districts:", error);
       setError("Failed to load districts");
     }
-  };
+  }; 
 
   const fetchInstitutes = async () => {
     try {
@@ -621,37 +621,7 @@ useEffect(() => {
                         }}
                       />
                     </div>
-                    <div>
-                      <label style={{ 
-                        display: "block", 
-                        marginBottom: "0.5rem", 
-                        fontWeight: "600", 
-                        color: theme.color 
-                      }}>
-                        Name with Initials
-                      </label>
-                      <input
-                        type="text"
-                        name="nameWithInitials"
-                        value={formData.nameWithInitials}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter name with initials"
-                        style={{
-                          width: "100%",
-                          padding: "0.75rem 1rem",
-                          borderRadius: "12px",
-                          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                          background: darkMode 
-                            ? 'rgba(15, 30, 55, 0.3)' 
-                            : 'rgba(255, 255, 255, 0.8)',
-                          color: theme.color,
-                          fontSize: "1rem",
-                          backdropFilter: 'blur(10px)',
-                          transition: "all 0.3s ease"
-                        }}
-                      />
-                    </div>
+                    
                   </div>
 
                   {/* Contact Number and NIC */}
@@ -720,118 +690,6 @@ useEffect(() => {
                     </div>
                   </div>
 
-                  {/* Individual-specific fields */}
-                  {userType === "individual" && (
-                    <>
-                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                        <div>
-                          <label style={{ 
-                            display: "block", 
-                            marginBottom: "0.5rem", 
-                            fontWeight: "600", 
-                            color: theme.color 
-                          }}>
-                            Postal Address
-                          </label>
-                          <input
-                            type="text"
-                            name="postalAddress"
-                            value={formData.postalAddress}
-                            onChange={handleChange}
-                            required
-                            placeholder="Enter postal address"
-                            style={{
-                              width: "100%",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "12px",
-                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                              background: darkMode 
-                                ? 'rgba(15, 30, 55, 0.3)' 
-                                : 'rgba(255, 255, 255, 0.8)',
-                              color: theme.color,
-                              fontSize: "1rem",
-                              backdropFilter: 'blur(10px)',
-                              transition: "all 0.3s ease"
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ 
-                            display: "block", 
-                            marginBottom: "0.5rem", 
-                            fontWeight: "600", 
-                            color: theme.color 
-                          }}>
-                            Preferred Language
-                          </label>
-                          <select
-                            name="preferredLanguage"
-                            value={formData.preferredLanguage}
-                            onChange={handleChange}
-                            required
-                            style={{
-                              width: "100%",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "12px",
-                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                              background: darkMode 
-                                ? 'rgba(15, 30, 55, 0.8)' 
-                                : 'rgba(255, 255, 255, 0.8)',
-                              color: theme.color,
-                              fontSize: "1rem",
-                              backdropFilter: 'blur(10px)',
-                              transition: "all 0.3s ease"
-                            }}
-                          >
-                            <option value="">Select Language</option>
-                            <option value="English">English</option>
-                            <option value="Sinhala">Sinhala</option>
-                            <option value="Tamil">Tamil</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div style={{ marginBottom: "1.5rem" }}>
-                        <label style={{ 
-                          display: "block", 
-                          marginBottom: "0.5rem", 
-                          fontWeight: "600", 
-                          color: theme.color 
-                        }}>
-                          District
-                        </label>
-                        <select
-                          name="district"
-                          value={formData.district}
-                          onChange={handleChange}
-                          required
-                          style={{
-                            width: "100%",
-                            padding: "0.75rem 1rem",
-                            borderRadius: "12px",
-                            border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                            background: darkMode 
-                              ? 'rgba(15, 30, 55, 0.8)' 
-                              : 'rgba(255, 255, 255, 0.8)',
-                            color: theme.color,
-                            fontSize: "1rem",
-                            backdropFilter: 'blur(10px)',
-                            transition: "all 0.3s ease"
-                          }}
-                        >
-                          <option value="">Select District</option>
-                          {districts.map((district, index) => (
-                            <option
-                              key={district.id || index}
-                              value={district.id}
-                            >
-                              {district.district_name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </>
-                  )}
 
                   {/* Institute-specific fields */}
                   {userType === "institute" && (

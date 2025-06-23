@@ -171,7 +171,35 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-// Login user
+// Middleware to check if account is locked
+const checkAccountLock = async (req, res, next) => {
+  try {
+    const { username, userType } = req.body;
+    
+    const user = await User.findOne({ 
+      $and: [
+        { username },
+        { userType }
+      ]
+    });
+
+    if (user && user.accountLockedUntil && user.accountLockedUntil > new Date()) {
+      const remainingTime = Math.ceil((user.accountLockedUntil - new Date()) / 1000);
+      return res.status(403).json({ 
+        message: `Account locked. Please try again in ${remainingTime} seconds.`,
+        accountLocked: true,
+        remainingTime
+      });
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Account lock check error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
 const loginUser = async (req, res) => {
   try {
     const { username, password, userType } = req.body;
@@ -184,14 +212,55 @@ const loginUser = async (req, res) => {
       ]
     });
 
+    // Check if account is locked
+    if (user && user.accountLockedUntil && user.accountLockedUntil > new Date()) {
+      const remainingTime = Math.ceil((user.accountLockedUntil - new Date()) / 1000);
+      return res.status(403).json({ 
+        message: `Account locked. Please try again in ${remainingTime} seconds.`,
+        accountLocked: true,
+        remainingTime
+      });
+    }
+
+    // Validate credentials
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(400).json({ message: "Invalid credentials or user type" });
+      // Increment failed attempts if user exists
+      if (user) {
+        user.failedLoginAttempts += 1;
+        
+        // Lock account after 5 failed attempts
+        if (user.failedLoginAttempts >= 5) {
+          user.accountLockedUntil = new Date(Date.now() + 60 * 1000); // 1 minute lock
+          await user.save();
+          
+          return res.status(403).json({ 
+            message: "Too many failed attempts. Account locked for 1 minute.",
+            accountLocked: true,
+            remainingTime: 60
+          });
+        }
+        
+        await user.save();
+        return res.status(400).json({ 
+          message: "Invalid credentials or user type",
+          remainingAttempts: 5 - user.failedLoginAttempts
+        });
+      }
+      
+      return res.status(400).json({ 
+        message: "Invalid credentials or user type"
+      });
     }
 
     // Check if user is an institute and if their request is approved
     if (user.userType === "institute" && !user.approveRequest) {
       return res.status(403).json({ message: "Your account has not been approved yet." });
     }
+
+    // Reset failed attempts on successful login
+    user.failedLoginAttempts = 0;
+    user.accountLockedUntil = null;
+    await user.save();
 
     const token = generateToken(user._id, user.username, user.email, user.userType, user.currentStatus);
 
