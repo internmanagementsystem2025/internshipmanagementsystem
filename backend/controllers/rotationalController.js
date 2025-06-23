@@ -7,6 +7,7 @@ const getAllRotationalCVs = async (req, res) => {
   try {
     const rotationalCVs = await CV.find({
       "rotationalAssignment.isRotational": true,
+      userType: "institute",
     }).populate({
       path: "rotationalAssignment.assignedStations.station",
       select: "stationName timePeriod",
@@ -89,6 +90,118 @@ const getAssignedCVs = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch assigned CVs" });
   }
 };
+
+// Assign CVs to multiple stations
+const assignCVsToMultipleStations = async (req, res) => {
+  const { cvIds, stations } = req.body; // stations is an array of objects with stationId, startDate, and endDate
+
+  try {
+    // Validate input
+    if (!cvIds || !Array.isArray(cvIds)) {
+      return res.status(400).json({ error: "CV IDs must be provided as an array" });
+    }
+    if (!stations || !Array.isArray(stations)) {
+      return res.status(400).json({ error: "Stations must be provided as an array" });
+    }
+
+    // Process each CV
+    const errors = [];
+    const successfulAssignments = [];
+
+    for (const cvId of cvIds) {
+      try {
+        const cv = await CV.findById(cvId);
+        if (!cv) {
+          errors.push(`CV with ID ${cvId} not found`);
+          continue;
+        }
+
+        for (const stationData of stations) {
+          const { stationId, startDate, endDate } = stationData;
+
+          // Validate station data
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          if (!stationId || isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+            errors.push(`Invalid station data for CV ${cvId}`);
+            continue;
+          }
+
+          // Check if the station exists
+          const station = await Station.findById(stationId);
+          if (!station) {
+            errors.push(`Station with ID ${stationId} not found`);
+            continue;
+          }
+
+          // Check if already assigned to this station in the same period
+          const existingAssignment = cv.rotationalAssignment.assignedStations.find(
+            (as) =>
+              as.station.equals(stationId) &&
+              ((start >= as.startDate && start <= as.endDate) ||
+                (end >= as.startDate && end <= as.endDate))
+          );
+
+          if (existingAssignment) {
+            errors.push(`CV ${cvId} is already assigned to station ${stationId} for overlapping dates`);
+            continue;
+          }
+
+          // Calculate total assigned weeks
+          const totalAssignedWeeks = cv.rotationalAssignment.assignedStations.reduce((total, as) => {
+            const weeks = (new Date(as.endDate) - new Date(as.startDate)) / (1000 * 60 * 60 * 24 * 7);
+            return total + weeks;
+          }, 0);
+
+          const newAssignmentWeeks = (end - start) / (1000 * 60 * 60 * 24 * 7);
+          const remainingWeeks = cv.rotationalAssignment.internshipDuration - totalAssignedWeeks;
+
+          if (newAssignmentWeeks > remainingWeeks) {
+            errors.push(`CV ${cvId} exceeds available internship duration (${remainingWeeks} weeks remaining)`);
+            continue;
+          }
+
+          // Add new assignment
+          cv.rotationalAssignment.assignedStations.push({
+            station: stationId,
+            startDate: start,
+            endDate: end,
+            serviceTimePeriod: Math.ceil((end - start) / (1000 * 60 * 60 * 24)), // days
+            isCurrent: true,
+          });
+
+          cv.rotationalAssignment.isRotational = true;
+        }
+
+        await cv.save();
+        successfulAssignments.push(cvId);
+      } catch (err) {
+        errors.push(`Error processing CV ${cvId}: ${err.message}`);
+      }
+    }
+
+    if (errors.length > 0) {
+      return res.status(207).json({
+        message: "Some assignments completed with errors",
+        successfulAssignments,
+        errors,
+        totalAttempted: cvIds.length,
+        successCount: successfulAssignments.length,
+        errorCount: errors.length,
+      });
+    }
+
+    res.status(200).json({
+      message: "All CVs assigned to stations successfully",
+      successfulAssignments,
+      total: cvIds.length,
+    });
+  } catch (error) {
+    console.error("Error in assignCVsToMultipleStations:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 
 // Assign CVs to a station
 const assignCVsToStation = async (req, res) => {
@@ -221,10 +334,18 @@ const assignCVsToStation = async (req, res) => {
 const checkAssignedCVs = async (req, res) => {
   try {
     const { cvIds } = req.query;
+     // Validate input
+    if (!cvIds || !Array.isArray(cvIds)) {
+      return res.status(400).json({ error: "CV IDs must be provided as an array" });
+    }
+
+    // Query to find CVs with assigned stations
     const assignedCVs = await CV.find({
       _id: { $in: cvIds },
-      "assignedStation.station": { $exists: true },
+      "rotationalAssignment.assignedStations.station": { $exists: true },
     });
+
+
     res.status(200).json(assignedCVs);
   } catch (error) {
     console.error("Error checking assigned CVs:", error);
@@ -593,4 +714,5 @@ module.exports = {
   reassignCVToNewStation,
   removeFromStation,
   getCVsForStation,
+  assignCVsToMultipleStations
 };
