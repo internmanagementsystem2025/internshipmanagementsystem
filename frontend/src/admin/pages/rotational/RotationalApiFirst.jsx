@@ -1,8 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Card, Table, Button, Badge, Row, Col, Form, Modal } from 'react-bootstrap';
+import { Container, Card, Table, Button, Badge, Row, Col, Form, Modal, ProgressBar } from 'react-bootstrap';
 import axios from 'axios';
 
-const RotationalApiFirst = () => {
+// Enhanced StatsCircle component with styling from ViewRotationalStation.jsx
+const StatsCircle = ({ title, value, total, percentage, color, darkMode }) => {
+  // Calculate the percentage if not provided
+  const calculatedPercentage = percentage || Math.round((value / total) * 100) || 0;
+  const strokeDasharray = `${calculatedPercentage * 2.512}, 251.2`; // 251.2 is approx 2π × 40 (circumference)
+  
+  // Background color based on dark mode
+  const bgColor = darkMode ? "#444" : "#e6e6e6";
+  
+  return (
+    <div className="text-center mb-4">
+      <div style={{ 
+        position: "relative", 
+        width: "150px", 
+        height: "150px", 
+        margin: "0 auto",
+        filter: "drop-shadow(0px 4px 8px rgba(0,0,0,0.2))"
+      }}>
+        <svg width="150" height="150" viewBox="0 0 100 100">
+          {/* Background Circle */}
+          <circle
+            cx="50"
+            cy="50"
+            r="40"
+            fill="none"
+            stroke={bgColor}
+            strokeWidth="14"
+            opacity="0.2"
+          />
+          {/* Foreground Circle - The progress indicator */}
+          <circle
+            cx="50"
+            cy="50"
+            r="40"
+            fill="none"
+            stroke={color || "#28a745"} // Default to success green if no color provided
+            strokeWidth="14"
+            strokeDasharray={strokeDasharray}
+            strokeDashoffset="0"
+            transform="rotate(-90 50 50)" // Rotate to start from the top
+            strokeLinecap="round" // Rounded ends for a nicer look
+            style={{
+              filter: "drop-shadow(0px 0px 4px rgba(0,0,0,0.3))"
+            }}
+          />
+        </svg>
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          fontSize: "1.75rem",
+          fontWeight: "bold",
+          textShadow: "1px 1px 3px rgba(0,0,0,0.2)"
+        }}>
+          {calculatedPercentage}%
+        </div>
+      </div>
+      <h5 className="mt-3 fw-bold">{title}</h5>
+      <div className="text-muted fs-6 fw-semibold">{value} of {total}</div>
+    </div>
+  );
+};
+
+const RotationalApiFirst = ({ darkMode }) => {
   const [allCVs, setAllCVs] = useState([]);
   const [pendingCVs, setPendingCVs] = useState([]);
   const [analytics, setAnalytics] = useState([]);
@@ -286,27 +350,83 @@ const RotationalApiFirst = () => {
     </Modal>
   );
 
+  // Function to determine color based on utilization percentage with more vibrant colors
+  const getUtilizationColor = (percentage) => {
+    if (percentage >= 80) return "#dc3545"; // A more vibrant danger red
+    if (percentage >= 50) return "#ff9800"; // A more vibrant warning orange
+    return "#00acc1"; // A more vibrant info teal
+  };
+
+  // Function to get status text based on utilization
+  const getUtilizationStatus = (percentage) => {
+    if (percentage >= 80) return "High Utilization";
+    if (percentage >= 50) return "Medium Utilization";
+    return "Low Utilization";
+  };
+
   return (
     <Container className="py-4">
       {loading ? (
-        <div className="text-center">Loading...</div>
+        <div className="text-center p-5">
+          <div className="spinner-border text-primary" role="status" style={{ width: "3rem", height: "3rem" }}>
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3 fs-5">Loading data...</p>
+        </div>
       ) : (
         <>
-          {/* Analytics Section */}
-          <Card className="mb-4">
-            <Card.Header as="h5">Station Analytics</Card.Header>
-            <Card.Body>
-              <Row>
+          {/* Analytics Section with improved styling */}
+          <Card className={`mb-4 shadow ${darkMode ? 'bg-dark text-white' : ''}`}>
+            <Card.Header as="h5" className={`py-3 ${darkMode ? 'bg-secondary' : 'bg-primary text-white'}`}>
+              Station Analytics
+            </Card.Header>
+            <Card.Body className="p-4">
+              <Row className="g-4">
                 {analytics.map(station => (
-                  <Col md={4} key={station.stationId} className="mb-3">
-                    <Card>
-                      <Card.Body>
-                        <Card.Title>{station.stationName}</Card.Title>
-                        <Card.Text>
-                          Assigned CVs: {station.assignedCVs}<br />
-                          Available Seats: {station.availableSeats}<br />
-                          Utilization: {station.utilizationPercentage}%
-                        </Card.Text>
+                  <Col lg={4} md={6} key={station.stationId} className="mb-4">
+                    <Card className={`h-100 shadow ${darkMode ? 'bg-dark text-white border-secondary' : 'border-0'}`}>
+                      <Card.Header className={`text-center py-3 ${darkMode ? 'bg-secondary' : 'bg-light'}`}>
+                        <h5 className="fw-bold mb-0">{station.stationName}</h5>
+                      </Card.Header>
+                      <Card.Body className="text-center p-4">
+                        {/* Enhanced StatsCircle component */}
+                        <StatsCircle 
+                          title={getUtilizationStatus(station.utilizationPercentage)} 
+                          value={station.assignedCVs} 
+                          total={station.maxStudents || station.assignedCVs + station.availableSeats} 
+                          percentage={station.utilizationPercentage} 
+                          color={getUtilizationColor(station.utilizationPercentage)}
+                          darkMode={darkMode}
+                        />
+                        
+                        <div className="mt-4 px-3">
+                          <div className="d-flex justify-content-between align-items-center mb-3">
+                            <span className="fs-6 fw-semibold">Assigned CVs:</span>
+                            <Badge bg="primary" pill className="px-3 py-2 fs-6">{station.assignedCVs}</Badge>
+                          </div>
+                          <div className="d-flex justify-content-between align-items-center mb-4">
+                            <span className="fs-6 fw-semibold">Available Seats:</span>
+                            <Badge bg="success" pill className="px-3 py-2 fs-6">{station.availableSeats}</Badge>
+                          </div>
+                          
+                          {/* Progress bar with improved styling */}
+                          <div className="mt-3">
+                            <ProgressBar 
+                              now={station.utilizationPercentage} 
+                              variant={
+                                station.utilizationPercentage >= 80 ? "danger" : 
+                                station.utilizationPercentage >= 50 ? "warning" : "info"
+                              }
+                              style={{ height: "10px", borderRadius: "5px" }}
+                              className="mb-2"
+                            />
+                            <div className="d-flex justify-content-between mt-2 px-2">
+                              <small className={`${darkMode ? "text-light" : "text-muted"}`}>0%</small>
+                              <small className={`${darkMode ? "text-light" : "text-muted"} fw-semibold`}>Utilization</small>
+                              <small className={`${darkMode ? "text-light" : "text-muted"}`}>100%</small>
+                            </div>
+                          </div>
+                        </div>
                       </Card.Body>
                     </Card>
                   </Col>
@@ -320,6 +440,14 @@ const RotationalApiFirst = () => {
           <HistoryModal />
         </>
       )}
+      <style jsx="true">{`
+        .shadow {
+          box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+        }
+        .border-0 {
+          border: none!important;
+        }
+      `}</style>
     </Container>
   );
 };
