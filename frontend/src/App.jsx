@@ -112,6 +112,8 @@ import ViewGeneratePlacementLetter  from "./admin/pages/lifecycle/ViewGeneratePl
 import PlacementLetterManagement  from "./admin/pages/others/PlacementLetterManagement";
 import AddNewUniversity  from "./admin/pages/others/AddNewUniversity";
 import InstituteRotational from "./institute/pages/instituterotational/instituteRotational";
+import Rotationalapifirst from "./admin/pages/rotational/RotationalApiFirst";
+import RotationalapiSecond from "./admin/pages/rotational/RotationalApiSecond";
 
 
 
@@ -405,6 +407,8 @@ function App() {
     <Route path="/all-rotational-stations" element={<AllRotationalStation darkMode={darkMode} />} />
     <Route path="/view-rotational-stations/:id" element={<ViewRotationalStation darkMode={darkMode} />} />
     <Route path="/edit-rotational-stations/:id" element={<EditStation darkMode={darkMode} />} />
+    <Route path="/rotation-api1" element={<Rotationalapifirst darkMode={darkMode} />} />
+    <Route path="/rotation-api2" element={<RotationalapiSecond darkMode={darkMode} />} />
     <Route path="/schedule-rotations" element={<ScheduleRotations darkMode={darkMode} />} />
     <Route path="/intern-certificate-request" element={<InternCertificateRequest darkMode={darkMode} />} />
     <Route path="/view-certificate-request/:id" element={<ViewCertificateRequest darkMode={darkMode} />} />
