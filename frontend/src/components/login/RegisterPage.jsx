@@ -140,6 +140,11 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
     return oldFormat || newFormat;
   };
 
+  const validateContactNumber = (number) => {
+    // Sri Lankan phone number validation (10 digits starting with 0)
+    return /^0[0-9]{9}$/.test(number.trim());
+  };
+
   // Theme toggle function
   const toggleTheme = () => {
     if (propToggleTheme) {
@@ -178,7 +183,13 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       setLoading(false);
       return;
     }
-
+// Validate contact number
+    if (!validateContactNumber(formData.contactNumber)) {
+      setError("Please enter a valid Sri Lankan phone number (10 digits starting with 0)");
+      setLoading(false);
+      return;
+    }
+    
     // Validate password match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -655,7 +666,10 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                               width: "100%",
                               padding: "0.75rem 1rem",
                               borderRadius: "12px",
-                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                              border: `1px solid formData.contactNumber && !validateContactNumber(formData.contactNumber) 
+              ? '#ff4444' 
+              : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+          }`,
                               background: darkMode 
                                 ? 'rgba(15, 30, 55, 0.3)' 
                                 : 'rgba(255, 255, 255, 0.8)',
@@ -665,6 +679,15 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                               transition: "all 0.3s ease"
                             }}
                           />
+                          {formData.contactNumber && !validateContactNumber(formData.contactNumber) && (
+        <p style={{
+          color: '#ff4444',
+          fontSize: '0.8rem',
+          marginTop: '0.25rem'
+        }}>
+          Please enter a valid phone number (10 digits starting with 0)
+        </p>
+      )}
                         </div>
                         <div>
                           <label style={{ 
