@@ -7,6 +7,93 @@ const { updateStats } = require("../controllers/statsController");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const jwt = require("jsonwebtoken");
+const jwksClient = require("jwks-rsa");
+
+
+
+// Setup JWKS client for Microsoft public keys
+const azureJwksClient = jwksClient({
+  jwksUri: 'https://login.microsoftonline.com/common/discovery/v2.0/keys',
+});
+
+// Get public key from Azure
+function getSigningKey(header, callback) {
+  azureJwksClient.getSigningKey(header.kid, (err, key) => {
+    if (err) return callback(err);
+    const signingKey = key.getPublicKey();
+    callback(null, signingKey);
+  });
+}
+
+// Azure login endpoint
+const loginWithAzure = async (req, res) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({ message: "Missing Azure ID token" });
+  }
+
+  jwt.verify(
+    idToken,
+    getSigningKey,
+    {
+      audience: 'cec10081-d857-4e10-a58e-96379acd977', // frontend clientId
+      issuer: [
+        'https://login.microsoftonline.com/534253fc-dfb6-462f-b5ca-cbe81939f5ee/v2.0',
+        'https://sts.windows.net/534253fc-dfb6-462f-b5ca-cbe81939f5ee/',
+      ],
+      algorithms: ['RS256'],
+    },
+    async (err, decoded) => {
+      if (err) {
+        console.error("Azure token verification failed", err);
+        return res.status(401).json({ message: "Invalid Azure token" });
+      }
+
+      const { email, name, oid } = decoded;
+
+      if (!email) {
+        return res.status(400).json({ message: "Azure token missing email claim" });
+      }
+
+      try {
+        let user = await User.findOne({ email });
+
+        // Auto-create user if not found (optional)
+        if (!user) {
+          user = new User({
+            username: email,
+            email,
+            fullName: name || '',
+            userType: "staff", // or executive_staff based on app logic
+            isEmailVerified: true,
+            cvStatus: "pending"
+          });
+          await user.save();
+        }
+
+        const token = generateToken(
+          user._id,
+          user.username,
+          user.email,
+          user.userType,
+          user.currentStatus
+        );
+
+        return res.status(200).json({ 
+          token,
+          userType: user.userType 
+        });
+
+      } catch (error) {
+        console.error("Azure login failed:", error);
+        return res.status(500).json({ message: "Server error during Azure login" });
+      }
+    }
+  );
+};
+
 
 // Temporary storage for pending registrations (use Redis in production)
 const pendingRegistrations = new Map();
@@ -541,5 +628,6 @@ module.exports = {
   verifyOTPAndResetPassword,
   getUserProfileByNic,
   verifyEmail,
-  upload 
+  upload,
+  loginWithAzure
 };

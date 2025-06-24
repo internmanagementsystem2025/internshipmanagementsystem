@@ -5,6 +5,8 @@ import { BsSun, BsMoon } from "react-icons/bs";
 import { AiOutlineScan } from "react-icons/ai"; 
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
+import { useMsal } from "@azure/msal-react";
+
 
 const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
   const navigate = useNavigate();
@@ -19,6 +21,8 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
     accentColor: darkMode ? "#2563eb" : "#10b981",
     border: darkMode ? "#333333" : "rgba(0, 0, 0, 0.1)",
   };
+  const { instance, accounts } = useMsal();
+
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -47,10 +51,34 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
 
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = localStorage.getItem("token");
+    let userType = null;
+  
+    try {
+      if (token) {
+        const decoded = jwtDecode(token);
+        userType = decoded.userType;
+      }
+    } catch (e) {
+      console.error("Token decode failed:", e);
+    }
+  
+    // Clear local storage
     localStorage.removeItem("token");
-    navigate("/login");
+  
+    if (["staff", "executive_staff"].includes(userType)) {
+      // Logout from Azure AD and redirect
+      await instance.logoutRedirect({
+        postLogoutRedirectUri: "/login",
+        account: accounts[0], // Use current MSAL account
+      });
+    } else {
+      // Normal logout
+      navigate("/login");
+    }
   };
+  
 
   // Toggle fullscreen mode
   const toggleFullscreen = () => {

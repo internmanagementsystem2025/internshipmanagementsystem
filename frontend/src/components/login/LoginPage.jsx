@@ -370,12 +370,32 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   const handleAzureLogin = async () => {
     try {
       setIsOAuthLoading(true);
-      await instance.loginRedirect(loginRequest);
+  
+      const loginResponse = await instance.loginPopup(loginRequest);
+      const idToken = loginResponse.idToken;
+  
+      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/azure-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken })
+      });
+  
+      const data = await response.json();
+      if (response.ok) {
+        localStorage.setItem("token", data.token);
+        redirectUser(data.userType);
+      } else {
+        setError(data.message || "Azure login failed");
+      }
+  
     } catch (err) {
-      console.error('Azure login error', err);
+      console.error("Azure login error:", err);
+      setError("Azure login failed. Please try again.");
+    } finally {
       setIsOAuthLoading(false);
     }
   };
+  
   
 
   const toggleStaffNotification = () => {
