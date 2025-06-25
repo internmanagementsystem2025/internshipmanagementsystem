@@ -1,14 +1,228 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Container, Row, Col, Card, Button, Form, Alert } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import axios from "axios";
 import logo from "../../../assets/logo.png";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLock } from '@fortawesome/free-solid-svg-icons';
+import { faLock, faSearch, faChevronDown, faUser } from '@fortawesome/free-solid-svg-icons';
 import PropTypes from "prop-types";
 import { motion } from 'framer-motion';
 import Notification from "../../../components/notifications/Notification"; 
+
+
+const SearchableSelect = ({ 
+  options = [], 
+  value, 
+  onChange, 
+  placeholder = "Search and select...", 
+  darkMode = false,
+  required = false,
+  disabled = false 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredOptions, setFilteredOptions] = useState(options);
+  const [hoveredOption, setHoveredOption] = useState(null);
+  const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const theme = {
+    inputBackground: darkMode ? "#2A2A2A" : "#ffffff",
+    inputBorder: darkMode ? "#404040" : "#e2e8f0",
+    inputFocus: darkMode ? "#2563eb" : "#10b981",
+    textPrimary: darkMode ? "#E1E1E1" : "#1e293b",
+    textSecondary: darkMode ? "#A0A0A0" : "#64748b",
+    dropdownBackground: darkMode ? "#1E1E1E" : "#ffffff",
+    hoverBackground: darkMode ? "#333333" : "#f1f5f9",
+    selectedBackground: darkMode ? "#404040" : "#e2e8f0",
+    border: darkMode ? "#333333" : "rgba(0, 0, 0, 0.1)",
+  };
+
+  useEffect(() => {
+    if (searchTerm === "") {
+      setFilteredOptions(options);
+    } else {
+      const filtered = options.filter(option =>
+        option.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (option.subtitle && option.subtitle.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredOptions(filtered);
+    }
+  }, [searchTerm, options]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (option) => {
+    onChange(option.value);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const selectedOption = options.find(opt => opt.value === value);
+  const displayValue = selectedOption ? selectedOption.label : "";
+
+  const getOptionBackgroundColor = (optionValue) => {
+    if (value === optionValue) {
+      return theme.selectedBackground;
+    }
+    if (hoveredOption === optionValue) {
+      return theme.hoverBackground;
+    }
+    return 'transparent';
+  };
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative', width: '100%' }}>
+      <div
+        style={{
+          position: 'relative',
+          border: `1px solid ${isOpen ? theme.inputFocus : theme.inputBorder}`,
+          borderRadius: '8px',
+          backgroundColor: theme.inputBackground,
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s ease'
+        }}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+      >
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0.5rem 0.75rem',
+          minHeight: '38px'
+        }}>
+          <FontAwesomeIcon 
+            icon={faUser} 
+            style={{ 
+              color: theme.textSecondary, 
+              marginRight: '8px',
+              fontSize: '14px'
+            }} 
+          />
+          <input
+            ref={inputRef}
+            type="text"
+            value={isOpen ? searchTerm : displayValue}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={placeholder}
+            style={{
+              border: 'none',
+              outline: 'none',
+              backgroundColor: 'transparent',
+              color: theme.textPrimary,
+              flex: 1,
+              fontSize: '14px',
+              cursor: disabled ? 'not-allowed' : isOpen ? 'text' : 'pointer'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!disabled) setIsOpen(true);
+            }}
+            disabled={disabled}
+            required={required}
+          />
+          <FontAwesomeIcon 
+            icon={faChevronDown} 
+            style={{ 
+              color: theme.textSecondary,
+              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s ease',
+              fontSize: '12px'
+            }} 
+          />
+        </div>
+      </div>
+
+      {isOpen && !disabled && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            backgroundColor: theme.dropdownBackground,
+            border: `1px solid ${theme.border}`,
+            borderRadius: '8px',
+            maxHeight: '200px',
+            overflowY: 'auto',
+            zIndex: 1000,
+            marginTop: '4px',
+            boxShadow: darkMode 
+              ? '0 8px 25px rgba(0, 0, 0, 0.3)' 
+              : '0 8px 25px rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          {filteredOptions.length === 0 ? (
+            <div style={{
+              padding: '12px 16px',
+              color: theme.textSecondary,
+              textAlign: 'center',
+              fontSize: '14px'
+            }}>
+              No staff members found
+            </div>
+          ) : (
+            filteredOptions.map((option) => (
+              <div
+                key={option.value}
+                onClick={() => handleSelect(option)}
+                onMouseEnter={() => setHoveredOption(option.value)}
+                onMouseLeave={() => setHoveredOption(null)}
+                style={{
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  borderBottom: `1px solid ${theme.border}`,
+                  backgroundColor: getOptionBackgroundColor(option.value),
+                  transition: 'background-color 0.2s ease'
+                }}
+              >
+                <div style={{
+                  color: theme.textPrimary,
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  marginBottom: '2px'
+                }}>
+                  {option.label}
+                </div>
+                {option.subtitle && (
+                  <div style={{
+                    color: theme.textSecondary,
+                    fontSize: '12px'
+                  }}>
+                    {option.subtitle}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
+SearchableSelect.propTypes = {
+  options: PropTypes.array.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  onChange: PropTypes.func.isRequired,
+  placeholder: PropTypes.string,
+  darkMode: PropTypes.bool,
+  required: PropTypes.bool,
+  disabled: PropTypes.bool
+};
 
 const TrainingCertificateRequest = ({ darkMode }) => {
   const [user, setUser] = useState(null);
@@ -40,7 +254,6 @@ const TrainingCertificateRequest = ({ darkMode }) => {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
   const [notificationVariant, setNotificationVariant] = useState("success");
-
 
   const theme = {
     backgroundColor: darkMode ? "#000000" : "#f8fafc",
@@ -94,23 +307,35 @@ const TrainingCertificateRequest = ({ darkMode }) => {
     }
   }, []);
   
-  // Fetch staff list from backend
+  // Fetch staff list from backend - FIXED
   const fetchStaffList = async (token) => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/staff`, {
+      const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/employees`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
-      setStaffList(response.data);
+      
+      // Handle both possible response formats
+      const employees = response.data.data || response.data;
+      console.log('Fetched employees:', employees); 
+      
+      setStaffList(Array.isArray(employees) ? employees : []);
     } catch (error) {
       console.error("Error fetching staff list:", error);
+      setErrorMessage("Failed to load staff list. Please refresh the page.");
     }
   };
 
-  // Handle staff selection
-  const handleStaffSelect = (e) => {
-    const staffId = e.target.value;
+  // Convert staff list to searchable options - UPDATED to show only name and job position
+  const staffOptions = staffList.map(staff => ({
+    value: staff._id || staff.id,
+    label: staff.full_name || staff.name || 'Unknown Name',
+    subtitle: staff.job_title || staff.position || staff.jobPosition || 'N/A'
+  }));
+
+  // Handle staff selection - FIXED
+  const handleStaffSelect = (staffId) => {
     if (!staffId) {
       setSelectedStaff("");
       setCertificateRequest({
@@ -121,13 +346,16 @@ const TrainingCertificateRequest = ({ darkMode }) => {
       return;
     }
 
-    const staff = staffList.find(staff => staff._id === staffId);
+    // Find staff by _id or id field
+    const staff = staffList.find(staff => (staff._id || staff.id) === staffId);
+    console.log('Selected staff:', staff); 
+    
     if (staff) {
       setSelectedStaff(staffId);
       setCertificateRequest({
         ...certificateRequest,
-        staffName: staff.name,
-        staffUserId: staff.userId
+        staffName: staff.full_name || staff.name || '', 
+        staffUserId: staff._id || staff.id || null
       });
     }
   };
@@ -389,26 +617,43 @@ const TrainingCertificateRequest = ({ darkMode }) => {
             <h4>Trainee Details</h4>
             <Card className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}>
               <Card.Body>
+                {/* Error Message Display */}
+                {errorMessage && (
+                  <Alert variant="danger" className="mb-3">
+                    {errorMessage}
+                  </Alert>
+                )}
+
                 {/* Form */}
                 <Form onSubmit={handleSubmit}>
-                  {/* Staff Selection */}
+                  {/* Staff Selection - FIXED with Searchable Select */}
                   <Form.Group controlId="staffSelect" className="mb-3">
-                    <Form.Label>Select Staff Member</Form.Label>
-                    <Form.Control
-                      as="select"
+                    <Form.Label>
+                      Select Staff Member <span style={{ color: '#dc3545' }}>*</span>
+                    </Form.Label>
+                    <SearchableSelect
+                      options={staffOptions}
                       value={selectedStaff}
                       onChange={handleStaffSelect}
-                      className={`form-control ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"}`}
-                      required
-                    >
-                      <option value="">Select Staff Member</option>
-                      {staffList.map((staff) => (
-                        <option key={staff._id} value={staff._id}>
-                          {staff.name} - {staff.jobPosition}
-                        </option>
-                      ))}
-                    </Form.Control>
+                      placeholder="Search and select staff member..."
+                      darkMode={darkMode}
+                      required={true}
+                      disabled={staffList.length === 0}
+                    />
+                    {staffList.length === 0 && (
+                      <small style={{ color: theme.textSecondary, marginTop: '4px', display: 'block' }}>
+                        Loading staff members...
+                      </small>
+                    )}
                   </Form.Group>
+
+                  {/* Display Selected Staff Info */}
+                  {selectedStaff && certificateRequest.staffName && (
+                    <Alert variant="info" className="mb-3">
+                      <FontAwesomeIcon icon={faUser} style={{ marginRight: '8px' }} />
+                      <strong>Selected Staff:</strong> {certificateRequest.staffName}
+                    </Alert>
+                  )}
 
                   {/* Form Fields */}
                   <Form.Group controlId="name" className="mb-3">
@@ -501,6 +746,7 @@ const TrainingCertificateRequest = ({ darkMode }) => {
                     <Form.Label>Period</Form.Label>
                     <Row>
                       <Col>
+                        <Form.Label>From</Form.Label>
                         <Form.Control
                           type="date"
                           name="periodFrom"
@@ -511,6 +757,7 @@ const TrainingCertificateRequest = ({ darkMode }) => {
                         />
                       </Col>
                       <Col>
+                        <Form.Label>To</Form.Label>
                         <Form.Control
                           type="date"
                           name="periodTo"
@@ -546,6 +793,7 @@ const TrainingCertificateRequest = ({ darkMode }) => {
                     <Form.Label>Upload Signature</Form.Label>
                     <Form.Control
                       type="file"
+                      name="traineeSignature"
                       accept="image/*"
                       onChange={handleInputChange}
                       className={`form-control ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"}`}
@@ -553,14 +801,22 @@ const TrainingCertificateRequest = ({ darkMode }) => {
                     />
                   </Form.Group>
 
-                  <div className="d-flex justify-content-between mt-3">
-                      <Button variant="danger" onClick={() => window.history.back()}>Go Back</Button>
-                      <Button type="submit" disabled={isSubmitting}>
+                  <div className="d-flex justify-content-between mt-4">
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => navigate('/individual-home')}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      variant="primary" 
+                      disabled={isSubmitting || !selectedStaff}
+                    >
                       {isSubmitting ? "Submitting..." : "Request Certificate"}
-                      </Button>
+                    </Button>
                   </div>
-
-                  {errorMessage && <div className="mt-3 text-danger">{errorMessage}</div>}
                 </Form>
               </Card.Body>
             </Card>
@@ -570,6 +826,7 @@ const TrainingCertificateRequest = ({ darkMode }) => {
     </div>
   );
 };
+
 
 TrainingCertificateRequest.propTypes = {
   darkMode: PropTypes.bool.isRequired,
