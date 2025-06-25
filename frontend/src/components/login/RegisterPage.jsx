@@ -655,30 +655,31 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                           }}>
                             Contact Number
                           </label>
-                          <input
-                            type="tel"
-                            name="contactNumber"
-                            value={formData.contactNumber}
-                            onChange={handleChange}
-                            required
-                            placeholder="Enter contact number"
-                            style={{
-                              width: "100%",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "12px",
-                              border: `1px solid formData.contactNumber && !validateContactNumber(formData.contactNumber) 
-              ? '#ff4444' 
-              : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
-          }`,
-                              background: darkMode 
-                                ? 'rgba(15, 30, 55, 0.3)' 
-                                : 'rgba(255, 255, 255, 0.8)',
-                              color: theme.color,
-                              fontSize: "1rem",
-                              backdropFilter: 'blur(10px)',
-                              transition: "all 0.3s ease"
-                            }}
-                          />
+                         <input
+  type="tel"
+  name="contactNumber"
+  value={formData.contactNumber}
+  onChange={handleChange}
+  required
+  placeholder="Enter contact number"
+  style={{
+    width: "100%",
+    padding: "0.75rem 1rem",
+    borderRadius: "12px",
+    border: `1px solid ${
+      formData.contactNumber && !validateContactNumber(formData.contactNumber) 
+        ? '#ff4444' 
+        : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+    }`,
+    background: darkMode 
+      ? 'rgba(15, 30, 55, 0.3)' 
+      : 'rgba(255, 255, 255, 0.8)',
+    color: theme.color,
+    fontSize: "1rem",
+    backdropFilter: 'blur(10px)',
+    transition: "all 0.3s ease"
+  }}
+/>
                           {formData.contactNumber && !validateContactNumber(formData.contactNumber) && (
         <p style={{
           color: '#ff4444',
