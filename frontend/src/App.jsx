@@ -111,7 +111,6 @@ import GeneratePlacementLetter  from "./admin/pages/lifecycle/GeneratePlacementL
 import ViewGeneratePlacementLetter  from "./admin/pages/lifecycle/ViewGeneratePlacementLetter";
 import PlacementLetterManagement  from "./admin/pages/others/PlacementLetterManagement";
 import AddNewUniversity  from "./admin/pages/others/AddNewUniversity";
-import InstituteRotational from "./institute/pages/instituterotational/instituteRotational";
 import Rotationalapifirst from "./admin/pages/rotational/RotationalApiFirst";
 import RotationalapiSecond from "./admin/pages/rotational/RotationalApiSecond";
 
@@ -178,7 +177,6 @@ function App() {
     "/view-cv/:cvId",
     "/edit-cv/:cvId",
     "/institute-help-support",
-    "/institute-rotational",
     "/bulk-cv-upload"
   ];
 
@@ -247,6 +245,8 @@ function App() {
     "/placement-letter-management",
     "/add-new-university",
     "/generate-placement-letter",
+    "/rotation-api1",
+    "/rotation-api2",
   ];
 
   const staffRoutes = [
@@ -348,7 +348,6 @@ function App() {
     <Route path="/view-cv/:cvId" element={<ViewCV darkMode={darkMode} />} />
     <Route path="/edit-cv/:cvId" element={<EditCV darkMode={darkMode} />} />
     <Route path="/institute-help-support" element={<InstituteHelp darkMode={darkMode} />} />
-    <Route path="/institute-rotational" element={<InstituteRotational darkMode={darkMode} />} />
     <Route path="/bulk-cv-upload" element={<BulkCVUploadForm darkMode={darkMode} />} />
 
     {/* Admin */}
