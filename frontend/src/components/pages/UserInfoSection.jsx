@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import { CgProfile } from "react-icons/cg";
 import { validateSriLankanNIC, extractBirthdayFromNIC } from "../../utils/nicValidator";
@@ -14,6 +14,147 @@ const UserInfoSection = ({
   errors = {},
   setFormErrors,
 }) => {
+  // State for institute search
+  const [instituteSearch, setInstituteSearch] = useState('');
+  const [showInstituteDropdown, setShowInstituteDropdown] = useState(false);
+  const [filteredInstitutes, setFilteredInstitutes] = useState([]);
+  const [selectedInstituteId, setSelectedInstituteId] = useState('');
+
+  // Initialize institute data on component mount
+  useEffect(() => {
+    if (institutes?.length > 0) {
+      // Sort institutes alphabetically, pushing "Other" to bottom
+      const sortedInstitutes = [...institutes].sort((a, b) => {
+        const nameA = a.name?.toLowerCase() || '';
+        const nameB = b.name?.toLowerCase() || '';
+        if (nameA === 'other') return 1;
+        if (nameB === 'other') return -1;
+        return nameA.localeCompare(nameB);
+      });
+      setFilteredInstitutes(sortedInstitutes);
+
+      // Set initial selected institute name if there's a value
+      if (cvData.institute) {
+        const selectedInstitute = institutes.find(inst => 
+          inst.id === cvData.institute || inst._id === cvData.institute || inst.name === cvData.institute
+        );
+        if (selectedInstitute) {
+          setInstituteSearch(selectedInstitute.name || '');
+          setSelectedInstituteId(selectedInstitute.id || selectedInstitute._id || cvData.institute);
+        } else {
+          // If no matching institute found, treat cvData.institute as a custom name
+          setInstituteSearch(cvData.institute);
+          setSelectedInstituteId('');
+        }
+      }
+    }
+  }, [institutes, cvData.institute]);
+
+  // Filter institutes based on search
+  const handleInstituteSearch = (searchTerm) => {
+    setInstituteSearch(searchTerm);
+    
+    if (!searchTerm.trim()) {
+      // If search is empty, show all institutes
+      const sortedInstitutes = [...institutes].sort((a, b) => {
+        const nameA = a.name?.toLowerCase() || '';
+        const nameB = b.name?.toLowerCase() || '';
+        if (nameA === 'other') return 1;
+        if (nameB === 'other') return -1;
+        return nameA.localeCompare(nameB);
+      });
+      setFilteredInstitutes(sortedInstitutes);
+    } else {
+      // Filter institutes based on search term
+      const filtered = institutes.filter(institute =>
+        institute.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      ).sort((a, b) => {
+        const nameA = a.name?.toLowerCase() || '';
+        const nameB = b.name?.toLowerCase() || '';
+        if (nameA === 'other') return 1;
+        if (nameB === 'other') return -1;
+        return nameA.localeCompare(nameB);
+      });
+      setFilteredInstitutes(filtered);
+    }
+    
+    setShowInstituteDropdown(true);
+    
+    // Clear selected institute if search doesn't match any existing institute
+    const exactMatch = institutes.find(inst => 
+      inst.name?.toLowerCase() === searchTerm.toLowerCase()
+    );
+    if (!exactMatch) {
+      setSelectedInstituteId('');
+    }
+  };
+
+  // Handle institute selection from dropdown
+  const handleInstituteSelect = (institute) => {
+    const instituteName = institute.name || '';
+    const instituteId = institute.id || institute._id || instituteName;
+    
+    setInstituteSearch(instituteName);
+    setSelectedInstituteId(instituteId);
+    setShowInstituteDropdown(false);
+    
+    // Update the form data - use ID if available, otherwise use name
+    const event = {
+      target: {
+        name: 'institute',
+        value: instituteId
+      }
+    };
+    handleInputChange(event);
+    
+    // Clear institute errors
+    if (setFormErrors) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.institute;
+        return newErrors;
+      });
+    }
+  };
+
+  // Handle institute input focus
+  const handleInstituteInputFocus = () => {
+    if (!readOnly) {
+      setShowInstituteDropdown(true);
+    }
+  };
+
+  // Handle institute input blur
+  const handleInstituteInputBlur = () => {
+    // Delay hiding dropdown to allow for clicks
+    setTimeout(() => {
+      // If user typed a custom institute name that doesn't exist in dropdown
+      if (instituteSearch && !selectedInstituteId) {
+        const event = {
+          target: {
+            name: 'institute',
+            value: instituteSearch
+          }
+        };
+        handleInputChange(event);
+      }
+    }, 200);
+  };
+
+  // Handle clicking outside the dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.institute-search-container')) {
+        setShowInstituteDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Format date for consistent comparison
   const formatDateToYYYYMMDD = (dateString) => {
     if (!dateString) return '';
@@ -37,7 +178,7 @@ const UserInfoSection = ({
 
   // Handle NIC validation when either NIC or birthday changes
   useEffect(() => {
-    if (cvData.nic) {
+    if (cvData.nic && setFormErrors) {
       const nicFormatValid = 
         (cvData.nic.length === 10 && /^[0-9]{9}[VvXx]$/.test(cvData.nic)) || 
         (cvData.nic.length === 12 && /^[0-9]{12}$/.test(cvData.nic));
@@ -147,7 +288,7 @@ const UserInfoSection = ({
     handleInputChange(e);
     
     // Check age constraints when birthday is entered manually
-    if (e.target.value) {
+    if (e.target.value && setFormErrors) {
       const age = calculateAge(e.target.value);
       
       if (age < 18 || age > 30) {
@@ -184,7 +325,7 @@ const UserInfoSection = ({
     handleInputChange(e);
     
     // Validate Sri Lankan mobile number format
-    if (value) {
+    if (value && setFormErrors) {
       const mobileValidation = validateSriLankanMobile(value);
       
       if (!mobileValidation.isValid) {
@@ -345,21 +486,21 @@ const UserInfoSection = ({
             required
             disabled={readOnly}
           >
-<option value="">Select District</option>
-{districts?.length > 0 ? (
-  districts
-    .sort((a, b) => a.district_name.localeCompare(b.district_name))
-    .map((district) => (
-      <option
-        key={district.id || district.district_name}
-        value={district.id}
-      >
-        {district.district_name}
-      </option>
-    ))
-) : (
-  <option value="">No districts available</option>
-)}
+            <option value="">Select District</option>
+            {districts?.length > 0 ? (
+              districts
+                .sort((a, b) => a.district_name.localeCompare(b.district_name))
+                .map((district) => (
+                  <option
+                    key={district.id || district.district_name}
+                    value={district.id}
+                  >
+                    {district.district_name}
+                  </option>
+                ))
+            ) : (
+              <option value="">No districts available</option>
+            )}
           </select>
           {errors.district && (
             <div className="invalid-feedback">{errors.district}</div>
@@ -443,7 +584,7 @@ const UserInfoSection = ({
           {errors.mobileNumber && (
             <div className="invalid-feedback">{errors.mobileNumber}</div>
           )}
-          {cvData.mobileNumber && !errors.mobileNumber && (
+          {cvData.mobileNumber && !errors.mobileNumber && validateSriLankanMobile && (
             <small>
               Format: {cvData.mobileNumber.startsWith('+') ? 'International' : 
               cvData.mobileNumber.startsWith('07') ? 'Local' : 'Custom'}
@@ -495,35 +636,69 @@ const UserInfoSection = ({
           <label className="form-label">
             Institute <span className="text-danger">*</span>
           </label>
-          <select
-            name="institute"
-            className={`form-select ${
-              darkMode ? "bg-secondary text-white" : "bg-white text-dark"
-            } ${errors.institute ? "is-invalid" : ""}`}
-            value={cvData.institute || ''}
-            onChange={handleInputChange}
-            required
-            disabled={readOnly}
-          >
-<option value="">Select Institute</option>
-{institutes?.length > 0 ? (
-  institutes
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((institute) => (
-      <option
-        key={institute.id || institute.name}
-        value={institute.id}
-      >
-        {institute.name}
-      </option>
-    ))
-) : (
-  <option value="">No institutes available</option>
-)}
-          </select>
+          <div className="institute-search-container position-relative">
+            <input
+              type="text"
+              name="institute"
+              className={`form-control ${
+                darkMode ? "bg-secondary text-white" : "bg-white text-dark"
+              } ${errors.institute ? "is-invalid" : ""}`}
+              placeholder="Search or type institute name..."
+              value={instituteSearch}
+              onChange={(e) => handleInstituteSearch(e.target.value)}
+              onFocus={handleInstituteInputFocus}
+              onBlur={handleInstituteInputBlur}
+              disabled={readOnly}
+              autoComplete="off"
+              required
+            />
+            
+            {/* Dropdown */}
+            {showInstituteDropdown && !readOnly && filteredInstitutes.length > 0 && (
+              <div 
+                className={`position-absolute w-100 shadow-lg border rounded-bottom ${
+                  darkMode ? "bg-dark border-secondary" : "bg-white border-light"
+                }`}
+                style={{
+                  top: '100%',
+                  zIndex: 1000,
+                  maxHeight: '200px',
+                  overflowY: 'auto'
+                }}
+              >
+                {filteredInstitutes.map((institute) => (
+                  <div
+                    key={institute.id || institute._id || institute.name}
+                    className={`p-2 cursor-pointer border-bottom ${
+                      darkMode ? "text-white border-secondary hover-bg-secondary" : "text-dark border-light hover-bg-light"
+                    }`}
+                    style={{ cursor: 'pointer' }}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevent input blur
+                      handleInstituteSelect(institute);
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.backgroundColor = darkMode ? '#6c757d' : '#f8f9fa';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    {institute.name || 'Unnamed Institute'}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
           {errors.institute && (
-            <div className="invalid-feedback">{errors.institute}</div>
+            <div className="invalid-feedback d-block">{errors.institute}</div>
           )}
+          
+          {/* Show helpful text */}
+          <small className="text-muted">
+            Start typing to search for institutes or enter a custom name
+          </small>
         </div>
       </div>
     </div>
