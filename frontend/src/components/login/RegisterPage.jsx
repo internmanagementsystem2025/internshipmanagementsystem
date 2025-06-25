@@ -699,6 +699,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                           }}>
                             Contact Number
                           </label>
+
                           <input
                             type="tel"
                             name="contactNumber"
