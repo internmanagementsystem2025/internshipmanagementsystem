@@ -235,6 +235,8 @@ const AdminSidebar = ({ darkMode }) => {
       dropdownItems: [
         { title: "Stations", route:"/all-rotational-stations", icon: FiMapPin },
         { title: "Schedule", route:"/schedule-rotations", icon: FiClock },
+        { title: "For API page 1", route:"/rotation-api1", icon: FiList },
+        { title: "For API page 2", route:"/rotation-api2", icon: FiFilePlus },
       ]
     },
     {
@@ -718,6 +720,7 @@ const AdminSidebar = ({ darkMode }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
                 style={{
+                  marginTop: '10px',
                   padding: '20px',
                   textAlign: 'center',
                   borderTop: `1px solid ${theme.border}`,

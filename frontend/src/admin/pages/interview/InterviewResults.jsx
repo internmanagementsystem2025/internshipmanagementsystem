@@ -140,26 +140,26 @@ const InterviewResults = ({ darkMode }) => {
   }, []);
 
   // Filter CVs based on search term
-  useEffect(() => {
-    if (interviewSearchTerm.trim() === "") {
-      setFilteredCvData(cvData);
-    } else {
-      const searchTermLower = interviewSearchTerm.toLowerCase();
-      const filtered = cvData.filter(
-        (cv) =>
-          (cv.interview?.interviewName &&
-            cv.interview.interviewName
-              .toLowerCase()
-              .includes(searchTermLower)) ||
-          (cv.fullName &&
-            cv.fullName.toLowerCase().includes(searchTermLower)) ||
-          (cv.nic && cv.nic.toLowerCase().includes(searchTermLower))
-      );
-      setFilteredCvData(filtered);
-    }
-    setCurrentPage(1);
-    setSelectedRows([]);
-  }, [interviewSearchTerm, cvData]);
+useEffect(() => {
+  if (interviewSearchTerm.trim() === "") {
+    setFilteredCvData(cvData);
+  } else {
+    const searchTermLower = interviewSearchTerm.toLowerCase();
+    const filtered = cvData.filter(
+      (cv) =>
+        (cv.interview?.interviews[0]?.interviewId?.interviewName && 
+          cv.interview.interviews[0].interviewId.interviewName 
+            .toLowerCase()
+            .includes(searchTermLower)) ||
+        (cv.fullName &&
+          cv.fullName.toLowerCase().includes(searchTermLower)) ||
+        (cv.nic && cv.nic.toLowerCase().includes(searchTermLower))
+    );
+    setFilteredCvData(filtered);
+  }
+  setCurrentPage(1);
+  setSelectedRows([]);
+}, [interviewSearchTerm, cvData]);
 
   // Open pass modal
   const openPassModal = (id, refNo, bulk = false) => {
