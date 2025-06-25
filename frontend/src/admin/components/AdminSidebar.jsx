@@ -720,6 +720,7 @@ const AdminSidebar = ({ darkMode }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
                 style={{
+                  marginTop: '10px',
                   padding: '20px',
                   textAlign: 'center',
                   borderTop: `1px solid ${theme.border}`,
