@@ -141,50 +141,8 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   };
 
   const validateContactNumber = (number) => {
+    // Sri Lankan phone number validation (10 digits starting with 0)
     return /^0[0-9]{9}$/.test(number.trim());
-  };
-
-  // Password validation function
-  const validatePassword = (password) => {
-    const minLength = 8;
-    const maxLength = 20;
-    
-    if (password.length < minLength || password.length > maxLength) {
-      return {
-        valid: false,
-        message: `Password must be between ${minLength}-${maxLength} characters`
-      };
-    }
-    
-    if (!/[A-Z]/.test(password)) {
-      return {
-        valid: false,
-        message: "Password must contain at least one uppercase letter"
-      };
-    }
-    
-    if (!/[a-z]/.test(password)) {
-      return {
-        valid: false,
-        message: "Password must contain at least one lowercase letter"
-      };
-    }
-    
-    if (!/[0-9]/.test(password)) {
-      return {
-        valid: false,
-        message: "Password must contain at least one number"
-      };
-    }
-    
-    if (!/[@#$%^&*!]/.test(password)) {
-      return {
-        valid: false,
-        message: "Password must contain at least one special character (@, #, $, %, etc.)"
-      };
-    }
-    
-    return { valid: true, message: "Password is valid" };
   };
 
   // Theme toggle function
@@ -198,13 +156,35 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
     }
   };
 
-  const handleChange = (e) => {
+  /*const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
     }));
-  };
+  };*/
+
+  const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  // Remove ALL spaces for username, password, confirmPassword, email, contact number and NIC fields
+  if (name === 'username' || name === 'password' || name === 'confirmPassword'  || name === 'email' || name === 'contactNumber' || name === 'nic') {
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value.replace(/\s/g, '')
+    }));
+  } else if (name === 'email') {
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value.trim()
+    }));
+  } else {
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value
+    }));
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -225,25 +205,40 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       setLoading(false);
       return;
     }
-
-    // Validate contact number
+  // Validate contact number
     if (!validateContactNumber(formData.contactNumber)) {
       setError("Please enter a valid Sri Lankan phone number (10 digits starting with 0)");
       setLoading(false);
       return;
     }
-    
-    // Validate password
-    const passwordValidation = validatePassword(formData.password);
-    if (!passwordValidation.valid) {
-      setError(passwordValidation.message);
+
+// Validate Gmail format (strong validation: only @gmail.com, no underscores, no consecutive dots, no leading/trailing dot)
+const gmailRegex = /^(?!.*\.\.)(?!.*\.$)(?!^\.)[a-zA-Z0-9.%+-]+@gmail\.com$/;
+if (!gmailRegex.test(formData.email)) {
+  setError("Please enter a valid Gmail address (no underscores, no consecutive dots, must end with @gmail.com).");
+  setLoading(false);
+  return;
+}
+
+    /*// Validate password strength (must include lowercase, uppercase, and symbol)
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_\-+=\[\]{};':"\\|,.<>\/?]).+$/;
+    if (!passwordStrengthRegex.test(formData.password)) {
+      setError("Password must include uppercase, lowercase letters, and a symbol.");
+      setLoading(false);
+      return;
+    }*/
+ 
+    // Validate password match
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
       setLoading(false);
       return;
     }
 
-    // Validate password match
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+    // Validate password strength (optional)
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_\-+=\[\]{};':"\\|,.<>\/?]).+$/;
+    if (formData.password.length < 8 || !passwordStrengthRegex.test(formData.password)){
+      setError("Password must be at least 8 characters long and include uppercase, lowercase letters, and a symbols.");
       setLoading(false);
       return;
     }
@@ -699,7 +694,6 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                           }}>
                             Contact Number
                           </label>
-
                           <input
                             type="tel"
                             name="contactNumber"
@@ -711,11 +705,10 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                               width: "100%",
                               padding: "0.75rem 1rem",
                               borderRadius: "12px",
-                              border: `1px solid ${
-                                formData.contactNumber && !validateContactNumber(formData.contactNumber) 
-                                  ? '#ff4444' 
-                                  : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
-                              }`,
+                              border: `1px solid formData.contactNumber && !validateContactNumber(formData.contactNumber) 
+              ? '#ff4444' 
+              : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+          }`,
                               background: darkMode 
                                 ? 'rgba(15, 30, 55, 0.3)' 
                                 : 'rgba(255, 255, 255, 0.8)',
@@ -726,14 +719,14 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                             }}
                           />
                           {formData.contactNumber && !validateContactNumber(formData.contactNumber) && (
-                            <p style={{
-                              color: '#ff4444',
-                              fontSize: '0.8rem',
-                              marginTop: '0.25rem'
-                            }}>
-                              Please enter a valid phone number (10 digits starting with 0)
-                            </p>
-                          )}
+        <p style={{
+          color: '#ff4444',
+          fontSize: '0.8rem',
+          marginTop: '0.25rem'
+        }}>
+          Please enter a valid phone number (10 digits starting with 0)
+        </p>
+      )}
                         </div>
                         <div>
                           <label style={{ 
@@ -957,247 +950,218 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                           </div>
                         </>
                       )}
+                    {/* Password and Confirm Password */}
+<div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+  {/* Password Field */}
+  <div>
+    <label style={{ 
+      display: "block", 
+      marginBottom: "0.5rem", 
+      fontWeight: "600", 
+      color: theme.color 
+    }}>
+      Password
+    </label>
+    <div style={{ position: "relative" }}>
+      <input
+        type={showPassword ? "text" : "password"}
+        name="password"
+        value={formData.password}
+        onChange={handleChange}
+        required
+        placeholder="Enter password"
+        style={{
+          width: "100%",
+          padding: "0.75rem 1rem",
+          borderRadius: "12px",
+          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+          background: darkMode 
+            ? 'rgba(15, 30, 55, 0.3)' 
+            : 'rgba(255, 255, 255, 0.8)',
+          color: theme.color,
+          fontSize: "1rem",
+          backdropFilter: 'blur(10px)',
+          transition: "all 0.3s ease"
+        }}
+      />
+      <button
+        type="button" 
+        onClick={() => setShowPassword(!showPassword)}
+        style={{
+          position: "absolute",
+          right: "0.75rem",
+          top: "50%",
+          transform: "translateY(-50%)",
+          background: "transparent",
+          border: "none",
+          color: theme.textSecondary,
+          cursor: "pointer",
+          padding: "0.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  </div>
 
-                      {/* Password and Confirm Password */}
-                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                        {/* Password Field */}
-                        <div>
-                          <label style={{ 
-                            display: "block", 
-                            marginBottom: "0.5rem", 
-                            fontWeight: "600", 
-                            color: theme.color 
-                          }}>
-                            Password
-                            <span style={{
-                              fontSize: "0.75rem",
-                              color: theme.textSecondary,
-                              marginLeft: "0.5rem",
-                              fontWeight: "normal"
-                            }}>
-                              (8-20 chars, uppercase, lowercase, number, special char)
-                            </span>
-                          </label>
-                          <div style={{ position: "relative" }}>
-                            <input
-                              type={showPassword ? "text" : "password"}
-                              name="password"
-                              value={formData.password}
-                              onChange={handleChange}
-                              required
-                              placeholder="Enter password"
-                              style={{
-                                width: "100%",
-                                padding: "0.75rem 1rem",
-                                borderRadius: "12px",
-                                border: `1px solid ${
-                                  formData.password && !validatePassword(formData.password).valid 
-                                    ? '#ff4444' 
-                                    : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
-                                }`,
-                                background: darkMode 
-                                  ? 'rgba(15, 30, 55, 0.3)' 
-                                  : 'rgba(255, 255, 255, 0.8)',
-                                color: theme.color,
-                                fontSize: "1rem",
-                                backdropFilter: 'blur(10px)',
-                                transition: "all 0.3s ease"
-                              }}
-                            />
-                            <button
-                              type="button" 
-                              onClick={() => setShowPassword(!showPassword)}
-                              style={{
-                                position: "absolute",
-                                right: "0.75rem",
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                background: "transparent",
-                                border: "none",
-                                color: theme.textSecondary,
-                                cursor: "pointer",
-                                padding: "0.5rem",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center"
-                              }}
-                            >
-                              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                            </button>
-                          </div>
-                          {formData.password && !validatePassword(formData.password).valid && (
-                            <p style={{
-                              color: '#ff4444',
-                              fontSize: '0.8rem',
-                              marginTop: '0.25rem'
-                            }}>
-                              {validatePassword(formData.password).message}
-                            </p>
-                          )}
-                        </div>
+  {/* Confirm Password Field */}
+  <div>
+    <label style={{ 
+      display: "block", 
+      marginBottom: "0.5rem", 
+      fontWeight: "600", 
+      color: theme.color 
+    }}>
+      Confirm Password
+    </label>
+    <div style={{ position: "relative" }}>
+      <input
+        type={showPassword ? "text" : "password"}
+        name="confirmPassword"
+        value={formData.confirmPassword}
+        onChange={handleChange}
+        required
+        placeholder="Confirm password"
+        style={{
+          width: "100%",
+          padding: "0.75rem 1rem",
+          borderRadius: "12px",
+          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+          background: darkMode 
+            ? 'rgba(15, 30, 55, 0.3)' 
+            : 'rgba(255, 255, 255, 0.8)',
+          color: theme.color,
+          fontSize: "1rem",
+          backdropFilter: 'blur(10px)',
+          transition: "all 0.3s ease"
+        }}
+      />
+      <button
+        type="button" 
+        onClick={() => setShowPassword(!showPassword)}
+        style={{
+          position: "absolute",
+          right: "0.75rem",
+          top: "50%",
+          transform: "translateY(-50%)",
+          background: "transparent",
+          border: "none",
+          color: theme.textSecondary,
+          cursor: "pointer",
+          padding: "0.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  </div>
+</div>
 
-                        {/* Confirm Password Field */}
-                        <div>
-                          <label style={{ 
-                            display: "block", 
-                            marginBottom: "0.5rem", 
-                            fontWeight: "600", 
-                            color: theme.color 
-                          }}>
-                            Confirm Password
-                          </label>
-                          <div style={{ position: "relative" }}>
-                            <input
-                              type={showPassword ? "text" : "password"}
-                              name="confirmPassword"
-                              value={formData.confirmPassword}
-                              onChange={handleChange}
-                              required
-                              placeholder="Confirm password"
-                              style={{
-                                width: "100%",
-                                padding: "0.75rem 1rem",
-                                borderRadius: "12px",
-                                border: `1px solid ${
-                                  formData.confirmPassword && formData.password !== formData.confirmPassword
-                                    ? '#ff4444' 
-                                    : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
-                                }`,
-                                background: darkMode 
-                                  ? 'rgba(15, 30, 55, 0.3)' 
-                                  : 'rgba(255, 255, 255, 0.8)',
-                                color: theme.color,
-                                fontSize: "1rem",
-                                backdropFilter: 'blur(10px)',
-                                transition: "all 0.3s ease"
-                              }}
-                            />
-                            <button
-                              type="button" 
-                              onClick={() => setShowPassword(!showPassword)}
-                              style={{
-                                position: "absolute",
-                                right: "0.75rem",
-                                top: "50%",
-                                transform: "translateY(-50%)",
-                                background: "transparent",
-                                border: "none",
-                                color: theme.textSecondary,
-                                cursor: "pointer",
-                                padding: "0.5rem",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center"
-                              }}
-                            >
-                              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                            </button>
-                          </div>
-                          {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                            <p style={{
-                              color: '#ff4444',
-                              fontSize: '0.8rem',
-                              marginTop: '0.25rem'
-                            }}>
-                              Passwords do not match
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                    {/* Submit Button */}
+                    <motion.button
+                      whileHover={{ scale: 1.02, y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      type="submit"
+                      style={{
+                        width: "100%",
+                        background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
+                        color: "white",
+                        border: "none",
+                        padding: "0.75rem 1.5rem",
+                        borderRadius: "12px",
+                        fontSize: "1rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        marginBottom: "1.5rem",
+                        boxShadow: `0 8px 25px ${theme.accentColor}40`,
+                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                      }}
+                    >
+                      Register
+                    </motion.button>
 
-                      {/* Submit Button */}
-                      <motion.button
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="submit"
-                        style={{
-                          width: "100%",
-                          background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
-                          color: "white",
-                          border: "none",
-                          padding: "0.75rem 1.5rem",
-                          borderRadius: "12px",
-                          fontSize: "1rem",
-                          fontWeight: "600",
-                          cursor: "pointer",
-                          marginBottom: "1.5rem",
-                          boxShadow: `0 8px 25px ${theme.accentColor}40`,
-                          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-                        }}
-                      >
-                        Register
-                      </motion.button>
-
-                      {/* Login Link */}
-                      <div style={{ 
-                        textAlign: "center", 
-                        marginTop: "1rem" 
+                    {/* Login Link */}
+                    <div style={{ 
+                      textAlign: "center", 
+                      marginTop: "1rem" 
+                    }}>
+                      <p style={{ 
+                        color: theme.textSecondary,
+                        fontSize: "0.95rem"
                       }}>
-                        <p style={{ 
-                          color: theme.textSecondary,
-                          fontSize: "0.95rem"
-                        }}>
-                          Already have an account?{" "}
-                          <a
-                            href="/login"
-                            style={{ 
-                              color: theme.accentColor,
-                              textDecoration: "none",
-                              fontWeight: "600"
-                            }}
-                          >
-                            Login
-                          </a>
-                        </p>
-                      </div>
-                    </motion.form>
-                  </>
-                )}
-              </motion.div>
-            </div>
+                        Already have an account?{" "}
+                        <a
+                          href="/login"
+                          style={{ 
+                            color: theme.accentColor,
+                            textDecoration: "none",
+                            fontWeight: "600"
+                          }}
+                        >
+                          Login
+                        </a>
+                      </p>
+                    </div>
+                  </motion.form>
+                </>
+              )}
+            </motion.div>
           </div>
-
-          {/* Enhanced Global Styles */}
-          <style>{`
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-            
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            }
-            
-            body {
-              overflow-x: hidden;
-            }
-            
-            button:hover {
-              transform: translateY(-1px);
-            }
-            
-            /* Smooth scrolling */
-            html {
-              scroll-behavior: smooth;
-            }
-            
-            /* Custom scrollbar */
-            ::-webkit-scrollbar {
-              width: 6px;
-            }
-            
-            ::-webkit-scrollbar-track {
-              background: ${darkMode ? '#0a192f' : '#f1f5f9'};
-            }
-            
-            ::-webkit-scrollbar-thumb {
-              background: ${theme.accentColor};
-              border-radius: 3px;
-            }
-          `}</style>
         </div>
-      )}
-    </>
+        
+
+        
+        
+        
+
+
+      {/* Enhanced Global Styles */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        body {
+          overflow-x: hidden;
+        }
+        
+        button:hover {
+          transform: translateY(-1px);
+        }
+        
+        /* Smooth scrolling */
+        html {
+          scroll-behavior: smooth;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+          background: ${darkMode ? '#0a192f' : '#f1f5f9'};
+        }
+        
+        ::-webkit-scrollbar-thumb {
+          background: ${theme.accentColor};
+          border-radius: 3px;
+        }
+      `}</style>
+    </div>
+    )}
+  </>
   );
 };
 
