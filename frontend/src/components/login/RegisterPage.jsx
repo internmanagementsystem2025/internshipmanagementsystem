@@ -167,7 +167,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   const { name, value } = e.target;
 
   // Remove ALL spaces for username, password, and confirmPassword fields
-  if (name === 'username' || name === 'password' || name === 'confirmPassword'  || name === 'email') {
+  if (name === 'username' || name === 'password' || name === 'confirmPassword'  || name === 'email' || name === 'contactNumber') {
     setFormData(prevData => ({
       ...prevData,
       [name]: value.replace(/\s/g, '')
@@ -211,6 +211,14 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       setLoading(false);
       return;
     }
+
+    // Validate Contact Number does not contain spaces
+    if (/\s/.test(formData.contactNumber)) {
+      setError("Contact Number cannot contain spaces");
+      setLoading(false);
+      return;
+    }
+
     // Validate contact number
     if (!validateContactNumber(formData.contactNumber)) {
       setError("Please enter a valid Sri Lankan phone number (10 digits starting with 0)");
