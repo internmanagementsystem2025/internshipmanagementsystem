@@ -3,9 +3,10 @@ import { motion } from "framer-motion";
 import Logo from "../../assets/logo.png";
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from '../../authconfig';
+import LoadingSpinner from './LoadingSpinner'; 
+import { useNavigation, handleAuthSuccess, checkAuthAndRedirect } from '../../utils/navigationUtils';
 
-
-// Fixed Icons as React components
+// Icon components
 const SunIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="5"/>
@@ -46,7 +47,54 @@ const MicrosoftIcon = () => (
   </svg>
 );
 
-// Enhanced Animated Logo Component with continuous animation
+const GoogleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+);
+
+const GoogleLoginButton = ({ onLogin, disabled }) => {
+  const handleGoogleLogin = () => {
+    if (!disabled) {
+      onLogin();
+    }
+  };
+
+  return (
+    <motion.button
+      whileHover={!disabled ? { scale: 1.02, y: -2 } : {}}
+      whileTap={!disabled ? { scale: 0.98 } : {}}
+      onClick={handleGoogleLogin}
+      disabled={disabled}
+      style={{
+        background: disabled ? "#f5f5f5" : "white",
+        color: disabled ? "#999" : "#5f6368",
+        border: "1px solid #dadce0",
+        padding: "0.75rem 1.5rem",
+        borderRadius: "12px",
+        fontSize: "1rem",
+        fontWeight: "600",
+        cursor: disabled ? "not-allowed" : "pointer",
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.5rem',
+        boxShadow: disabled ? "none" : "0 2px 4px rgba(0,0,0,0.1)",
+        transition: "all 0.3s ease",
+        opacity: disabled ? 0.6 : 1
+      }}
+    >
+      <GoogleIcon />
+      Continue with Google
+    </motion.button>
+  );
+};
+
+// AnimatedLogo component (keeping existing implementation)
 const AnimatedLogo = ({ darkMode }) => {
   const accentColor = darkMode ? "#00aaff" : "#00cc66";
   
@@ -65,7 +113,6 @@ const AnimatedLogo = ({ darkMode }) => {
         position: 'relative'
       }}
     >
-      {/* Continuous floating animation for the main text */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ 
@@ -97,7 +144,6 @@ const AnimatedLogo = ({ darkMode }) => {
         Welcome Back!
       </motion.div>
       
-      {/* Subtitle with gentle fade animation */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ 
@@ -124,7 +170,6 @@ const AnimatedLogo = ({ darkMode }) => {
         Sign in to access your internship portal
       </motion.div>
       
-      {/* Animated gradient line with continuous movement */}
       <motion.div
         initial={{ width: 0, opacity: 0 }}
         animate={{ 
@@ -148,7 +193,6 @@ const AnimatedLogo = ({ darkMode }) => {
         }}
       />
       
-      {/* Floating particles animation */}
       {[...Array(6)].map((_, i) => (
         <motion.div
           key={i}
@@ -181,7 +225,6 @@ const AnimatedLogo = ({ darkMode }) => {
         />
       ))}
       
-      {/* Pulsing ring animation */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ 
@@ -227,11 +270,14 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   const [registrationMessage, setRegistrationMessage] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [accountLocked, setAccountLocked] = useState(false);
+  const [remainingTime, setRemainingTime] = useState(0);
   const { instance } = useMsal();
-
+  const { isNavigating, navigationMessage, navigateToUserDashboard, clearNavigation } = useNavigation();
   const darkMode = propDarkMode !== undefined ? propDarkMode : internalDarkMode;
 
-  // Theme configurations
   const darkTheme = {
     backgroundColor: "#0a192f",
     color: "white",
@@ -250,28 +296,40 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
 
   const theme = darkMode ? darkTheme : lightTheme;
 
-  // Handle responsive design
   useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      setIsMobile(width < 768);
-      setIsTablet(width >= 768 && width < 1024);
-    };
-    
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    
-    return () => window.removeEventListener('resize', handleResize);
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  // Check for messages from other pages
+  useEffect(() => {
+    if (!initialLoading) {
+      const isAlreadyAuthenticated = checkAuthAndRedirect();
+      if (isAlreadyAuthenticated) {
+        return; 
+      }
+
+      const handleResize = () => {
+        const width = window.innerWidth;
+        setIsMobile(width < 768);
+        setIsTablet(width >= 768 && width < 1024);
+      };
+      
+      handleResize();
+      window.addEventListener('resize', handleResize);
+      
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, [initialLoading]);
+
   useEffect(() => {
     if (window.location.state?.message) {
       setRegistrationMessage(window.location.state.message);
     }
   }, []);
 
-  // Handle URL parameters for authentication callbacks
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
@@ -280,6 +338,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     
     if (errorParam) {
       const errorMessages = {
+        'google_auth_failed': 'Google authentication failed.',
         'azure_auth_failed': 'Microsoft Azure authentication failed.',
         'oauth_individual_only': 'OAuth login is only available for individual users.',
         'unauthorized_organization': 'You are not authorized to access this system.',
@@ -293,17 +352,34 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     
     if (token) {
       console.log('Token detected in URL, storing and redirecting');
-      localStorage.setItem("token", token);
-      
-      if (redirectUserType) {
-        redirectUser(redirectUserType);
-      } else {
-        redirectUser('individual');
-      }
+      const response = {
+        token,
+        userType: redirectUserType || 'individual'
+      };
+      handleAuthSuccess(response, navigateToUserDashboard);
     }
-  }, []);
+  }, [navigateToUserDashboard]);
 
-  // Theme toggle function
+  useEffect(() => {
+  let timer;
+  if (accountLocked && remainingTime > 0) {
+    timer = setInterval(() => {
+      setRemainingTime(prev => {
+        const newTime = prev - 1;
+        if (newTime <= 0) {
+          clearInterval(timer);
+          setAccountLocked(false);
+          setFailedAttempts(0);
+          setError(""); // Clear the error message when lock expires
+          return 0;
+        }
+        return newTime;
+      });
+    }, 1000);
+  }
+  return () => clearInterval(timer);
+}, [accountLocked, remainingTime]);
+
   const toggleTheme = () => {
     if (propToggleTheme) {
       propToggleTheme();
@@ -314,90 +390,71 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     }
   };
 
-  const redirectUser = (userType) => {
-    const routes = {
-      individual: "/individual-home",
-      institute: "/institute-home",
-      admin: "/admin-home",
-      staff: "/staff-home",
-      executive_staff: "/executive-staff-home"
-    };
-
-    const route = routes[userType];
-    if (route) {
-      window.location.href = route;
-    } else {
-      setError("Unknown user type.");
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  e.preventDefault();
+  
+  if (accountLocked) {
+    setError(`Account locked. Please try again in ${remainingTime} seconds.`);
+    return;
+  }
 
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password, userType }),
-      });
+  setLoading(true);
+  setError("");
 
-      const data = await response.json();
+  try {
+    const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ username, password, userType }),
+    });
 
-      if (response.ok) {
-        const { token, userType: responseUserType } = data;
-        localStorage.setItem("token", token);
-        redirectUser(responseUserType);
+    const data = await response.json();
+
+    if (response.ok) {
+      handleAuthSuccess(data, navigateToUserDashboard);
+      setFailedAttempts(0);
+    } else {
+      const newFailedAttempts = failedAttempts + 1;
+      setFailedAttempts(newFailedAttempts);
+      
+      if (newFailedAttempts >= 5) {
+        setAccountLocked(true);
+        setRemainingTime(60);
+        setError("Too many failed attempts. Account locked for 1 minute.");
       } else {
         if (data.useAzureLogin) {
           setError("Staff and Executive members must use Microsoft Azure login. Please click the Azure login button below.");
         } else {
-          setError(data.message || "Invalid credentials or user type.");
+          setError(data.message || `Invalid credentials or user type. ${5 - newFailedAttempts} attempts remaining.`);
         }
       }
-    } catch (err) {
-      console.error("Error during login:", err);
-      setError("An error occurred. Please try again.");
-    } finally {
-      setLoading(false);
     }
+  } catch (err) {
+    console.error("Error during login:", err);
+    setError("An error occurred. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
+  const handleGoogleLogin = () => {
+    setIsOAuthLoading(true);
+    setError("");
+    window.location.href = `${import.meta.env.VITE_BASE_URL}/api/auth/google`;
   };
 
   const handleAzureLogin = async () => {
     try {
       setIsOAuthLoading(true);
-  
-      const loginResponse = await instance.loginPopup(loginRequest);
-      const idToken = loginResponse.idToken;
-  
-      const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/azure-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken })
-      });
-  
-      const data = await response.json();
-      if (response.ok) {
-        localStorage.setItem("token", data.token);
-        redirectUser(data.userType);
-      } else {
-        setError(data.message || "Azure login failed");
-      }
-  
+      await instance.loginRedirect(loginRequest);
     } catch (err) {
-      console.error("Azure login error:", err);
-      setError("Azure login failed. Please try again.");
-    } finally {
+      console.error('Azure login error', err);
       setIsOAuthLoading(false);
     }
   };
   
-  
-
   const toggleStaffNotification = () => {
     setShowStaffNotification(!showStaffNotification);
   };
@@ -406,7 +463,22 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     window.location.href = '/';
   };
 
-  const showAzureLogin = ["staff", "executive_staff"].includes(userType);
+  const showAzureLogin = userType === "staff";
+  const showGoogleLogin = userType === "individual";
+
+  if (initialLoading) {
+    return <LoadingSpinner 
+      darkMode={darkMode} 
+      message="Loading Login Page..." 
+    />;
+  }
+
+  if (isNavigating || loading || isOAuthLoading) {
+    return <LoadingSpinner 
+      darkMode={darkMode} 
+      message={isNavigating ? navigationMessage : (isOAuthLoading ? "Redirecting to authentication..." : "Logging in...")} 
+    />;
+  }
 
   return (
     <div
@@ -420,7 +492,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
       }}
     >
-      {/* Background Effects */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -435,9 +506,8 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
           : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
       }} />
 
-      {/* Main Content */}
       <div style={{ position: 'relative', zIndex: 1 }}>
-        {/* Enhanced Navbar */}
+        {/* Navigation bar */}
         <nav style={{ 
           background: "transparent", 
           position: "fixed", 
@@ -514,7 +584,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
           </div>
         </nav>
 
-        {/* Main Content Container */}
         <div style={{ 
           display: "flex", 
           alignItems: "center", 
@@ -525,7 +594,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
           margin: "0 auto",
           padding: isMobile ? "80px 1rem 2rem" : "80px 2rem 2rem"
         }}>
-          {/* Login Container */}
           <div style={{ 
             display: "grid", 
             gridTemplateColumns: (isMobile || isTablet) ? "1fr" : "1fr 1fr",
@@ -534,8 +602,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
             width: "100%",
             maxWidth: "1000px"
           }}>
-            {/* Left Content - Animated Logo */}
-            {!isMobile && (
+           {!isMobile && (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -544,7 +611,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                   width: '100%',
                   height: '500px',
                   overflow: 'hidden',
-
                   backdropFilter: 'blur(20px)',
                   position: 'relative',
                   display: 'flex',
@@ -556,7 +622,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
               </motion.div>
             )}
 
-            {/* Right Content - Login Form */}
             <motion.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
@@ -573,379 +638,394 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                 width: '100%'
               }}
             >
-              {loading || isOAuthLoading ? (
-                <div
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.6 }}
+                style={{ textAlign: "center", marginBottom: "2rem" }}
+              >
+                <h1 style={{ 
+                  fontSize: isMobile ? "1.8rem" : "2.2rem", 
+                  fontWeight: "800", 
+                  color: theme.accentColor,
+                  marginBottom: "0.5rem",
+                  textShadow: `0 0 15px ${theme.accentColor}40`
+                }}>
+                  Welcome Back
+                </h1>
+                <p style={{ color: theme.textSecondary, fontSize: "1rem" }}>
+                  Sign in to access your internship portal
+                </p>
+              </motion.div>
+
+              {registrationMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    minHeight: "300px"
+                    background: `linear-gradient(135deg, #00cc66, #00aa88)`,
+                    color: "white",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "12px",
+                    marginBottom: "1rem",
+                    fontSize: "0.9rem"
                   }}
                 >
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                    style={{
-                      width: "3rem",
-                      height: "3rem",
-                      border: `3px solid ${theme.accentColor}30`,
-                      borderTop: `3px solid ${theme.accentColor}`,
-                      borderRadius: "50%"
-                    }}
-                  />
-                  <p style={{ marginTop: "1rem", fontSize: "1.1rem", color: theme.textSecondary }}>
-                    {isOAuthLoading ? "Redirecting to authentication..." : "Logging in..."}
+                  {registrationMessage}
+                </motion.div>
+              )}
+
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    background: `linear-gradient(135deg, #ff4444, #cc3333)`,
+                    color: "white",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "12px",
+                    marginBottom: "1rem",
+                    fontSize: "0.9rem"
+                  }}
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              {showAzureLogin && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                  style={{
+                    background: darkMode 
+                      ? 'linear-gradient(135deg, rgba(15, 30, 55, 0.6), rgba(20, 35, 60, 0.4))' 
+                      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(240, 245, 255, 0.6))',
+                    border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                    borderRadius: '16px',
+                    padding: '2rem',
+                    textAlign: 'center',
+                    marginBottom: '1.5rem'
+                  }}
+                >
+                  <MicrosoftIcon />
+                  <h3 style={{ 
+                    fontWeight: "700", 
+                    marginBottom: "0.5rem", 
+                    marginTop: "1rem",
+                    color: theme.color 
+                  }}>
+                    Employee Login
+                  </h3>
+                 <p style={{ 
+                     marginBottom: "1.5rem", 
+                     color: theme.textSecondary,
+                     fontSize: "0.95rem"
+                     }}>
+                     Staff members must use Microsoft Azure Active Directory to login with your company credentials.
                   </p>
-                </div>
-              ) : (
-                <>
-                  {/* Header */}
-                  <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3, duration: 0.6 }}
-                    style={{ textAlign: "center", marginBottom: "2rem" }}
+                  <motion.button
+                    whileHover={{ scale: 1.02, y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleAzureLogin}
+                    style={{
+                      background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
+                      color: "white",
+                      border: "none",
+                      padding: "0.75rem 1.5rem",
+                      borderRadius: "12px",
+                      fontSize: "1rem",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      width: '100%',
+                      boxShadow: `0 8px 25px ${theme.accentColor}40`,
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                    }}
                   >
-                    <h1 style={{ 
-                      fontSize: isMobile ? "1.8rem" : "2.2rem", 
-                      fontWeight: "800", 
-                      color: theme.accentColor,
-                      marginBottom: "0.5rem",
-                      textShadow: `0 0 15px ${theme.accentColor}40`
+                    <MicrosoftIcon />
+                    Login with Microsoft Azure
+                  </motion.button>
+                </motion.div>
+              )}
+
+              {!showAzureLogin && (
+                <motion.form
+                  onSubmit={handleSubmit}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4, duration: 0.6 }}
+                >
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <label style={{ 
+                      display: "block", 
+                      marginBottom: "0.5rem", 
+                      fontWeight: "600", 
+                      color: theme.color 
                     }}>
-                      Welcome Back
-                    </h1>
-                    <p style={{ color: theme.textSecondary, fontSize: "1rem" }}>
-                      Sign in to access your internship portal
-                    </p>
-                  </motion.div>
-
-                  {/* Registration success message */}
-                  {registrationMessage && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      Select Role
+                    </label>
+                    <select
+                      value={userType}
+                      onChange={(e) => setUserType(e.target.value)}
+                      disabled={accountLocked}
                       style={{
-                        background: `linear-gradient(135deg, #00cc66, #00aa88)`,
-                        color: "white",
+                        width: "100%",
                         padding: "0.75rem 1rem",
                         borderRadius: "12px",
-                        marginBottom: "1rem",
-                        fontSize: "0.9rem"
+                        border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                        background: darkMode 
+                          ? 'rgba(15, 30, 55, 0.8)' 
+                          : 'rgba(255, 255, 255, 0.8)',
+                        color: theme.color,
+                        fontSize: "1rem",
+                        backdropFilter: 'blur(10px)',
+                        transition: "all 0.3s ease",
+                        opacity: accountLocked ? 0.6 : 1,
+                        cursor: accountLocked ? "not-allowed" : "pointer"
                       }}
                     >
-                      {registrationMessage}
-                    </motion.div>
-                  )}
+                      <option value="individual">Individual</option>
+                      <option value="institute">Institute</option>
+                      <option value="admin">Admin</option>
+                      <option value="staff">Staff</option>
+                    </select>
+                  </div>
 
-                  {/* Error message */}
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <label style={{ 
+                      display: "block", 
+                      marginBottom: "0.5rem", 
+                      fontWeight: "600", 
+                      color: theme.color 
+                    }}>
+                      Username
+                    </label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      disabled={accountLocked}
                       style={{
-                        background: `linear-gradient(135deg, #ff4444, #cc3333)`,
-                        color: "white",
+                        width: "100%",
                         padding: "0.75rem 1rem",
                         borderRadius: "12px",
-                        marginBottom: "1rem",
-                        fontSize: "0.9rem"
+                        border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                        background: darkMode 
+                          ? 'rgba(15, 30, 55, 0.3)' 
+                          : 'rgba(255, 255, 255, 0.8)',
+                        color: theme.color,
+                        fontSize: "1rem",
+                        backdropFilter: 'blur(10px)',
+                        transition: "all 0.3s ease",
+                        opacity: accountLocked ? 0.6 : 1,
+                        cursor: accountLocked ? "not-allowed" : "auto"
+                      }}
+                      required
+                      placeholder="Enter your username"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <label style={{ 
+                      display: "block", 
+                      marginBottom: "0.5rem", 
+                      fontWeight: "600", 
+                      color: theme.color 
+                    }}>
+                      Password
+                    </label>
+                    <div style={{ 
+                      display: "flex", 
+                      alignItems: "center",
+                      position: "relative"
+                    }}>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={accountLocked}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 1rem",
+                          borderRadius: "12px",
+                          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                          background: darkMode 
+                            ? 'rgba(15, 30, 55, 0.3)' 
+                            : 'rgba(255, 255, 255, 0.8)',
+                          color: theme.color,
+                          fontSize: "1rem",
+                          backdropFilter: 'blur(10px)',
+                          transition: "all 0.3s ease",
+                          opacity: accountLocked ? 0.6 : 1,
+                          cursor: accountLocked ? "not-allowed" : "auto"
+                        }}
+                        required
+                        placeholder="Enter your password"
+                      />
+                      <button
+                        type="button" 
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={accountLocked}
+                        style={{
+                          position: "absolute",
+                          right: "0.75rem",
+                          background: "transparent",
+                          border: "none",
+                          color: theme.textSecondary,
+                          cursor: accountLocked ? "not-allowed" : "pointer",
+                          padding: "0.5rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: accountLocked ? 0.6 : 1
+                        }}
+                      >
+                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    whileHover={!accountLocked ? { scale: 1.02, y: -2 } : {}}
+                    whileTap={!accountLocked ? { scale: 0.98 } : {}}
+                    type="submit"
+                    disabled={accountLocked}
+                    style={{
+                      width: "100%",
+                      background: accountLocked 
+                        ? "#cccccc" 
+                        : `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
+                      color: "white",
+                      border: "none",
+                      padding: "0.75rem 1.5rem",
+                      borderRadius: "12px",
+                      fontSize: "1rem",
+                      fontWeight: "600",
+                      cursor: accountLocked ? "not-allowed" : "pointer",
+                      marginBottom: "0.75rem",
+                      boxShadow: accountLocked ? "none" : `0 8px 25px ${theme.accentColor}40`,
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      opacity: accountLocked ? 0.6 : 1
+                    }}
+                  >
+                    {accountLocked ? `Account Locked (${remainingTime}s)` : "Login"}
+                  </motion.button>
+
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "flex-end",
+                    marginBottom: "1.5rem",
+                    marginTop: "0.25rem"
+                  }}>
+                    <a
+                      href="/forgot-password/email-confirm"
+                      style={{ 
+                        color: theme.accentColor,
+                        textDecoration: "underline",
+                        textUnderlineOffset: "3px",
+                        fontSize: "0.9rem",
+                        fontWeight: "500",
+                        transition: "opacity 0.2s ease",
+                        ":hover": {
+                          opacity: 0.8
+                        }
                       }}
                     >
-                      {error}
-                    </motion.div>
-                  )}
+                      Forgot your password?
+                    </a>
+                  </div>
 
-                  {/* Azure Login Card for Staff/Executive */}
-                  {showAzureLogin && (
+                  {showGoogleLogin && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4, duration: 0.6 }}
+                      transition={{ delay: 0.3, duration: 0.6 }}
                       style={{
                         background: darkMode 
                           ? 'linear-gradient(135deg, rgba(15, 30, 55, 0.6), rgba(20, 35, 60, 0.4))' 
-                          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(240, 245, 255, 0.6))',
+                          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(240, 255, 240, 0.6))',
                         border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
                         borderRadius: '16px',
-                        padding: '2rem',
-                        textAlign: 'center',
+                        padding: '1.5rem',
                         marginBottom: '1.5rem'
                       }}
                     >
-                      <MicrosoftIcon />
-                      <h3 style={{ 
-                        fontWeight: "700", 
-                        marginBottom: "0.5rem", 
-                        marginTop: "1rem",
-                        color: theme.color 
-                      }}>
-                        Employee Login
-                      </h3>
-                      <p style={{ 
-                        marginBottom: "1.5rem", 
-                        color: theme.textSecondary,
-                        fontSize: "0.95rem"
-                      }}>
-                        {userType === 'executive_staff' ? 'Executive' : 'Staff'} members must use 
-                        Microsoft Azure Active Directory to login with your company credentials.
-                      </p>
-                      <motion.button
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={handleAzureLogin}
-                        disabled={isOAuthLoading}
-                        style={{
-                          background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
-                          color: "white",
-                          border: "none",
-                          padding: "0.75rem 1.5rem",
-                          borderRadius: "12px",
-                          fontSize: "1rem",
-                          fontWeight: "600",
-                          cursor: "pointer",
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                          width: '100%',
-                          boxShadow: `0 8px 25px ${theme.accentColor}40`,
-                          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-                        }}
-                      >
-                        <MicrosoftIcon />
-                        Login with Microsoft Azure
-                      </motion.button>
+                      <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+                        <h3 style={{ 
+                          fontWeight: "600", 
+                          marginBottom: "0.5rem",
+                          color: theme.color,
+                          fontSize: '1.1rem'
+                        }}>
+                          Quick Sign In
+                        </h3>
+                        <p style={{ 
+                          color: theme.textSecondary,
+                          fontSize: "0.9rem",
+                          lineHeight: 1.4
+                        }}>
+                          Sign in with your Google account for faster access
+                        </p>
+                      </div>
+                      
+                      <GoogleLoginButton onLogin={handleGoogleLogin} />
                     </motion.div>
                   )}
 
-                  {/* Traditional Login Form - Hidden for staff/executive_staff */}
-                  {!showAzureLogin && (
-                    <motion.form
-                      onSubmit={handleSubmit}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.4, duration: 0.6 }}
-                    >
-                      {/* User Type Selection */}
-                      <div style={{ marginBottom: "1.5rem" }}>
-                        <label style={{ 
-                          display: "block", 
-                          marginBottom: "0.5rem", 
-                          fontWeight: "600", 
-                          color: theme.color 
-                        }}>
-                          Select Role
-                        </label>
-                        <select
-                          value={userType}
-                          onChange={(e) => setUserType(e.target.value)}
-                          style={{
-                            width: "100%",
-                            padding: "0.75rem 1rem",
-                            borderRadius: "12px",
-                            border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                            background: darkMode 
-                              ? 'rgba(15, 30, 55, 0.8)' 
-                              : 'rgba(255, 255, 255, 0.8)',
-                            color: theme.color,
-                            fontSize: "1rem",
-                            backdropFilter: 'blur(10px)',
-                            transition: "all 0.3s ease"
-                          }}
-                        >
-                          <option value="individual">Individual</option>
-                          <option value="institute">Institute</option>
-                          <option value="admin">Admin</option>
-                          <option value="staff">Staff</option>
-                          <option value="executive_staff">Executive Staff</option>
-                        </select>
-                      </div>
-
-                      {/* Username Field */}
-                      <div style={{ marginBottom: "1.5rem" }}>
-                        <label style={{ 
-                          display: "block", 
-                          marginBottom: "0.5rem", 
-                          fontWeight: "600", 
-                          color: theme.color 
-                        }}>
-                          Username
-                        </label>
-                        <input
-                          type="text"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          style={{
-                            width: "100%",
-                            padding: "0.75rem 1rem",
-                            borderRadius: "12px",
-                            border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                            background: darkMode 
-                              ? 'rgba(15, 30, 55, 0.3)' 
-                              : 'rgba(255, 255, 255, 0.8)',
-                            color: theme.color,
-                            fontSize: "1rem",
-                            backdropFilter: 'blur(10px)',
-                            transition: "all 0.3s ease"
-                          }}
-                          required
-                          placeholder="Enter your username"
-                        />
-                      </div>
-
-                      {/* Password Field */}
-                      <div style={{ marginBottom: "1.5rem" }}>
-                        <label style={{ 
-                          display: "block", 
-                          marginBottom: "0.5rem", 
-                          fontWeight: "600", 
-                          color: theme.color 
-                        }}>
-                          Password
-                        </label>
-                        <div style={{ 
-                          display: "flex", 
-                          alignItems: "center",
-                          position: "relative"
-                        }}>
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={{
-                              width: "100%",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "12px",
-                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                              background: darkMode 
-                                ? 'rgba(15, 30, 55, 0.3)' 
-                                : 'rgba(255, 255, 255, 0.8)',
-                              color: theme.color,
-                              fontSize: "1rem",
-                              backdropFilter: 'blur(10px)',
-                              transition: "all 0.3s ease"
-                            }}
-                            required
-                            placeholder="Enter your password"
-                          />
-                          <button
-                            type="button" 
-                            onClick={() => setShowPassword(!showPassword)}
-                            style={{
-                              position: "absolute",
-                              right: "0.75rem",
-                              background: "transparent",
-                              border: "none",
-                              color: theme.textSecondary,
-                              cursor: "pointer",
-                              padding: "0.5rem",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center"
-                            }}
-                          >
-                            {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Forgot Password Link */}
-                      <div style={{ 
-                        display: "flex", 
-                        justifyContent: "flex-end", 
-                        marginBottom: "1.5rem" 
-                      }}>
-                        <a
-                          href="/forgot-password/email-confirm"
-                          style={{ 
-                            color: theme.accentColor,
-                            textDecoration: "none",
-                            fontSize: "0.9rem",
-                            fontWeight: "500"
-                          }}
-                        >
-                          Forgot your password?
-                        </a>
-                      </div>
-
-                      {/* Submit Button */}
-                      <motion.button
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        whileTap={{ scale: 0.98 }}
-                        type="submit"
-                        style={{
-                          width: "100%",
-                          background: `linear-gradient(135deg, ${theme.accentColor}, ${darkMode ? '#0066ff' : '#00aa88'})`,
-                          color: "white",
-                          border: "none",
-                          padding: "0.75rem 1.5rem",
-                          borderRadius: "12px",
-                          fontSize: "1rem",
-                          fontWeight: "600",
-                          cursor: "pointer",
-                          marginBottom: "1.5rem",
-                          boxShadow: `0 8px 25px ${theme.accentColor}40`,
-                          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-                        }}
-                      >
-                        Login
-                      </motion.button>
-
-                      {/* Registration Link */}
-                      <div style={{ 
-                        textAlign: "center", 
-                        marginTop: "1rem" 
-                      }}>
-                        <p style={{ 
-                          color: theme.textSecondary,
-                          fontSize: "0.95rem"
-                        }}>
-                          Don't have an account?{" "}
-                          <a
-                            href="/register"
-                            style={{ 
-                              color: theme.accentColor,
-                              textDecoration: "none",
-                              fontWeight: "600"
-                            }}
-                          >
-                            Create one
-                          </a>
-                        </p>
-                      </div>
-                    </motion.form>
-                  )}
-
-                  {/* Staff Login Info Button */}
                   <div style={{ 
                     textAlign: "center", 
-                    marginTop: "1.5rem" 
+                    marginTop: "1rem" 
                   }}>
-                    <button
-                      onClick={toggleStaffNotification}
-                      style={{ 
-                        background: "transparent",
-                        border: "none",
-                        color: theme.accentColor,
-                        textDecoration: "none",
-                        cursor: "pointer",
-                        fontSize: "0.9rem",
-                        fontWeight: "500"
-                      }}
-                    >
-                      University/Institute login information
-                    </button>
+                    <p style={{ 
+                      color: theme.textSecondary,
+                      fontSize: "0.95rem"
+                    }}>
+                      Don't have an account?{" "}
+                      <a
+                        href="/register"
+                        style={{ 
+                          color: theme.accentColor,
+                          textDecoration: "underline",
+                          fontWeight: "600"
+                        }}
+                      >
+                        Create one
+                      </a>
+                    </p>
                   </div>
-                </>
+                </motion.form>
               )}
+
+             {(userType === "institute" || userType === "staff") && (
+               <div style={{ 
+                textAlign: "center", 
+                marginTop: "1.5rem" 
+                }}>
+             <button
+               onClick={toggleStaffNotification}
+               style={{ 
+                background: "transparent",
+                border: "none",
+                color: theme.accentColor,
+                textDecoration: "none",
+                cursor: "pointer",
+                fontSize: "0.9rem",
+                fontWeight: "500"
+             }}
+             >
+               University/Institute login information
+             </button>
+           </div>
+          )}
             </motion.div>
           </div>
         </div>
       </div>
 
-      {/* Staff Notification Modal */}
       {showStaffNotification && (
         <div style={{
           position: "fixed",
@@ -1015,7 +1095,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
                 fontSize: "0.95rem",
                 lineHeight: 1.6
               }}>
-                Company employees must use Microsoft Azure Active Directory login with their corporate credentials. Select "Staff" or "Executive" from the role dropdown and use the Azure login button.
+                Company staff must use Microsoft Azure Active Directory login with their corporate credentials. Select "Staff" from the role dropdown and use the Azure login button.
               </p>
             </div>
             
@@ -1047,7 +1127,6 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
         </div>
       )}
 
-      {/* Enhanced Global Styles */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
@@ -1066,12 +1145,10 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
           transform: translateY(-1px);
         }
         
-        /* Smooth scrolling */
         html {
           scroll-behavior: smooth;
         }
         
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
           width: 6px;
         }
@@ -1090,3 +1167,4 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
 };
 
 export default LoginPage;
+

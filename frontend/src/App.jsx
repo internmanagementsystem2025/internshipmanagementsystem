@@ -63,8 +63,6 @@ import VerifyOTPPage from "./components/login/VerifyOTPPage";
 import ScheduleInduction from "./admin/pages/induction/ScheduleInduction";
 import ScheduleScheme from "./admin/pages/assignscheme/ScheduleScheme";
 import InternLifeCycle from "./admin/pages/lifecycle/InternLifeCycle";
-import AcceptanceLetterRequest from "./admin/pages/lifecycle/AcceptanceLetterRequest";
-import ViewAcceptanceLetter from "./admin/pages/lifecycle/ViewAcceptanceLetter";
 import StaffHome from "./staff/pages/home/StaffHome";
 
 import InternPendingRequests from "./staff/pages/internpendingrequests/InternPendingRequests";
@@ -109,6 +107,14 @@ import LearnMorePage from "./components/login/LearnMorePage";
 import ChangePassword  from "./components/login/ChangePassword";
 import InternPlacement from "./admin/pages/internplacement/InternPlacement";
 import InternAllocations from "./staff/pages/internallocation/MyInternsAllocation";
+import GeneratePlacementLetter  from "./admin/pages/lifecycle/GeneratePlacementLetter";
+import ViewGeneratePlacementLetter  from "./admin/pages/lifecycle/ViewGeneratePlacementLetter";
+import PlacementLetterManagement  from "./admin/pages/others/PlacementLetterManagement";
+import AddNewUniversity  from "./admin/pages/others/AddNewUniversity";
+import InstituteRotational from "./institute/pages/instituterotational/instituteRotational";
+import Rotationalapifirst from "./admin/pages/rotational/RotationalApiFirst";
+import RotationalapiSecond from "./admin/pages/rotational/RotationalApiSecond";
+
 
 
 
@@ -172,6 +178,7 @@ function App() {
     "/view-cv/:cvId",
     "/edit-cv/:cvId",
     "/institute-help-support",
+    "/institute-rotational",
     "/bulk-cv-upload"
   ];
 
@@ -237,11 +244,13 @@ function App() {
     "/add-employees",
     "/view-employees",
     "/intern-placement",
+    "/placement-letter-management",
+    "/add-new-university",
+    "/generate-placement-letter",
   ];
 
   const staffRoutes = [
     "/staff-home",
-
     "/my-interns-pending",
     "/my-certificate-request",
     "/my-interns-placement",
@@ -339,6 +348,7 @@ function App() {
     <Route path="/view-cv/:cvId" element={<ViewCV darkMode={darkMode} />} />
     <Route path="/edit-cv/:cvId" element={<EditCV darkMode={darkMode} />} />
     <Route path="/institute-help-support" element={<InstituteHelp darkMode={darkMode} />} />
+    <Route path="/institute-rotational" element={<InstituteRotational darkMode={darkMode} />} />
     <Route path="/bulk-cv-upload" element={<BulkCVUploadForm darkMode={darkMode} />} />
 
     {/* Admin */}
@@ -373,8 +383,9 @@ function App() {
     <Route path="/edit-scheme/:schemeId" element={<EditScheme darkMode={darkMode} />} />
     <Route path="/schedule-scheme" element={<ScheduleScheme darkMode={darkMode} />} />
     <Route path="/life-cycle" element={<InternLifeCycle darkMode={darkMode} />} />
-    <Route path="/acceptance-letter/:nic" element={<AcceptanceLetterRequest darkMode={darkMode} />} />
-    <Route path="/view-acceptance-letter/:nic" element={<ViewAcceptanceLetter darkMode={darkMode} />} />
+    <Route path="/generate-placement-letter" element={<GeneratePlacementLetter darkMode={darkMode} />} />
+    <Route path="/view-generate-placement-letter/:id" element={<ViewGeneratePlacementLetter darkMode={darkMode} />} />
+    <Route path="/view-generate-placement-letter/preview" element={<ViewGeneratePlacementLetter darkMode={darkMode} isPreview />} />
     <Route path="/admin-help-support" element={<AdminHelp darkMode={darkMode} />} />
     <Route path="/staff-intern-request" element={<StaffInternRequest darkMode={darkMode} />} />
     <Route path="/all-certificate" element={<AllCertificate darkMode={darkMode} />} />
@@ -397,11 +408,15 @@ function App() {
     <Route path="/all-rotational-stations" element={<AllRotationalStation darkMode={darkMode} />} />
     <Route path="/view-rotational-stations/:id" element={<ViewRotationalStation darkMode={darkMode} />} />
     <Route path="/edit-rotational-stations/:id" element={<EditStation darkMode={darkMode} />} />
+    <Route path="/rotation-api1" element={<Rotationalapifirst darkMode={darkMode} />} />
+    <Route path="/rotation-api2" element={<RotationalapiSecond darkMode={darkMode} />} />
     <Route path="/schedule-rotations" element={<ScheduleRotations darkMode={darkMode} />} />
     <Route path="/intern-certificate-request" element={<InternCertificateRequest darkMode={darkMode} />} />
     <Route path="/view-certificate-request/:id" element={<ViewCertificateRequest darkMode={darkMode} />} />
     <Route path="/admin-reports" element={<AdminReports darkMode={darkMode} />} />
     <Route path="/intern-placement" element={<InternPlacement darkMode={darkMode} />} />
+    <Route path="/placement-letter-management" element={<PlacementLetterManagement darkMode={darkMode} />} />
+    <Route path="/add-new-university" element={<AddNewUniversity darkMode={darkMode} />} />
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />

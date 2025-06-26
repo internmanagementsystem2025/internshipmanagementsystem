@@ -6,10 +6,9 @@ import {
   FiCheckCircle, FiCalendar, FiAward, FiUsers, FiRepeat, 
   FiLayers, FiMail, FiClipboard, FiBriefcase, FiDatabase, 
   FiCodepen, FiCreditCard, FiBarChart, FiHelpCircle, FiChevronDown,
-  FiFile, FiUpload, FiCheck, FiLayout, FiUserPlus, FiClock,
-  FiBook, FiBookOpen, FiFileMinus, FiFilePlus as FiFilePlusAlt,
-  FiUserCheck, FiUserX, FiMapPin, FiSettings, FiTruck, FiDollarSign,
-  FiPieChart, FiMessageSquare, FiGrid, FiPackage, FiPlus
+  FiFile,  FiCheck, FiUserPlus, FiClock, FiBook, FiBookOpen, 
+   FiFilePlus as FiFilePlusAlt, FiMapPin,  FiGrid, FiPlus, FiFileMinus,
+   FiCircle
 } from "react-icons/fi";
 import { FaBuildingColumns } from "react-icons/fa6";
 import logo from "../../assets/logo.png";
@@ -236,6 +235,8 @@ const AdminSidebar = ({ darkMode }) => {
       dropdownItems: [
         { title: "Stations", route:"/all-rotational-stations", icon: FiMapPin },
         { title: "Schedule", route:"/schedule-rotations", icon: FiClock },
+        { title: "For API page 1", route:"/rotation-api1", icon: FiList },
+        { title: "For API page 2", route:"/rotation-api2", icon: FiFilePlus },
       ]
     },
     {
@@ -263,6 +264,17 @@ const AdminSidebar = ({ darkMode }) => {
       icon: FiBarChart,
       route: "/admin-reports",
       key: "reports"
+    },
+
+    {
+            title: "Others",
+            icon: FiCircle,
+            key: "others",
+            hasDropdown: true,
+            dropdownItems: [
+            { title: "University Management", route: "/add-new-university", icon: FiBookOpen },
+            { title: "Placement Letter Management", route: "/placement-letter-management", icon: FiFileMinus },
+            ]
     },
     {
       title: "Help & Support",

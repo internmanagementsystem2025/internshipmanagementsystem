@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Logo from "../../assets/logo.png";
+import LoadingSpinner from './LoadingSpinner';
 
 // Fixed Icons as React components
 const SunIcon = () => (
@@ -52,11 +53,11 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   const [loading, setLoading] = useState(false);
   const [userType, setUserType] = useState("individual");
   const [error, setError] = useState("");
-  const [districts, setDistricts] = useState([]);
   const [institutes, setInstitutes] = useState([]);
   const [registrationMessage, setRegistrationMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   const darkMode = propDarkMode !== undefined ? propDarkMode : internalDarkMode;
 
@@ -79,17 +80,22 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
 
   const theme = darkMode ? darkTheme : lightTheme;
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageLoading(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const [formData, setFormData] = useState({
     username: "",
     email: "",
     fullName: "",
-    nameWithInitials: "",
-    postalAddress: "",
     contactNumber: "",
     nic: "",
-    district: "",
-    preferredLanguage: "",
     password: "",
+    confirmPassword: "",
     instituteContactNumber: "",
     instituteContactEmail: "",
     instituteName: "",
@@ -110,29 +116,34 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   }, []);
 
   useEffect(() => {
-    const fetchDistricts = async () => {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/districts`);
-        setDistricts(response.data);
-      } catch (error) {
-        console.error("Error fetching districts:", error);
-        setError("Failed to load districts");
-      }
-    };
-
     const fetchInstitutes = async () => {
       try {
         const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/institutes`);
-        setInstitutes(response.data.institutes || []);
+        const sortedInstitutes = (response.data.institutes || []).sort((a, b) => 
+          a.name.localeCompare(b.name)
+        );
+        setInstitutes(sortedInstitutes);
       } catch (error) {
         console.error("Error fetching institutes:", error);
         setError("Failed to load institutes");
       }
     };
 
-    fetchDistricts();
     fetchInstitutes();
   }, []);
+
+  // NIC validation function
+  const validateNIC = (nic) => {
+    const cleanedNIC = nic.trim().toUpperCase();
+    const oldFormat = /^[0-9]{9}[VX]$/.test(cleanedNIC);
+    const newFormat = /^[0-9]{12}$/.test(cleanedNIC);
+    return oldFormat || newFormat;
+  };
+
+  const validateContactNumber = (number) => {
+    // Sri Lankan phone number validation (10 digits starting with 0)
+    return /^0[0-9]{9}$/.test(number.trim());
+  };
 
   // Theme toggle function
   const toggleTheme = () => {
@@ -159,9 +170,36 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
     setError("");
     setRegistrationMessage("");
 
-    // Validate form data
-    if (!formData.username || !formData.email || !formData.password) {
+    // Validate required fields
+    if (!formData.username || !formData.email || !formData.password || !formData.nic || !formData.fullName || !formData.contactNumber) {
       setError("Please fill in all required fields");
+      setLoading(false);
+      return;
+    }
+
+    // Validate NIC format
+    if (!validateNIC(formData.nic)) {
+      setError("Please enter a valid NIC number (old format: 123456789V or new format: 123456789012)");
+      setLoading(false);
+      return;
+    }
+// Validate contact number
+    if (!validateContactNumber(formData.contactNumber)) {
+      setError("Please enter a valid Sri Lankan phone number (10 digits starting with 0)");
+      setLoading(false);
+      return;
+    }
+    
+    // Validate password match
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    // Validate password strength (optional)
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long");
       setLoading(false);
       return;
     }
@@ -215,557 +253,265 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: theme.backgroundColor,
-        color: theme.color,
-        transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-        position: "relative",
-        overflow: "hidden",
-        minHeight: "100vh",
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-      }}
-    >
-      {/* Background Effects */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: 0,
-        opacity: 0.1,
-        pointerEvents: 'none',
-        background: darkMode 
-          ? 'radial-gradient(circle at 20% 50%, #00aaff 0%, transparent 50%), radial-gradient(circle at 80% 20%, #0066ff 0%, transparent 50%)'
-          : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
-      }} />
+    <>
+      {pageLoading ? (
+        <LoadingSpinner 
+          darkMode={darkMode}
+          message="Loading Registration..."
+          subMessage="Please wait while we process your request"
+          size="medium"
+        />
+      ) : (
+        <div
+          style={{
+            backgroundColor: theme.backgroundColor,
+            color: theme.color,
+            transition: "all 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+            position: "relative",
+            overflow: "hidden",
+            minHeight: "100vh",
+            fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+          }}
+        >
+          {/* Background Effects */}
+          <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 0,
+              opacity: 0.1,
+              pointerEvents: 'none',
+              background: darkMode 
+                ? 'radial-gradient(circle at 20% 50%, #00aaff 0%, transparent 50%), radial-gradient(circle at 80% 20%, #0066ff 0%, transparent 50%)'
+                : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
+            }} />
 
-      {/* Main Content */}
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        {/* Enhanced Navbar */}
-        <nav style={{ 
-          background: "transparent", 
-          position: "fixed", 
-          top: 0,
-          width: "100%",
-          padding: isMobile ? "1rem" : "1rem 2rem",
-          zIndex: 10,
-          backdropFilter: 'blur(20px)',
-          borderBottom: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
-        }}>
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center",
-            maxWidth: "1200px",
-            margin: "0 auto"
-          }}>
-            <div 
-              onClick={handleBackToHome} 
-              style={{ 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}
-            >
-              <img 
-                src={Logo} 
-                alt="Logo" 
-                style={{ height: '40px', width: 'auto' }} 
-              />
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-              <motion.button 
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={toggleTheme}
-                style={{ 
-                  background: "transparent",
-                  border: "none",
-                  color: theme.color,
-                  cursor: "pointer",
-                  padding: "0.5rem",
-                  borderRadius: "50%",
-                  transition: "all 0.3s ease",
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {darkMode ? <SunIcon /> : <MoonIcon />}
-              </motion.button>
-              
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                style={{ 
-                  background: "transparent", 
-                  color: theme.color,
-                  border: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                  padding: "0.5rem 1rem",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  backdropFilter: 'blur(10px)',
-                  transition: "all 0.3s ease",
-                  fontSize: '0.9rem'
-                }} 
-                onClick={() => navigate('/login')}
-              >
-                Login
-              </motion.button>
-            </div>
-          </div>
-        </nav>
-
-        {/* Main Content Container */}
-<div style={{ 
-  display: "flex", 
-  alignItems: "center", 
-  justifyContent: "center", 
-  minHeight: '100vh', 
-  paddingTop: '80px',
-  maxWidth: "1400px", 
-  margin: "0 auto",
-  padding: isMobile ? "80px 1rem 2rem" : "80px 3rem 2rem" 
-}}>
-
-          {/* Register Form Container - Now full width */}
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  style={{
-    background: darkMode 
-      ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.6), rgba(15, 30, 55, 0.4))' 
-      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.6))',
-    backdropFilter: 'blur(20px)',
-    border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-    borderRadius: '24px',
-    padding: isMobile ? '2rem' : window.innerWidth > 1200 ? '4rem' : '3rem', 
-    boxShadow: `0 25px 50px ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
-    width: '100%',
-    maxWidth: window.innerWidth > 1400 ? '1400px' : '1000px'
-  }}
->
-            {loading ? (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  minHeight: "300px"
-                }}
-              >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  style={{
-                    width: "3rem",
-                    height: "3rem",
-                    border: `3px solid ${theme.accentColor}30`,
-                    borderTop: `3px solid ${theme.accentColor}`,
-                    borderRadius: "50%"
+          {/* Main Content */}
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            {/* Navbar */}
+            <nav style={{ 
+              background: "transparent", 
+              position: "fixed", 
+              top: 0,
+              width: "100%",
+              padding: isMobile ? "1rem" : "1rem 2rem",
+              zIndex: 10,
+              backdropFilter: 'blur(20px)',
+              borderBottom: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`
+            }}>
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                maxWidth: "1200px",
+                margin: "0 auto"
+              }}>
+                <div 
+                  onClick={handleBackToHome} 
+                  style={{ 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem'
                   }}
-                />
-                <p style={{ marginTop: "1rem", fontSize: "1.1rem", color: theme.textSecondary }}>
-                  Processing registration...
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Header */}
-                <motion.div
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                  style={{ textAlign: "center", marginBottom: "2rem" }}
                 >
-                  <img
-                    src={Logo}
-                    alt="Logo"
-                    style={{ maxWidth: "130px", marginBottom: "1rem" }}
+                  <img 
+                    src={Logo} 
+                    alt="Logo" 
+                    style={{ height: '40px', width: 'auto' }} 
                   />
-                  <h1 style={{ 
-                    fontSize: isMobile ? "1.8rem" : "2.2rem", 
-                    fontWeight: "800", 
-                    color: theme.accentColor,
-                    marginBottom: "0.5rem",
-                    textShadow: `0 0 15px ${theme.accentColor}40`
-                  }}>
-                    INTERNSHIP MANAGEMENT SYSTEM
-                  </h1>
-                  <p style={{ color: theme.textSecondary, fontSize: "1rem" }}>
-                    Fill the form below to create a new account.
-                  </p>
-                </motion.div>
+                </div>
 
-                {/* Alert Messages */}
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      background: `linear-gradient(135deg, #ff4444, #cc3333)`,
-                      color: "white",
-                      padding: "0.75rem 1rem",
-                      borderRadius: "12px",
-                      marginBottom: "1rem",
-                      fontSize: "0.9rem"
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <motion.button 
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={toggleTheme}
+                    style={{ 
+                      background: "transparent",
+                      border: "none",
+                      color: theme.color,
+                      cursor: "pointer",
+                      padding: "0.5rem",
+                      borderRadius: "50%",
+                      transition: "all 0.3s ease",
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
-                    {error}
-                  </motion.div>
-                )}
+                    {darkMode ? <SunIcon /> : <MoonIcon />}
+                  </motion.button>
+                  
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{ 
+                      background: "transparent", 
+                      color: theme.color,
+                      border: `1px solid ${theme.darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                      padding: "0.5rem 1rem",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      backdropFilter: 'blur(10px)',
+                      transition: "all 0.3s ease",
+                      fontSize: '0.9rem'
+                    }} 
+                    onClick={() => navigate('/login')}
+                  >
+                    Login
+                  </motion.button>
+                </div>
+              </div>
+            </nav>
 
-                {registrationMessage && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
+            {/* Main Content Container */}
+            <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center", 
+                  minHeight: '100vh', 
+                  paddingTop: '80px',
+                  maxWidth: "1400px", 
+                  margin: "0 auto",
+                  padding: isMobile ? "80px 1rem 2rem" : "80px 3rem 2rem" 
+              }}>
+              {/* Register Form Container */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  background: darkMode 
+                    ? 'linear-gradient(135deg, rgba(10, 25, 47, 0.6), rgba(15, 30, 55, 0.4))' 
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(248, 250, 252, 0.6))',
+                  backdropFilter: 'blur(20px)',
+                  border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+                  borderRadius: '24px',
+                  padding: isMobile ? '2rem' : window.innerWidth > 1200 ? '4rem' : '3rem', 
+                  boxShadow: `0 25px 50px ${darkMode ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.15)'}`,
+                  width: '100%',
+                  maxWidth: window.innerWidth > 1400 ? '1400px' : '1000px'
+                }}
+              >
+                {loading ? (
+                  <div
                     style={{
-                      background: `linear-gradient(135deg, #00cc66, #00aa88)`,
-                      color: "white",
-                      padding: "0.75rem 1rem",
-                      borderRadius: "12px",
-                      marginBottom: "1rem",
-                      fontSize: "0.9rem"
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      minHeight: "300px"
                     }}
                   >
-                    {registrationMessage}
-                  </motion.div>
-                )}
-
-                {userType === "institute" && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      background: darkMode 
-                        ? 'linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 152, 0, 0.2))'
-                        : 'linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1))',
-                      border: `1px solid ${darkMode ? 'rgba(255, 193, 7, 0.3)' : 'rgba(255, 152, 0, 0.3)'}`,
-                      color: darkMode ? '#ffc107' : '#ff9800',
-                      padding: "0.75rem 1rem",
-                      borderRadius: "12px",
-                      marginBottom: "1rem",
-                      fontSize: "0.9rem",
-                      textAlign: "center"
-                    }}
-                  >
-                    <strong>Note:</strong> This form is for university/institute staff only.
-                  </motion.div>
-                )}
-
-                {/* Registration Form */}
-                <motion.form
-                  onSubmit={handleSubmit}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                >
-                  {/* User Type Selection */}
-                  <div style={{ marginBottom: "1.5rem" }}>
-                    <label style={{ 
-                      display: "block", 
-                      marginBottom: "0.5rem", 
-                      fontWeight: "600", 
-                      color: theme.color 
-                    }}>
-                      Select User Type
-                    </label>
-                    <select
-                      value={userType}
-                      onChange={(e) => setUserType(e.target.value)}
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                       style={{
-                        width: "100%",
-                        padding: "0.75rem 1rem",
-                        borderRadius: "12px",
-                        border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                        background: darkMode 
-                          ? 'rgba(15, 30, 55, 0.8)' 
-                          : 'rgba(255, 255, 255, 0.8)',
-                        color: theme.color,
-                        fontSize: "1rem",
-                        backdropFilter: 'blur(10px)',
-                        transition: "all 0.3s ease"
+                        width: "3rem",
+                        height: "3rem",
+                        border: `3px solid ${theme.accentColor}30`,
+                        borderTop: `3px solid ${theme.accentColor}`,
+                        borderRadius: "50%"
                       }}
+                    />
+                    <p style={{ marginTop: "1rem", fontSize: "1.1rem", color: theme.textSecondary }}>
+                      Processing registration...
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Header */}
+                    <motion.div
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6 }}
+                      style={{ textAlign: "center", marginBottom: "2rem" }}
                     >
-                      <option value="individual">Individual</option>
-                      <option value="institute">Institute</option>
-                    </select>
-                  </div>
+                      <img
+                        src={Logo}
+                        alt="Logo"
+                        style={{ maxWidth: "130px", marginBottom: "1rem" }}
+                      />
+                      <h1 style={{ 
+                        fontSize: isMobile ? "1.8rem" : "2.2rem", 
+                        fontWeight: "800", 
+                        color: theme.accentColor,
+                        marginBottom: "0.5rem",
+                        textShadow: `0 0 15px ${theme.accentColor}40`
+                      }}>
+                        INTERNSHIP MANAGEMENT SYSTEM
+                      </h1>
+                      <p style={{ color: theme.textSecondary, fontSize: "1rem" }}>
+                        Fill the form below to create a new account.
+                      </p>
+                    </motion.div>
 
-                  {/* Username and Email */}
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                    <div>
-                      <label style={{ 
-                        display: "block", 
-                        marginBottom: "0.5rem", 
-                        fontWeight: "600", 
-                        color: theme.color 
-                      }}>
-                        Username
-                      </label>
-                      <input
-                        type="text"
-                        name="username"
-                        value={formData.username}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter username"
+                    {/* Alert Messages */}
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
                         style={{
-                          width: "100%",
+                          background: `linear-gradient(135deg, #ff4444, #cc3333)`,
+                          color: "white",
                           padding: "0.75rem 1rem",
                           borderRadius: "12px",
-                          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                          background: darkMode 
-                            ? 'rgba(15, 30, 55, 0.3)' 
-                            : 'rgba(255, 255, 255, 0.8)',
-                          color: theme.color,
-                          fontSize: "1rem",
-                          backdropFilter: 'blur(10px)',
-                          transition: "all 0.3s ease"
+                          marginBottom: "1rem",
+                          fontSize: "0.9rem"
                         }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ 
-                        display: "block", 
-                        marginBottom: "0.5rem", 
-                        fontWeight: "600", 
-                        color: theme.color 
-                      }}>
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter email"
-                        style={{
-                          width: "100%",
-                          padding: "0.75rem 1rem",
-                          borderRadius: "12px",
-                          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                          background: darkMode 
-                            ? 'rgba(15, 30, 55, 0.3)' 
-                            : 'rgba(255, 255, 255, 0.8)',
-                          color: theme.color,
-                          fontSize: "1rem",
-                          backdropFilter: 'blur(10px)',
-                          transition: "all 0.3s ease"
-                        }}
-                      />
-                    </div>
-                  </div>
+                      >
+                        {error}
+                      </motion.div>
+                    )}
 
-                  {/* Full Name and Name with Initials */}
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                    <div>
-                      <label style={{ 
-                        display: "block", 
-                        marginBottom: "0.5rem", 
-                        fontWeight: "600", 
-                        color: theme.color 
-                      }}>
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        name="fullName"
-                        value={formData.fullName}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter full name"
+                    {registrationMessage && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
                         style={{
-                          width: "100%",
+                          background: `linear-gradient(135deg, #00cc66, #00aa88)`,
+                          color: "white",
                           padding: "0.75rem 1rem",
                           borderRadius: "12px",
-                          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                          background: darkMode 
-                            ? 'rgba(15, 30, 55, 0.3)' 
-                            : 'rgba(255, 255, 255, 0.8)',
-                          color: theme.color,
-                          fontSize: "1rem",
-                          backdropFilter: 'blur(10px)',
-                          transition: "all 0.3s ease"
+                          marginBottom: "1rem",
+                          fontSize: "0.9rem"
                         }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ 
-                        display: "block", 
-                        marginBottom: "0.5rem", 
-                        fontWeight: "600", 
-                        color: theme.color 
-                      }}>
-                        Name with Initials
-                      </label>
-                      <input
-                        type="text"
-                        name="nameWithInitials"
-                        value={formData.nameWithInitials}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter name with initials"
-                        style={{
-                          width: "100%",
-                          padding: "0.75rem 1rem",
-                          borderRadius: "12px",
-                          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                          background: darkMode 
-                            ? 'rgba(15, 30, 55, 0.3)' 
-                            : 'rgba(255, 255, 255, 0.8)',
-                          color: theme.color,
-                          fontSize: "1rem",
-                          backdropFilter: 'blur(10px)',
-                          transition: "all 0.3s ease"
-                        }}
-                      />
-                    </div>
-                  </div>
+                      >
+                        {registrationMessage}
+                      </motion.div>
+                    )}
 
-                  {/* Contact Number and NIC */}
-                  <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                    <div>
-                      <label style={{ 
-                        display: "block", 
-                        marginBottom: "0.5rem", 
-                        fontWeight: "600", 
-                        color: theme.color 
-                      }}>
-                        Contact Number
-                      </label>
-                      <input
-                        type="tel"
-                        name="contactNumber"
-                        value={formData.contactNumber}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter contact number"
+                    {userType === "institute" && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
                         style={{
-                          width: "100%",
+                          background: darkMode 
+                            ? 'linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 152, 0, 0.2))'
+                            : 'linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1))',
+                          border: `1px solid ${darkMode ? 'rgba(255, 193, 7, 0.3)' : 'rgba(255, 152, 0, 0.3)'}`,
+                          color: darkMode ? '#ffc107' : '#ff9800',
                           padding: "0.75rem 1rem",
                           borderRadius: "12px",
-                          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                          background: darkMode 
-                            ? 'rgba(15, 30, 55, 0.3)' 
-                            : 'rgba(255, 255, 255, 0.8)',
-                          color: theme.color,
-                          fontSize: "1rem",
-                          backdropFilter: 'blur(10px)',
-                          transition: "all 0.3s ease"
+                          marginBottom: "1rem",
+                          fontSize: "0.9rem",
+                          textAlign: "center"
                         }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ 
-                        display: "block", 
-                        marginBottom: "0.5rem", 
-                        fontWeight: "600", 
-                        color: theme.color 
-                      }}>
-                        NIC
-                      </label>
-                      <input
-                        type="text"
-                        name="nic"
-                        value={formData.nic}
-                        onChange={handleChange}
-                        required
-                        placeholder="Enter NIC number"
-                        style={{
-                          width: "100%",
-                          padding: "0.75rem 1rem",
-                          borderRadius: "12px",
-                          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                          background: darkMode 
-                            ? 'rgba(15, 30, 55, 0.3)' 
-                            : 'rgba(255, 255, 255, 0.8)',
-                          color: theme.color,
-                          fontSize: "1rem",
-                          backdropFilter: 'blur(10px)',
-                          transition: "all 0.3s ease"
-                        }}
-                      />
-                    </div>
-                  </div>
+                      >
+                        <strong>Note:</strong> This form is for university/institute staff only.
+                      </motion.div>
+                    )}
 
-                  {/* Individual-specific fields */}
-                  {userType === "individual" && (
-                    <>
-                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                        <div>
-                          <label style={{ 
-                            display: "block", 
-                            marginBottom: "0.5rem", 
-                            fontWeight: "600", 
-                            color: theme.color 
-                          }}>
-                            Postal Address
-                          </label>
-                          <input
-                            type="text"
-                            name="postalAddress"
-                            value={formData.postalAddress}
-                            onChange={handleChange}
-                            required
-                            placeholder="Enter postal address"
-                            style={{
-                              width: "100%",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "12px",
-                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                              background: darkMode 
-                                ? 'rgba(15, 30, 55, 0.3)' 
-                                : 'rgba(255, 255, 255, 0.8)',
-                              color: theme.color,
-                              fontSize: "1rem",
-                              backdropFilter: 'blur(10px)',
-                              transition: "all 0.3s ease"
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ 
-                            display: "block", 
-                            marginBottom: "0.5rem", 
-                            fontWeight: "600", 
-                            color: theme.color 
-                          }}>
-                            Preferred Language
-                          </label>
-                          <select
-                            name="preferredLanguage"
-                            value={formData.preferredLanguage}
-                            onChange={handleChange}
-                            required
-                            style={{
-                              width: "100%",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "12px",
-                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                              background: darkMode 
-                                ? 'rgba(15, 30, 55, 0.8)' 
-                                : 'rgba(255, 255, 255, 0.8)',
-                              color: theme.color,
-                              fontSize: "1rem",
-                              backdropFilter: 'blur(10px)',
-                              transition: "all 0.3s ease"
-                            }}
-                          >
-                            <option value="">Select Language</option>
-                            <option value="English">English</option>
-                            <option value="Sinhala">Sinhala</option>
-                            <option value="Tamil">Tamil</option>
-                          </select>
-                        </div>
-                      </div>
-
+                    {/* Registration Form */}
+                    <motion.form
+                      onSubmit={handleSubmit}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6 }}
+                    >
+                      {/* User Type Selection */}
                       <div style={{ marginBottom: "1.5rem" }}>
                         <label style={{ 
                           display: "block", 
@@ -773,13 +519,11 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                           fontWeight: "600", 
                           color: theme.color 
                         }}>
-                          District
+                          Select User Type
                         </label>
                         <select
-                          name="district"
-                          value={formData.district}
-                          onChange={handleChange}
-                          required
+                          value={userType}
+                          onChange={(e) => setUserType(e.target.value)}
                           style={{
                             width: "100%",
                             padding: "0.75rem 1rem",
@@ -794,23 +538,12 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                             transition: "all 0.3s ease"
                           }}
                         >
-                          <option value="">Select District</option>
-                          {districts.map((district, index) => (
-                            <option
-                              key={district.id || index}
-                              value={district.id}
-                            >
-                              {district.district_name}
-                            </option>
-                          ))}
+                          <option value="individual">Individual</option>
+                          <option value="institute">Institute</option>
                         </select>
                       </div>
-                    </>
-                  )}
 
-                  {/* Institute-specific fields */}
-                  {userType === "institute" && (
-                    <>
+                      {/* Username and Email */}
                       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
                         <div>
                           <label style={{ 
@@ -819,80 +552,15 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                             fontWeight: "600", 
                             color: theme.color 
                           }}>
-                            Institute Contact Number
-                          </label>
-                          <input
-                            type="tel"
-                            name="instituteContactNumber"
-                            value={formData.instituteContactNumber}
-                            onChange={handleChange}
-                            required
-                            placeholder="Enter institute contact number"
-                            style={{
-                              width: "100%",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "12px",
-                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                              background: darkMode 
-                                ? 'rgba(15, 30, 55, 0.3)' 
-                                : 'rgba(255, 255, 255, 0.8)',
-                              color: theme.color,
-                              fontSize: "1rem",
-                              backdropFilter: 'blur(10px)',
-                              transition: "all 0.3s ease"
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label style={{ 
-                            display: "block", 
-                            marginBottom: "0.5rem", 
-                            fontWeight: "600", 
-                            color: theme.color 
-                          }}>
-                            Institute Contact Email
-                          </label>
-                          <input
-                            type="email"
-                            name="instituteContactEmail"
-                            value={formData.instituteContactEmail}
-                            onChange={handleChange}
-                            required
-                            placeholder="Enter institute email"
-                            style={{
-                              width: "100%",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "12px",
-                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                              background: darkMode 
-                                ? 'rgba(15, 30, 55, 0.3)' 
-                                : 'rgba(255, 255, 255, 0.8)',
-                              color: theme.color,
-                              fontSize: "1rem",
-                              backdropFilter: 'blur(10px)',
-                              transition: "all 0.3s ease"
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
-                        <div>
-                          <label style={{ 
-                            display: "block", 
-                            marginBottom: "0.5rem", 
-                            fontWeight: "600", 
-                            color: theme.color 
-                          }}>
-                            Department / Faculty
+                            Username
                           </label>
                           <input
                             type="text"
-                            name="department"
-                            value={formData.department}
+                            name="username"
+                            value={formData.username}
                             onChange={handleChange}
                             required
-                            placeholder="Enter department or faculty"
+                            placeholder="Enter username"
                             style={{
                               width: "100%",
                               padding: "0.75rem 1rem",
@@ -915,11 +583,305 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                             fontWeight: "600", 
                             color: theme.color 
                           }}>
-                              Institute Type
+                            Email
+                          </label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            required
+                            placeholder="Enter email"
+                            style={{
+                              width: "100%",
+                              padding: "0.75rem 1rem",
+                              borderRadius: "12px",
+                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                              background: darkMode 
+                                ? 'rgba(15, 30, 55, 0.3)' 
+                                : 'rgba(255, 255, 255, 0.8)',
+                              color: theme.color,
+                              fontSize: "1rem",
+                              backdropFilter: 'blur(10px)',
+                              transition: "all 0.3s ease"
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Full Name */}
+                      <div style={{ marginBottom: "1.5rem" }}>
+                        <div>
+                          <label style={{ 
+                            display: "block", 
+                            marginBottom: "0.5rem", 
+                            fontWeight: "600", 
+                            color: theme.color 
+                          }}>
+                            Full Name
+                          </label>
+                          <input
+                            type="text"
+                            name="fullName"
+                            value={formData.fullName}
+                            onChange={handleChange}
+                            required
+                            placeholder="Enter full name"
+                            style={{
+                              width: "100%",
+                              padding: "0.75rem 1rem",
+                              borderRadius: "12px",
+                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                              background: darkMode 
+                                ? 'rgba(15, 30, 55, 0.3)' 
+                                : 'rgba(255, 255, 255, 0.8)',
+                              color: theme.color,
+                              fontSize: "1rem",
+                              backdropFilter: 'blur(10px)',
+                              transition: "all 0.3s ease"
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Contact Number and NIC */}
+                      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                        <div>
+                          <label style={{ 
+                            display: "block", 
+                            marginBottom: "0.5rem", 
+                            fontWeight: "600", 
+                            color: theme.color 
+                          }}>
+                            Contact Number
+                          </label>
+                          <input
+                            type="tel"
+                            name="contactNumber"
+                            value={formData.contactNumber}
+                            onChange={handleChange}
+                            required
+                            placeholder="Enter contact number"
+                            style={{
+                              width: "100%",
+                              padding: "0.75rem 1rem",
+                              borderRadius: "12px",
+                              border: `1px solid formData.contactNumber && !validateContactNumber(formData.contactNumber) 
+              ? '#ff4444' 
+              : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+          }`,
+                              background: darkMode 
+                                ? 'rgba(15, 30, 55, 0.3)' 
+                                : 'rgba(255, 255, 255, 0.8)',
+                              color: theme.color,
+                              fontSize: "1rem",
+                              backdropFilter: 'blur(10px)',
+                              transition: "all 0.3s ease"
+                            }}
+                          />
+                          {formData.contactNumber && !validateContactNumber(formData.contactNumber) && (
+        <p style={{
+          color: '#ff4444',
+          fontSize: '0.8rem',
+          marginTop: '0.25rem'
+        }}>
+          Please enter a valid phone number (10 digits starting with 0)
+        </p>
+      )}
+                        </div>
+                        <div>
+                          <label style={{ 
+                            display: "block", 
+                            marginBottom: "0.5rem", 
+                            fontWeight: "600", 
+                            color: theme.color 
+                          }}>
+                            NIC
+                          </label>
+                          <input
+                            type="text"
+                            name="nic"
+                            value={formData.nic}
+                            onChange={handleChange}
+                            required
+                            placeholder="Enter NIC number (e.g., 123456789V or 123456789012)"
+                            style={{
+                              width: "100%",
+                              padding: "0.75rem 1rem",
+                              borderRadius: "12px",
+                              border: `1px solid ${
+                                formData.nic && !validateNIC(formData.nic) 
+                                  ? '#ff4444' 
+                                  : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
+                              }`,
+                              background: darkMode 
+                                ? 'rgba(15, 30, 55, 0.3)' 
+                                : 'rgba(255, 255, 255, 0.8)',
+                              color: theme.color,
+                              fontSize: "1rem",
+                              backdropFilter: 'blur(10px)',
+                              transition: "all 0.3s ease"
+                            }}
+                          />
+                          {formData.nic && !validateNIC(formData.nic) && (
+                            <p style={{
+                              color: '#ff4444',
+                              fontSize: '0.8rem',
+                              marginTop: '0.25rem'
+                            }}>
+                              Please enter a valid NIC (old format: 123456789V or new format: 123456789012)
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Institute-specific fields */}
+                      {userType === "institute" && (
+                        <>
+                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                            <div>
+                              <label style={{ 
+                                display: "block", 
+                                marginBottom: "0.5rem", 
+                                fontWeight: "600", 
+                                color: theme.color 
+                              }}>
+                                Institute Contact Number
+                              </label>
+                              <input
+                                type="tel"
+                                name="instituteContactNumber"
+                                value={formData.instituteContactNumber}
+                                onChange={handleChange}
+                                required
+                                placeholder="Enter institute contact number"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.75rem 1rem",
+                                  borderRadius: "12px",
+                                  border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                                  background: darkMode 
+                                    ? 'rgba(15, 30, 55, 0.3)' 
+                                    : 'rgba(255, 255, 255, 0.8)',
+                                  color: theme.color,
+                                  fontSize: "1rem",
+                                  backdropFilter: 'blur(10px)',
+                                  transition: "all 0.3s ease"
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ 
+                                display: "block", 
+                                marginBottom: "0.5rem", 
+                                fontWeight: "600", 
+                                color: theme.color 
+                              }}>
+                                Institute Contact Email
+                              </label>
+                              <input
+                                type="email"
+                                name="instituteContactEmail"
+                                value={formData.instituteContactEmail}
+                                onChange={handleChange}
+                                required
+                                placeholder="Enter institute email"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.75rem 1rem",
+                                  borderRadius: "12px",
+                                  border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                                  background: darkMode 
+                                    ? 'rgba(15, 30, 55, 0.3)' 
+                                    : 'rgba(255, 255, 255, 0.8)',
+                                  color: theme.color,
+                                  fontSize: "1rem",
+                                  backdropFilter: 'blur(10px)',
+                                  transition: "all 0.3s ease"
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+                            <div>
+                              <label style={{ 
+                                display: "block", 
+                                marginBottom: "0.5rem", 
+                                fontWeight: "600", 
+                                color: theme.color 
+                              }}>
+                                Department / Faculty
+                              </label>
+                              <input
+                                type="text"
+                                name="department"
+                                value={formData.department}
+                                onChange={handleChange}
+                                required
+                                placeholder="Enter department or faculty"
+                                style={{
+                                  width: "100%",
+                                  padding: "0.75rem 1rem",
+                                  borderRadius: "12px",
+                                  border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                                  background: darkMode 
+                                    ? 'rgba(15, 30, 55, 0.3)' 
+                                    : 'rgba(255, 255, 255, 0.8)',
+                                  color: theme.color,
+                                  fontSize: "1rem",
+                                  backdropFilter: 'blur(10px)',
+                                  transition: "all 0.3s ease"
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ 
+                                display: "block", 
+                                marginBottom: "0.5rem", 
+                                fontWeight: "600", 
+                                color: theme.color 
+                              }}>
+                                Institute Type
+                              </label>
+                              <select
+                                name="instituteType"
+                                value={formData.instituteType}
+                                onChange={handleChange}
+                                required
+                                style={{
+                                  width: "100%",
+                                  padding: "0.75rem 1rem",
+                                  borderRadius: "12px",
+                                  border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                                  background: darkMode 
+                                    ? 'rgba(15, 30, 55, 0.8)' 
+                                    : 'rgba(255, 255, 255, 0.8)',
+                                  color: theme.color,
+                                  fontSize: "1rem",
+                                  backdropFilter: 'blur(10px)',
+                                  transition: "all 0.3s ease"
+                                }}
+                              >
+                                <option value="">Select Institute Type</option>
+                                <option value="Government University">Government University</option>
+                                <option value="Private University">Private University</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: "1.5rem" }}>
+                            <label style={{ 
+                              display: "block", 
+                              marginBottom: "0.5rem", 
+                              fontWeight: "600", 
+                              color: theme.color 
+                            }}>
+                              Institute
                             </label>
                             <select
-                              name="instituteType"
-                              value={formData.instituteType}
+                              name="instituteName"
+                              value={formData.instituteName}
                               onChange={handleChange}
                               required
                               style={{
@@ -936,111 +898,131 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                                 transition: "all 0.3s ease"
                               }}
                             >
-                              <option value="">Select Institute Type</option>
-                              <option value="Government University">Government University</option>
-                              <option value="Private University">Private University</option>
+                              <option value="">Select Institute</option>
+                              {institutes.map((institute, index) => (
+                                <option
+                                  key={institute.id || index}
+                                  value={institute.name}
+                                >
+                                  {institute.name}
+                                </option>
+                              ))}
                             </select>
                           </div>
-                        </div>
+                        </>
+                      )}
+                    {/* Password and Confirm Password */}
+<div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
+  {/* Password Field */}
+  <div>
+    <label style={{ 
+      display: "block", 
+      marginBottom: "0.5rem", 
+      fontWeight: "600", 
+      color: theme.color 
+    }}>
+      Password
+    </label>
+    <div style={{ position: "relative" }}>
+      <input
+        type={showPassword ? "text" : "password"}
+        name="password"
+        value={formData.password}
+        onChange={handleChange}
+        required
+        placeholder="Enter password"
+        style={{
+          width: "100%",
+          padding: "0.75rem 1rem",
+          borderRadius: "12px",
+          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+          background: darkMode 
+            ? 'rgba(15, 30, 55, 0.3)' 
+            : 'rgba(255, 255, 255, 0.8)',
+          color: theme.color,
+          fontSize: "1rem",
+          backdropFilter: 'blur(10px)',
+          transition: "all 0.3s ease"
+        }}
+      />
+      <button
+        type="button" 
+        onClick={() => setShowPassword(!showPassword)}
+        style={{
+          position: "absolute",
+          right: "0.75rem",
+          top: "50%",
+          transform: "translateY(-50%)",
+          background: "transparent",
+          border: "none",
+          color: theme.textSecondary,
+          cursor: "pointer",
+          padding: "0.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  </div>
 
-                        <div style={{ marginBottom: "1.5rem" }}>
-                          <label style={{ 
-                            display: "block", 
-                            marginBottom: "0.5rem", 
-                            fontWeight: "600", 
-                            color: theme.color 
-                          }}>
-                            Institute
-                          </label>
-                          <select
-                            name="instituteName"
-                            value={formData.instituteName}
-                            onChange={handleChange}
-                            required
-                            style={{
-                              width: "100%",
-                              padding: "0.75rem 1rem",
-                              borderRadius: "12px",
-                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                              background: darkMode 
-                                ? 'rgba(15, 30, 55, 0.8)' 
-                                : 'rgba(255, 255, 255, 0.8)',
-                              color: theme.color,
-                              fontSize: "1rem",
-                              backdropFilter: 'blur(10px)',
-                              transition: "all 0.3s ease"
-                            }}
-                          >
-                            <option value="">Select Institute</option>
-                            {institutes.map((institute, index) => (
-                              <option
-                                key={institute.id || index}
-                                value={institute.name}
-                              >
-                                {institute.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Password */}
-                    <div style={{ marginBottom: "1.5rem" }}>
-                      <label style={{ 
-                        display: "block", 
-                        marginBottom: "0.5rem", 
-                        fontWeight: "600", 
-                        color: theme.color 
-                      }}>
-                        Password
-                      </label>
-                      <div style={{ 
-                        display: "flex", 
-                        alignItems: "center",
-                        position: "relative"
-                      }}>
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="password"
-                          value={formData.password}
-                          onChange={handleChange}
-                          required
-                          placeholder="Enter a strong password"
-                          style={{
-                            width: "100%",
-                            padding: "0.75rem 1rem",
-                            borderRadius: "12px",
-                            border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                            background: darkMode 
-                              ? 'rgba(15, 30, 55, 0.3)' 
-                              : 'rgba(255, 255, 255, 0.8)',
-                            color: theme.color,
-                            fontSize: "1rem",
-                            backdropFilter: 'blur(10px)',
-                            transition: "all 0.3s ease"
-                          }}
-                        />
-                        <button
-                          type="button" 
-                          onClick={() => setShowPassword(!showPassword)}
-                          style={{
-                            position: "absolute",
-                            right: "0.75rem",
-                            background: "transparent",
-                            border: "none",
-                            color: theme.textSecondary,
-                            cursor: "pointer",
-                            padding: "0.5rem",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center"
-                          }}
-                        >
-                          {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                        </button>
-                      </div>
-                    </div>
+  {/* Confirm Password Field */}
+  <div>
+    <label style={{ 
+      display: "block", 
+      marginBottom: "0.5rem", 
+      fontWeight: "600", 
+      color: theme.color 
+    }}>
+      Confirm Password
+    </label>
+    <div style={{ position: "relative" }}>
+      <input
+        type={showPassword ? "text" : "password"}
+        name="confirmPassword"
+        value={formData.confirmPassword}
+        onChange={handleChange}
+        required
+        placeholder="Confirm password"
+        style={{
+          width: "100%",
+          padding: "0.75rem 1rem",
+          borderRadius: "12px",
+          border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+          background: darkMode 
+            ? 'rgba(15, 30, 55, 0.3)' 
+            : 'rgba(255, 255, 255, 0.8)',
+          color: theme.color,
+          fontSize: "1rem",
+          backdropFilter: 'blur(10px)',
+          transition: "all 0.3s ease"
+        }}
+      />
+      <button
+        type="button" 
+        onClick={() => setShowPassword(!showPassword)}
+        style={{
+          position: "absolute",
+          right: "0.75rem",
+          top: "50%",
+          transform: "translateY(-50%)",
+          background: "transparent",
+          border: "none",
+          color: theme.textSecondary,
+          cursor: "pointer",
+          padding: "0.5rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+      </button>
+    </div>
+  </div>
+</div>
 
                     {/* Submit Button */}
                     <motion.button
@@ -1093,6 +1075,11 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
             </motion.div>
           </div>
         </div>
+        
+
+        
+        
+        
 
 
       {/* Enhanced Global Styles */}
@@ -1134,6 +1121,8 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
         }
       `}</style>
     </div>
+    )}
+  </>
   );
 };
 

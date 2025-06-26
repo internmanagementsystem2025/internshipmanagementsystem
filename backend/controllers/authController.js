@@ -7,93 +7,6 @@ const { updateStats } = require("../controllers/statsController");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const jwt = require("jsonwebtoken");
-const jwksClient = require("jwks-rsa");
-
-
-
-// Setup JWKS client for Microsoft public keys
-const azureJwksClient = jwksClient({
-  jwksUri: 'https://login.microsoftonline.com/common/discovery/v2.0/keys',
-});
-
-// Get public key from Azure
-function getSigningKey(header, callback) {
-  azureJwksClient.getSigningKey(header.kid, (err, key) => {
-    if (err) return callback(err);
-    const signingKey = key.getPublicKey();
-    callback(null, signingKey);
-  });
-}
-
-// Azure login endpoint
-const loginWithAzure = async (req, res) => {
-  const { idToken } = req.body;
-
-  if (!idToken) {
-    return res.status(400).json({ message: "Missing Azure ID token" });
-  }
-
-  jwt.verify(
-    idToken,
-    getSigningKey,
-    {
-      audience: 'cec10081-d857-4e10-a58e-96379acd977', // frontend clientId
-      issuer: [
-        'https://login.microsoftonline.com/534253fc-dfb6-462f-b5ca-cbe81939f5ee/v2.0',
-        'https://sts.windows.net/534253fc-dfb6-462f-b5ca-cbe81939f5ee/',
-      ],
-      algorithms: ['RS256'],
-    },
-    async (err, decoded) => {
-      if (err) {
-        console.error("Azure token verification failed", err);
-        return res.status(401).json({ message: "Invalid Azure token" });
-      }
-
-      const { email, name, oid } = decoded;
-
-      if (!email) {
-        return res.status(400).json({ message: "Azure token missing email claim" });
-      }
-
-      try {
-        let user = await User.findOne({ email });
-
-        // Auto-create user if not found (optional)
-        if (!user) {
-          user = new User({
-            username: email,
-            email,
-            fullName: name || '',
-            userType: "staff", // or executive_staff based on app logic
-            isEmailVerified: true,
-            cvStatus: "pending"
-          });
-          await user.save();
-        }
-
-        const token = generateToken(
-          user._id,
-          user.username,
-          user.email,
-          user.userType,
-          user.currentStatus
-        );
-
-        return res.status(200).json({ 
-          token,
-          userType: user.userType 
-        });
-
-      } catch (error) {
-        console.error("Azure login failed:", error);
-        return res.status(500).json({ message: "Server error during Azure login" });
-      }
-    }
-  );
-};
-
 
 // Temporary storage for pending registrations (use Redis in production)
 const pendingRegistrations = new Map();
@@ -258,7 +171,35 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-// Login user
+// Middleware to check if account is locked
+const checkAccountLock = async (req, res, next) => {
+  try {
+    const { username, userType } = req.body;
+    
+    const user = await User.findOne({ 
+      $and: [
+        { username },
+        { userType }
+      ]
+    });
+
+    if (user && user.accountLockedUntil && user.accountLockedUntil > new Date()) {
+      const remainingTime = Math.ceil((user.accountLockedUntil - new Date()) / 1000);
+      return res.status(403).json({ 
+        message: `Account locked. Please try again in ${remainingTime} seconds.`,
+        accountLocked: true,
+        remainingTime
+      });
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Account lock check error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
 const loginUser = async (req, res) => {
   try {
     const { username, password, userType } = req.body;
@@ -271,14 +212,55 @@ const loginUser = async (req, res) => {
       ]
     });
 
+    // Check if account is locked
+    if (user && user.accountLockedUntil && user.accountLockedUntil > new Date()) {
+      const remainingTime = Math.ceil((user.accountLockedUntil - new Date()) / 1000);
+      return res.status(403).json({ 
+        message: `Account locked. Please try again in ${remainingTime} seconds.`,
+        accountLocked: true,
+        remainingTime
+      });
+    }
+
+    // Validate credentials
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(400).json({ message: "Invalid credentials or user type" });
+      // Increment failed attempts if user exists
+      if (user) {
+        user.failedLoginAttempts += 1;
+        
+        // Lock account after 5 failed attempts
+        if (user.failedLoginAttempts >= 5) {
+          user.accountLockedUntil = new Date(Date.now() + 60 * 1000); // 1 minute lock
+          await user.save();
+          
+          return res.status(403).json({ 
+            message: "Too many failed attempts. Account locked for 1 minute.",
+            accountLocked: true,
+            remainingTime: 60
+          });
+        }
+        
+        await user.save();
+        return res.status(400).json({ 
+          message: "Invalid credentials or user type",
+          remainingAttempts: 5 - user.failedLoginAttempts
+        });
+      }
+      
+      return res.status(400).json({ 
+        message: "Invalid credentials or user type"
+      });
     }
 
     // Check if user is an institute and if their request is approved
     if (user.userType === "institute" && !user.approveRequest) {
       return res.status(403).json({ message: "Your account has not been approved yet." });
     }
+
+    // Reset failed attempts on successful login
+    user.failedLoginAttempts = 0;
+    user.accountLockedUntil = null;
+    await user.save();
 
     const token = generateToken(user._id, user.username, user.email, user.userType, user.currentStatus);
 
@@ -617,6 +599,38 @@ const getUserProfileByNic = async (req, res) => {
   }
 };
 
+
+const getGoogleProfile = async (req, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized access" });
+    }
+
+    const user = await User.findById(req.user.id).select("googleId profileImage");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.googleId) {
+      return res.status(404).json({ message: "Not a Google user" });
+    }
+
+    if (user.profileImage) {
+      let profilePicture = user.profileImage;
+      if (!profilePicture.includes('=s') && !profilePicture.endsWith('.jpg') && !profilePicture.endsWith('.png')) {
+        profilePicture = `${profilePicture}=s400-c`;
+      }
+      return res.json({ picture: profilePicture });
+    }
+    
+    res.status(404).json({ message: "Profile picture not found" });
+  } catch (error) {
+    console.error("Error fetching Google profile:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = { 
   registerUser, 
   loginUser, 
@@ -628,6 +642,6 @@ module.exports = {
   verifyOTPAndResetPassword,
   getUserProfileByNic,
   verifyEmail,
-  upload,
-  loginWithAzure
+  getGoogleProfile,
+  upload 
 };
