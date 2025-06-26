@@ -88,11 +88,7 @@ export const validateSriLankanNIC = (nicNumber, birthday) => {
       age--;
     }
     
-    result.ageValid = (age >= 18 && age <= 30);
     
-    if (!result.ageValid) {
-      result.message = `Age must be between 18-30 years. Current age: ${age}`;
-    }
   }
   
   // If we have both a valid NIC birthday and input birthday, compare them

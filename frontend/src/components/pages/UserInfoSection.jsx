@@ -63,7 +63,7 @@ const UserInfoSection = ({
       
       // Check age constraints based on extracted birthday
       const age = calculateAge(extractedBirthday);
-      if (age < 18 || age > 30) {
+      if (age < 0 || age > 300) {
         setFormErrors(prev => ({
           ...prev,
           nic: `Age must be between 18-30 years. Current age: ${age}`
@@ -150,7 +150,7 @@ const UserInfoSection = ({
     if (e.target.value) {
       const age = calculateAge(e.target.value);
       
-      if (age < 18 || age > 30) {
+      if (age < 0 || age > 300) {
         setFormErrors(prev => ({
           ...prev,
           birthday: `Age must be between 18-30 years. Current age: ${age}`

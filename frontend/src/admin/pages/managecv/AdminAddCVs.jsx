@@ -161,11 +161,119 @@ const AdminAddCVs = ({ darkMode }) => {
     setFormErrors(commonErrors);
   };
 
+  // Add these helper functions at the top of the file after imports
+  const isLeapYear = (year) => {
+    return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  };
+
+  const getDayOfYear = (month, day, year) => {
+    const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let dayOfYear = day;
+    for (let i = 0; i < month - 1; i++) {
+      dayOfYear += daysInMonth[i];
+    }
+    return dayOfYear;
+  };
+
+  const getDateFromDayOfYear = (dayOfYear, year) => {
+    const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let month = 0;
+    let remainingDays = dayOfYear;
+
+    while (remainingDays > daysInMonth[month]) {
+      remainingDays -= daysInMonth[month];
+      month++;
+    }
+
+    return {
+      month: month + 1,
+      day: remainingDays
+    };
+  };
+
+  const extractBirthdayFromNIC = (nic) => {
+    // Remove any spaces or special characters
+    nic = nic.replace(/[^0-9vVxX]/g, '');
+
+    try {
+      let year, dayOfYear, gender;
+
+      if (nic.length === 10) {
+        // Old NIC format (e.g., 841234567V)
+        year = parseInt("19" + nic.substr(0, 2));
+        dayOfYear = parseInt(nic.substr(2, 3));
+      } else if (nic.length === 12) {
+        // New NIC format (e.g., 200419204350)
+        year = parseInt(nic.substr(0, 4));
+        dayOfYear = parseInt(nic.substr(4, 3));
+      } else {
+        return { isValid: false, error: "Invalid NIC length" };
+      }
+
+      // Determine gender and adjust day number
+      gender = dayOfYear > 500 ? "Female" : "Male";
+      dayOfYear = dayOfYear > 500 ? dayOfYear - 500 : dayOfYear;
+
+      // Validate day of year
+      if (dayOfYear < 1 || dayOfYear > (isLeapYear(year) ? 366 : 365)) {
+        return { isValid: false, error: "Invalid day of year" };
+      }
+
+      // Convert day of year to date
+      const { month, day } = getDateFromDayOfYear(dayOfYear, year);
+
+      // Format date components
+      const formattedMonth = month.toString().padStart(2, '0');
+      const formattedDay = day.toString().padStart(2, '0');
+      const birthday = `${year}-${formattedMonth}-${formattedDay}`;
+
+      return {
+        isValid: true,
+        birthday,
+        gender,
+        year,
+        month: formattedMonth,
+        day: formattedDay
+      };
+    } catch (error) {
+      console.error('Error parsing NIC:', error);
+      return { isValid: false, error: "Invalid NIC format" };
+    }
+  };
+
   // Handle Input Change with improved nested object handling - Same as individual
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormModified(true);
-    
+
+    // Special handling for NIC input
+    if (name === 'nic') {
+      const nicInfo = extractBirthdayFromNIC(value);
+      if (nicInfo.isValid) {
+        setCvData(prevState => ({
+          ...prevState,
+          nic: value,
+          birthday: nicInfo.birthday,
+          gender: nicInfo.gender
+        }));
+
+        // Clear any existing errors
+        setFormErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.nic;
+          delete newErrors.birthday;
+          delete newErrors.gender;
+          return newErrors;
+        });
+        return;
+      } else {
+        setFormErrors(prev => ({
+          ...prev,
+          nic: nicInfo.error
+        }));
+      }
+    }
+
     // Handle nested paths like "roleData.dataEntry.proficiency.msWord"
     if (name.includes(".")) {
       const parts = name.split(".");
