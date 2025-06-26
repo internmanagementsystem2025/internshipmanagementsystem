@@ -167,7 +167,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   const { name, value } = e.target;
 
   // Remove ALL spaces for username, password, and confirmPassword fields
-  if (name === 'password' || name === 'confirmPassword') {
+  if (name === 'username' || name === 'password' || name === 'confirmPassword') {
     setFormData(prevData => ({
       ...prevData,
       [name]: value.replace(/\s/g, '')
@@ -198,13 +198,20 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       return;
     }
 
+    // Validate Username does not contain spaces
+    if (/\s/.test(formData.username)) {
+      setError("Username cannot contain spaces");
+      setLoading(false);
+      return;
+    }
+
     // Validate NIC format
     if (!validateNIC(formData.nic)) {
       setError("Please enter a valid NIC number (old format: 123456789V or new format: 123456789012)");
       setLoading(false);
       return;
     }
-// Validate contact number
+    // Validate contact number
     if (!validateContactNumber(formData.contactNumber)) {
       setError("Please enter a valid Sri Lankan phone number (10 digits starting with 0)");
       setLoading(false);
