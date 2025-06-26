@@ -167,7 +167,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   const { name, value } = e.target;
 
   // Remove ALL spaces for username, password, and confirmPassword fields
-  if (name === 'username' || name === 'password' || name === 'confirmPassword'  || name === 'email' || name === 'contactNumber') {
+  if (name === 'username' || name === 'password' || name === 'confirmPassword'  || name === 'email' || name === 'contactNumber' || name === 'nic') {
     setFormData(prevData => ({
       ...prevData,
       [name]: value.replace(/\s/g, '')
@@ -211,6 +211,14 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       setLoading(false);
       return;
     }
+
+    // Validate NIC does not contain spaces
+    if (/\s/.test(formData.nic)) {
+      setError("NIC cannot contain spaces");
+      setLoading(false);
+      return;
+    }
+
 
     // Validate Contact Number does not contain spaces
     if (/\s/.test(formData.contactNumber)) {
