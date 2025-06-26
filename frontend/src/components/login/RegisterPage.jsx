@@ -167,7 +167,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
   const { name, value } = e.target;
 
   // Remove ALL spaces for username, password, and confirmPassword fields
-  if (name === 'username' || name === 'password' || name === 'confirmPassword') {
+  if (name === 'username' || name === 'password' || name === 'confirmPassword'  || name === 'email') {
     setFormData(prevData => ({
       ...prevData,
       [name]: value.replace(/\s/g, '')
@@ -218,6 +218,13 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       return;
     }
 
+    // Validate password does not contain spaces
+    if (/\s/.test(formData.password)) {
+      setError("Password cannot contain spaces");
+      setLoading(false);
+      return;
+    }
+
     // Validate password match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -250,6 +257,12 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
 
       setLoading(false);
 
+    // Validate email does not contain spaces
+    if (/\s/.test(formData.email)) {
+      setError("email cannot contain spaces");
+      setLoading(false);
+      return;
+    }
 
       if (response.data.requiresVerification) {
         localStorage.setItem("registerEmail", formData.email);
