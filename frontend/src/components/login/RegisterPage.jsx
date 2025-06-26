@@ -163,10 +163,11 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       [name]: value,
     }));
   };*/
+
   const handleChange = (e) => {
   const { name, value } = e.target;
 
-  // Remove ALL spaces for username, password, and confirmPassword fields
+  // Remove ALL spaces for username, password, confirmPassword, email, contact number and NIC fields
   if (name === 'username' || name === 'password' || name === 'confirmPassword'  || name === 'email' || name === 'contactNumber' || name === 'nic') {
     setFormData(prevData => ({
       ...prevData,
@@ -198,49 +199,35 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       return;
     }
 
-    // Validate Username does not contain spaces
-    if (/\s/.test(formData.username)) {
-      setError("Username cannot contain spaces");
-      setLoading(false);
-      return;
-    }
-
     // Validate NIC format
     if (!validateNIC(formData.nic)) {
       setError("Please enter a valid NIC number (old format: 123456789V or new format: 123456789012)");
       setLoading(false);
       return;
     }
-
-    // Validate NIC does not contain spaces
-    if (/\s/.test(formData.nic)) {
-      setError("NIC cannot contain spaces");
-      setLoading(false);
-      return;
-    }
-
-
-    // Validate Contact Number does not contain spaces
-    if (/\s/.test(formData.contactNumber)) {
-      setError("Contact Number cannot contain spaces");
-      setLoading(false);
-      return;
-    }
-
-    // Validate contact number
+  // Validate contact number
     if (!validateContactNumber(formData.contactNumber)) {
       setError("Please enter a valid Sri Lankan phone number (10 digits starting with 0)");
       setLoading(false);
       return;
     }
 
-    // Validate password does not contain spaces
-    if (/\s/.test(formData.password)) {
-      setError("Password cannot contain spaces");
+// Validate Gmail format (strong validation: only @gmail.com, no underscores, no consecutive dots, no leading/trailing dot)
+const gmailRegex = /^(?!.*\.\.)(?!.*\.$)(?!^\.)[a-zA-Z0-9.%+-]+@gmail\.com$/;
+if (!gmailRegex.test(formData.email)) {
+  setError("Please enter a valid Gmail address (no underscores, no consecutive dots, must end with @gmail.com).");
+  setLoading(false);
+  return;
+}
+
+    /*// Validate password strength (must include lowercase, uppercase, and symbol)
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_\-+=\[\]{};':"\\|,.<>\/?]).+$/;
+    if (!passwordStrengthRegex.test(formData.password)) {
+      setError("Password must include uppercase, lowercase letters, and a symbol.");
       setLoading(false);
       return;
-    }
-
+    }*/
+ 
     // Validate password match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -249,8 +236,9 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
     }
 
     // Validate password strength (optional)
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_\-+=\[\]{};':"\\|,.<>\/?]).+$/;
+    if (formData.password.length < 8 || !passwordStrengthRegex.test(formData.password)){
+      setError("Password must be at least 8 characters long and include uppercase, lowercase letters, and a symbols.");
       setLoading(false);
       return;
     }
@@ -272,13 +260,6 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       );
 
       setLoading(false);
-
-    // Validate email does not contain spaces
-    if (/\s/.test(formData.email)) {
-      setError("email cannot contain spaces");
-      setLoading(false);
-      return;
-    }
 
       if (response.data.requiresVerification) {
         localStorage.setItem("registerEmail", formData.email);
