@@ -1,27 +1,26 @@
 import React, { useEffect, useState } from "react";
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Button,
-  Form,
-  Alert,
-  Spinner,
-} from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
+import { Container, Dropdown } from "react-bootstrap";
 import axios from "axios";
-import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
+import logo from "../../../assets/logo.png";
+import ViewInterviewDetails from "./ViewInterviewDetails";
+import ViewInterviewInterns from "./ViewInterviewInterns";
 
 const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/interviews`;
 
 const ViewInterview = ({ darkMode }) => {
+  const navigate = useNavigate();
   const { id } = useParams();
   const [interviewData, setInterviewData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("interview-info");
+
+  const tabs = [
+    { id: "interview-info", label: "Interview Info" },
+    { id: "interview-interns", label: "Interview Interns" },
+  ];
 
   useEffect(() => {
     const fetchInterview = async () => {
@@ -40,136 +39,105 @@ const ViewInterview = ({ darkMode }) => {
     fetchInterview();
   }, [id]);
 
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "interview-info":
+        return <ViewInterviewDetails darkMode={darkMode} interviewId={id} />;
+      case "interview-interns":
+        return <ViewInterviewInterns darkMode={darkMode} interviewId={id} />;
+      default:
+        return <ViewInterviewDetails darkMode={darkMode} interviewId={id} />;
+    }
+  };
+
   return (
     <div
       className={`d-flex flex-column min-vh-100 ${
-        darkMode ? "bg-dark text-white" : "bg-light text-dark"
+        darkMode ? "bg-dark text-white" : "bg-white text-dark"
       }`}
     >
-      {/* Header */}
-      <Container className="text-center mt-4 mb-3">
-        <img
-          src={logo}
-          alt="Company Logo"
-          className="mx-auto d-block"
-          style={{ height: "50px" }}
-        />
-        <h3 className="mt-3">VIEW INTERVIEW DETAILS</h3>
-      </Container>
+      {/* Main Content Section */}
+      <Container fluid className="px-0">
+        {/* Logo and Title */}
+        <div className="text-center mt-4 mb-3">
+          <img
+            src={logo}
+            alt="Company Logo"
+            className="mx-auto d-block"
+            style={{ height: "50px" }}
+          />
+          <h3 className="mt-2 px-3">VIEW INTERVIEW DETAILS</h3>
+        </div>
 
-      {/* Main Section */}
-      <Container
-        className={`p-4 rounded shadow ${
-          darkMode ? "bg-secondary text-white" : "bg-white text-dark"
-        } mb-5`}
-      >
-        <Row>
-          <Col md={12}>
-            <Card
-              className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}
+        {/* Responsive Navigation */}
+        <div className="d-block d-md-none px-3 mb-3">
+          <Dropdown>
+            <Dropdown.Toggle
+              variant={darkMode ? "secondary" : "outline-primary"}
+              className="w-100"
             >
-              <Card.Body>
-                {loading ? (
-                  <div className="text-center">
-                    <Spinner animation="border" size="lg" />
-                    <p>Loading interview details...</p>
-                  </div>
-                ) : error ? (
-                  <Alert variant="danger">{error}</Alert>
-                ) : (
-                  <Form>
-                    {/* Interview Label */}
-                    <Form.Group controlId="interviewLabel" className="mb-3">
-                      <Form.Label>Interview Name</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={interviewData.interviewName}
-                        readOnly
-                        className={`form-control ${
-                          darkMode
-                            ? "bg-secondary text-white"
-                            : "bg-white text-dark"
-                        }`}
-                      />
-                    </Form.Group>
+              {tabs.find((tab) => tab.id === activeTab)?.label || "Select Tab"}
+            </Dropdown.Toggle>
+            <Dropdown.Menu className={darkMode ? "dropdown-menu-dark" : ""}>
+              {tabs.map((tab) => (
+                <Dropdown.Item
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  active={activeTab === tab.id}
+                >
+                  {tab.label}
+                </Dropdown.Item>
+              ))}
+            </Dropdown.Menu>
+          </Dropdown>
+        </div>
 
-                    {/* Interview Date */}
-                    <Form.Group controlId="interviewDate" className="mb-3">
-                      <Form.Label>Interview Date</Form.Label>
-                      <Form.Control
-                        type="date"
-                        value={interviewData.interviewDate}
-                        readOnly
-                        className={`form-control ${
-                          darkMode
-                            ? "bg-secondary text-white"
-                            : "bg-white text-dark"
-                        }`}
-                      />
-                    </Form.Group>
+        {/* Desktop Tabs */}
+        <div
+          className={`
+            d-none 
+            d-md-flex 
+            justify-content-center 
+            gap-3 
+            border-bottom 
+            py-2 
+            ${darkMode ? "border-secondary" : "border-gray-300"}
+          `}
+        >
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`
+                btn 
+                ${
+                  activeTab === tab.id
+                    ? darkMode
+                      ? "btn-light text-dark"
+                      : "btn-primary"
+                    : "btn-outline-secondary"
+                }
+                btn-sm 
+                px-3
+              `}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-                    {/* Interview Time */}
-                    <Form.Group controlId="interviewTime" className="mb-3">
-                      <Form.Label>Interview Time</Form.Label>
-                      <Form.Control
-                        type="time"
-                        value={interviewData.interviewTime}
-                        readOnly
-                        className={`form-control ${
-                          darkMode
-                            ? "bg-secondary text-white"
-                            : "bg-white text-dark"
-                        }`}
-                      />
-                    </Form.Group>
-
-                    {/* Location */}
-                    <Form.Group controlId="location" className="mb-3">
-                      <Form.Label>Location</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={interviewData.location}
-                        readOnly
-                        className={`form-control ${
-                          darkMode
-                            ? "bg-secondary text-white"
-                            : "bg-white text-dark"
-                        }`}
-                      />
-                    </Form.Group>
-
-                    {/* Note */}
-                    <Form.Group controlId="note" className="mb-3">
-                      <Form.Label>Note</Form.Label>
-                      <Form.Control
-                        as="textarea"
-                        value={interviewData.note || "No additional notes"}
-                        readOnly
-                        rows={3}
-                        className={`form-control ${
-                          darkMode
-                            ? "bg-secondary text-white"
-                            : "bg-white text-dark"
-                        }`}
-                      />
-                    </Form.Group>
-                  </Form>
-                )}
-
-                {/* Go Back Button */}
-                <div className="d-flex justify-content-between mt-3">
-                  <Button
-                    variant="danger"
-                    onClick={() => navigate(-1)}
-                    disabled={loading}
-                  >
-                    Go Back
-                  </Button>
-                </div>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+        {/* Tab Content */}
+        <div
+          className={`
+            flex-grow-1 
+            overflow-auto 
+            p-3 
+            p-md-4 
+            ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}
+          `}
+        >
+          {renderTabContent()}
+        </div>
       </Container>
     </div>
   );
@@ -180,3 +148,4 @@ ViewInterview.propTypes = {
 };
 
 export default ViewInterview;
+
