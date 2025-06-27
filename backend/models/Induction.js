@@ -1,23 +1,30 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const inductionSchema = new mongoose.Schema(
-  {
-    induction: { type: String, required: true },
-    startDate: { type: String, required: true },
-    time: {
-      type: String,
-      required: [true, "time is required"],
-      validate: {
-        validator: function (v) {
-          return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v);
-        },
-        message: "Invalid time format. Please use HH:MM in 24-hour format.",
-      },
-    },  // <-- This closing brace was missing
-    location: { type: String, required: true },
-    note: { type: String },
+const InductionSchema = new mongoose.Schema({
+  induction: {
+    type: String,
+    required: true,
+    trim: true
   },
-  { timestamps: true }
-);
+  startDate: {
+    type: String, // or Date if you want to store as Date object
+    required: true
+  },
+  endDate: {
+    type: String, // or Date if you want to store as Date object
+    required: true
+  },
+  location: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  note: {
+    type: String,
+    trim: true
+  }
+}, {
+  timestamps: true // This adds createdAt and updatedAt automatically
+});
 
-module.exports = mongoose.model("Induction", inductionSchema);
+module.exports = mongoose.model('Induction', InductionSchema);

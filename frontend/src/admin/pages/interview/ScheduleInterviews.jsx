@@ -186,36 +186,47 @@ const ScheduleInterviews = ({ darkMode }) => {
   };
 
   // New helper functions
-  const fetchAndValidateInduction = async (inductionId) => {
-    try {
-      const response = await axios.get(
-        `${API_BASE_URL}/inductions/${inductionId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+// Fixed fetchAndValidateInduction function
+const fetchAndValidateInduction = async (inductionId) => {
+  try {
+    console.log('Fetching induction with ID:', inductionId); // Debug log
+    
+    // FIXED: Add /api to the URL path
+    const response = await axios.get(
+      `${API_BASE_URL}/api/inductions/${inductionId}`, // Changed from /inductions/ to /api/inductions/
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-      const induction = response.data;
+    const induction = response.data;
+    console.log('Fetched induction:', induction); // Debug log
 
-      // Modified validation to match your schema
-      const requiredFields = ["induction", "startDate", "endDate", "location"];
+    // Your database has these fields: induction, startDate, endDate, location
+    // But your validation is checking for different fields
+    const requiredFields = ["induction", "startDate", "endDate", "location"];
 
-      const missingFields = requiredFields.filter((field) => !induction[field]);
+    const missingFields = requiredFields.filter((field) => !induction[field]);
 
-      if (missingFields.length > 0) {
-        throw new Error(
-          `Induction is missing required fields: ${missingFields.join(", ")}`
-        );
-      }
-
-      return induction;
-    } catch (error) {
-      console.error("Failed to fetch/validate induction:", error);
+    if (missingFields.length > 0) {
       throw new Error(
-        error.response?.data?.message ||
-          error.message ||
-          "Invalid induction data. Please select a different induction program."
+        `Induction is missing required fields: ${missingFields.join(", ")}`
       );
     }
-  };
+
+    return induction;
+  } catch (error) {
+    console.error("Failed to fetch/validate induction:", error);
+    
+    if (error.response?.status === 404) {
+      throw new Error('Induction not found. Please select a valid induction program.');
+    }
+    
+    throw new Error(
+      error.response?.data?.message ||
+        error.message ||
+        "Invalid induction data. Please select a different induction program."
+    );
+  }
+};
 
   const processBatchAssignment = async (cvIds, inductionId, induction) => {
     return Promise.all(
