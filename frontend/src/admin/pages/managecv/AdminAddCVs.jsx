@@ -276,7 +276,7 @@ const AdminAddCVs = ({ darkMode }) => {
       
       // Special handling for email validation on change
       if (name === "emailAddress" && value) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const emailRegex = /^(?!.*\.\.)(?!.*\.$)(?!^\.)[a-zA-Z0-9.%+-]+@gmail\.com$/;
         if (!emailRegex.test(value)) {
           setFormErrors(prev => ({
             ...prev,
@@ -336,7 +336,7 @@ const AdminAddCVs = ({ darkMode }) => {
     if (!cvData.emailAddress) {
       errors.emailAddress = "Email address is required";
     } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailRegex =/^(?!.*\.\.)(?!.*\.$)(?!^\.)[a-zA-Z0-9.%+-]+@gmail\.com$/;
       if (!emailRegex.test(cvData.emailAddress)) {
         errors.emailAddress = "Please enter a valid email address (e.g., example@domain.com)";
       }
@@ -394,6 +394,7 @@ const AdminAddCVs = ({ darkMode }) => {
       errors.emergencyContactNumber1 = "At least one emergency contact is required";
     }
 
+  
     // File validations
     if (!cvData.updatedCv) {
       errors.updatedCv = "CV file is required";
@@ -637,6 +638,7 @@ const AdminAddCVs = ({ darkMode }) => {
               >
                 Back
               </button>
+              
               <button 
                 type="submit" 
                 className={`btn ${darkMode ? "btn-primary" : "btn-success"} px-5`}
