@@ -113,6 +113,7 @@ import PlacementLetterManagement  from "./admin/pages/others/PlacementLetterMana
 import AddNewUniversity  from "./admin/pages/others/AddNewUniversity";
 import Rotationalapifirst from "./admin/pages/rotational/RotationalApiFirst";
 import RotationalapiSecond from "./admin/pages/rotational/RotationalApiSecond";
+import ViewInductions from "./admin/pages/induction/ViewInduction";
 
 
 
@@ -247,6 +248,7 @@ function App() {
     "/generate-placement-letter",
     "/rotation-api1",
     "/rotation-api2",
+    "/view-inductions",
   ];
 
   const staffRoutes = [
@@ -416,6 +418,7 @@ function App() {
     <Route path="/intern-placement" element={<InternPlacement darkMode={darkMode} />} />
     <Route path="/placement-letter-management" element={<PlacementLetterManagement darkMode={darkMode} />} />
     <Route path="/add-new-university" element={<AddNewUniversity darkMode={darkMode} />} />
+     <Route path="/view-inductions/:inductionId" element={<ViewInductions darkMode={darkMode} />} />
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />
