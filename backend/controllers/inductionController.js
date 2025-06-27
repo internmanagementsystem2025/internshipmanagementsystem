@@ -2,13 +2,13 @@ const Induction = require('../models/Induction');
 
 exports.addInduction = async (req, res) => {
   try {
-    const { induction, startDate, endDate, location, note } = req.body;
+    const { induction, startDate, time, location, note } = req.body;
 
-    if (!induction || !startDate || !endDate || !location) {
-      return res.status(400).json({ message: 'Induction, Start Date, End Date, and Location are required fields' });
+    if (!induction || !startDate || !time || !location) {
+      return res.status(400).json({ message: 'Induction, Start Date, Time, and Location are required fields' });
     }
 
-    const newInduction = new Induction({ induction, startDate, endDate, location, note });
+    const newInduction = new Induction({ induction, startDate, time, location, note });
     const savedInduction = await newInduction.save();
     res.status(201).json(savedInduction);
   } catch (error) {
