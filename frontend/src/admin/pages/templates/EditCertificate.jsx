@@ -65,6 +65,9 @@ const EditCertificate = ({ darkMode }) => {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showErrorNotification, setShowErrorNotification] = useState(false);
 
+  // Read-only lines configuration
+  const readOnlyLines = [1, 3, 5, 9, 10, 12];
+
   // Fetch certificate data based on ID
   useEffect(() => {
     const fetchCertificate = async () => {
@@ -100,12 +103,7 @@ const EditCertificate = ({ darkMode }) => {
     setSuccessMessage("");
 
     try {
-      console.log("Sending update request to:", `${API_BASE_URL}/${id}`);
-      console.log("Request payload:", certificateData);
-
       const response = await axios.put(`${API_BASE_URL}/${id}`, certificateData);
-      console.log("Response:", response.data);
-
       setSuccessMessage("Certificate Updated Successfully!");
       setShowSuccessNotification(true);
 
@@ -115,13 +113,9 @@ const EditCertificate = ({ darkMode }) => {
       }, 3000);
 
     } catch (error) {
-      console.error("Error:", error);
       setErrorMessage(error.response?.data?.error || "An error occurred while updating the certificate.");
       setShowErrorNotification(true);
-
-      setTimeout(() => {
-        setShowErrorNotification(false);
-      }, 3000);
+      setTimeout(() => setShowErrorNotification(false), 3000);
     } finally {
       setIsSubmitting(false);
     }
@@ -159,21 +153,30 @@ const EditCertificate = ({ darkMode }) => {
                       value={certificateData.certificateName}
                       onChange={handleInputChange}
                       required
+                      readOnly
                     />
                   </Form.Group>
 
-                  {Array.from({ length: 15 }, (_, i) => (
-                    <Form.Group key={`label${i + 1}`} controlId={`label${i + 1}`} className="mb-3">
-                      <Form.Label>Line {i + 1}</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name={`label${i + 1}`}
-                        value={certificateData[`label${i + 1}`]}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </Form.Group>
-                  ))}
+                  {Array.from({ length: 15 }, (_, i) => {
+                    const fieldName = `label${i + 1}`;
+                    const isReadOnly = readOnlyLines.includes(i + 1);
+                    
+                    return (
+                      <Form.Group key={fieldName} controlId={fieldName} className="mb-3">
+                        <Form.Label>Line {i + 1}</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name={fieldName}
+                          value={certificateData[fieldName]}
+                          onChange={handleInputChange}
+                          required={!isReadOnly}
+                          readOnly={isReadOnly}
+                          plaintext={isReadOnly}
+                          className={isReadOnly ? (darkMode ? "text-white" : "text-dark") : ""}
+                        />
+                      </Form.Group>
+                    );
+                  })}
 
                   <div className="d-flex justify-content-between mt-3">
                     <Button variant="danger" onClick={() => navigate(-1)} disabled={isSubmitting}>
