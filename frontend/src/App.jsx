@@ -113,8 +113,7 @@ import PlacementLetterManagement  from "./admin/pages/others/PlacementLetterMana
 import AddNewUniversity  from "./admin/pages/others/AddNewUniversity";
 import Rotationalapifirst from "./admin/pages/rotational/RotationalApiFirst";
 import RotationalapiSecond from "./admin/pages/rotational/RotationalApiSecond";
-import ViewInductions from "./admin/pages/induction/ViewInduction";
-
+import ViewInduction from "./admin/pages/induction/ViewInduction";
 
 
 
@@ -372,7 +371,7 @@ function App() {
     <Route path="/add-new-institute" element={<AddNewInstitute darkMode={darkMode} />} />
     <Route path="/add-new-induction" element={<AddNewInduction darkMode={darkMode} />} />
     <Route path="/schedule-induction" element={<ScheduleInduction darkMode={darkMode} />} />
-    <Route path="/view-induction/:id" element={<ViewInductionDetails darkMode={darkMode} />} />
+    <Route path="/view-induction/:id" element={<ViewInduction darkMode={darkMode} />} />
     <Route path="/edit-induction/:id" element={<EditInduction darkMode={darkMode} />} />
     <Route path="/induction-results" element={<InductionResults darkMode={darkMode} />} />
     <Route path="/view-all-scheme" element={<ViewAllSchemes darkMode={darkMode} />} />
@@ -418,7 +417,7 @@ function App() {
     <Route path="/intern-placement" element={<InternPlacement darkMode={darkMode} />} />
     <Route path="/placement-letter-management" element={<PlacementLetterManagement darkMode={darkMode} />} />
     <Route path="/add-new-university" element={<AddNewUniversity darkMode={darkMode} />} />
-     <Route path="/view-inductions/:inductionId" element={<ViewInductions darkMode={darkMode} />} />
+     <Route path="/view-inductions/:inductionId" element={<ViewInduction darkMode={darkMode} />} />
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />
