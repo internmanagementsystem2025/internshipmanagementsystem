@@ -46,44 +46,43 @@ const ViewInductionDetails = ({ darkMode }) => {
         darkMode ? "bg-dark text-white" : "bg-light text-dark"
       }`}
     >
-      {/* Header */}
-      <Container className="text-center mt-4 mb-3">
-        <img
-          src={logo}
-          alt="Company Logo"
-          className="mx-auto d-block"
-          style={{ height: "50px" }}
-        />
-        <h3 className="mt-3">VIEW INDUCTION DETAILS</h3>
-      </Container>
-
       {/* Main Section */}
-      <Container
-        className={`p-4 rounded shadow ${
-          darkMode ? "bg-secondary text-white" : "bg-white text-dark"
-        } mb-5`}
-      >
-        <Row>
-          <Col md={12}>
-            <Card
-              className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}
-            >
-              <Card.Body>
-                {loading ? (
-                  <div className="text-center">
-                    <Spinner animation="border" size="lg" />
-                    <p>Loading induction details...</p>
-                  </div>
-                ) : error ? (
-                  <Alert variant="danger">{error}</Alert>
-                ) : (
+      <Container className={`p-4 rounded shadow ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"} mb-5`}>
+        <h4>View Induction Details</h4>
+
+        <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-5">
+            <Spinner animation="border" size="lg" />
+            <p className="mt-3">Loading induction details...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <Alert variant="danger" className="mb-4">
+            <Alert.Heading>Error</Alert.Heading>
+            {error}
+          </Alert>
+        )}
+
+        {/* Success State - Show content only when data is loaded */}
+        {!loading && !error && inductionData && (
+          <Row>
+            <Col md={12}>
+              <Card
+                className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}
+              >
+                <Card.Body>
                   <Form>
                     {/* Induction Label */}
                     <Form.Group controlId="inductionLabel" className="mb-3">
                       <Form.Label>Induction Name</Form.Label>
                       <Form.Control
                         type="text"
-                        value={inductionData.induction}
+                        value={inductionData.induction || ""}
                         readOnly
                         className={`form-control ${
                           darkMode
@@ -98,7 +97,7 @@ const ViewInductionDetails = ({ darkMode }) => {
                       <Form.Label>Start Date</Form.Label>
                       <Form.Control
                         type="date"
-                        value={inductionData.startDate}
+                        value={inductionData.startDate || ""}
                         readOnly
                         className={`form-control ${
                           darkMode
@@ -108,12 +107,12 @@ const ViewInductionDetails = ({ darkMode }) => {
                       />
                     </Form.Group>
 
-                    {/* Start Date */}
-                    <Form.Group controlId="endDate" className="mb-3">
-                      <Form.Label>End Date</Form.Label>
+                    {/* Time */}
+                    <Form.Group controlId="time" className="mb-3">
+                      <Form.Label>Time</Form.Label>
                       <Form.Control
-                        type="date"
-                        value={inductionData.endDate}
+                        type="time"
+                        value={inductionData.time || ""}
                         readOnly
                         className={`form-control ${
                           darkMode
@@ -128,7 +127,22 @@ const ViewInductionDetails = ({ darkMode }) => {
                       <Form.Label>Location</Form.Label>
                       <Form.Control
                         type="text"
-                        value={inductionData.location}
+                        value={inductionData.location || ""}
+                        readOnly
+                        className={`form-control ${
+                          darkMode
+                            ? "bg-secondary text-white"
+                            : "bg-white text-dark"
+                        }`}
+                      />
+                    </Form.Group>
+
+                    {/* Note */}
+                    <Form.Group controlId="note" className="mb-3">
+                      <Form.Label>Note</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={inductionData.note || ""}
                         readOnly
                         className={`form-control ${
                           darkMode
@@ -138,22 +152,22 @@ const ViewInductionDetails = ({ darkMode }) => {
                       />
                     </Form.Group>
                   </Form>
-                )}
 
-                {/* Go Back Button */}
-                <div className="d-flex justify-content-between mt-3">
-                  <Button
-                    variant="danger"
-                    onClick={() => navigate(-1)}
-                    disabled={loading}
-                  >
-                    Go Back
-                  </Button>
-                </div>
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
+                  {/* Go Back Button */}
+                  <div className="d-flex justify-content-between mt-3">
+                    <Button
+                      variant="danger"
+                      onClick={() => navigate(-1)}
+                      disabled={loading}
+                    >
+                      Go Back
+                    </Button>
+                  </div>
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        )}
       </Container>
     </div>
   );

@@ -175,7 +175,7 @@ const ViewAllInductions = ({ darkMode }) => {
                 <th>#</th>
                 <th>Induction Name</th>
                 <th>Start Date</th>
-                <th>End Date</th>
+                <th>Time</th>
                 <th>Location</th>
                 <th>View</th>
                 <th>Edit</th>
@@ -189,7 +189,7 @@ const ViewAllInductions = ({ darkMode }) => {
                     <td>{indexOfFirstInduction + index + 1}</td>
                     <td>{induction.induction || "N/A"}</td>
                     <td>{induction.startDate || "N/A"}</td>
-                    <td>{induction.endDate || "N/A"}</td>
+                    <td>{induction.time || "N/A"}</td>
                     <td>{induction.location || "N/A"}</td>
                     <td>
                       <Button

@@ -12,8 +12,9 @@ const EditInduction = ({ darkMode }) => {
   const [inductionData, setInductionData] = useState({
     induction: "",
     startDate: "",
-    endDate: "",
+    time: "",
     location: "",
+    note: "",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -128,12 +129,12 @@ const EditInduction = ({ darkMode }) => {
                     </Form.Group>
 
                     {/* End Date */}
-                    <Form.Group controlId="endDate" className="mb-3">
-                      <Form.Label>End Date</Form.Label>
+                    <Form.Group controlId="time" className="mb-3">
+                      <Form.Label>Time</Form.Label>
                       <Form.Control
-                        type="date"
-                        name="endDate"
-                        value={inductionData.endDate}
+                        type="time"
+                        name="time"
+                        value={inductionData.time}
                         onChange={handleInputChange}
                         className={`form-control ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"}`}
                         required
@@ -147,6 +148,19 @@ const EditInduction = ({ darkMode }) => {
                         type="text"
                         name="location"
                         value={inductionData.location}
+                        onChange={handleInputChange}
+                        className={`form-control ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"}`}
+                        required
+                      />
+                    </Form.Group>
+
+                    {/* Location */}
+                    <Form.Group controlId="note" className="mb-3">
+                      <Form.Label>Note</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="note"
+                        value={inductionData.note}
                         onChange={handleInputChange}
                         className={`form-control ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"}`}
                         required

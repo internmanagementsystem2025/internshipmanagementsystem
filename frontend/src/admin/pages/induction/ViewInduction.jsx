@@ -1,60 +1,40 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Container, Dropdown } from "react-bootstrap";
-import axios from "axios";
-import PropTypes from "prop-types";
+
 import logo from "../../../assets/logo.png";
-import ViewInterviewDetails from "./ViewInterviewDetails";
-import ViewInterviewInterns from "./ViewInterviewInterns";
+import ViewInductionDetails from "./ViewInductionDetails";
+import ViewInductionInterns from "./ViewInductionInterns";
 
-const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/interviews`;
-
-const ViewInterview = ({ darkMode }) => {
+const ViewInduction = ({ darkMode }) => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const [interviewData, setInterviewData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState("interview-info");
+  const [activeTab, setActiveTab] = useState("induction-info");
 
   const tabs = [
-    { id: "interview-info", label: "Interview Info" },
-    { id: "interview-interns", label: "Interview Interns" },
+    { id: "induction-info", label: "Induction Info" },
+    { id: "induction-details", label: "Induction Interns" },
   ];
-
-  useEffect(() => {
-    const fetchInterview = async () => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/${id}`);
-        setInterviewData(response.data);
-      } catch (err) {
-        setError(
-          err.response?.data?.error || "Failed to load interview details."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInterview();
-  }, [id]);
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case "interview-info":
-        return <ViewInterviewDetails darkMode={darkMode} interviewId={id} />;
-      case "interview-interns":
-        return <ViewInterviewInterns darkMode={darkMode} interviewId={id} />;
+      case "induction-info":
+        return <ViewInductionDetails darkMode={darkMode} />;
+      case "induction-details":
+        return <ViewInductionInterns darkMode={darkMode} inductionId={id} />;
       default:
-        return <ViewInterviewDetails darkMode={darkMode} interviewId={id} />;
+        return <ViewInductionDetails darkMode={darkMode} />;
     }
   };
 
   return (
     <div
-      className={`d-flex flex-column min-vh-100 ${
-        darkMode ? "bg-dark text-white" : "bg-white text-dark"
-      }`}
+      className={`
+        d-flex 
+        flex-column 
+        min-vh-100 
+        ${darkMode ? "bg-dark text-white" : "bg-white text-dark"}
+      `}
     >
       {/* Main Content Section */}
       <Container fluid className="px-0">
@@ -62,11 +42,15 @@ const ViewInterview = ({ darkMode }) => {
         <div className="text-center mt-4 mb-3">
           <img
             src={logo}
-            alt="Company Logo"
-            className="mx-auto d-block"
-            style={{ height: "50px" }}
+            alt="SLT Mobitel Logo"
+            className="mx-auto d-block mb-3"
+            style={{
+              height: "50px",
+              maxWidth: "100%",
+              objectFit: "contain",
+            }}
           />
-          <h3 className="mt-2 px-3">VIEW INTERVIEW DETAILS</h3>
+          <h3 className="mt-2 px-3">VIEW INDUCTION DETAILS</h3>
         </div>
 
         {/* Responsive Navigation */}
@@ -143,9 +127,4 @@ const ViewInterview = ({ darkMode }) => {
   );
 };
 
-ViewInterview.propTypes = {
-  darkMode: PropTypes.bool.isRequired,
-};
-
-export default ViewInterview;
-
+export default ViewInduction;
