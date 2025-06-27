@@ -33,7 +33,6 @@ const Notification = ({ show, onClose, message, variant = "success" }) => {
   );
 };
 
-
 const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api/certificate-letters`;
 
 const EditCertificateLetter = ({ darkMode }) => {
@@ -59,6 +58,9 @@ const EditCertificateLetter = ({ darkMode }) => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showErrorNotification, setShowErrorNotification] = useState(false);
+
+  // Define which lines should be read-only
+  const readOnlyLines = [1, 2, 3, 5, 7, 9, 10];
 
   useEffect(() => {
     const fetchLetter = async () => {
@@ -88,38 +90,32 @@ const EditCertificateLetter = ({ darkMode }) => {
 
   // Handle form submission
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
-  setErrorMessage("");
-  setSuccessMessage("");
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
 
-  try {
-    console.log("Sending update request to:", `${API_BASE_URL}/${id}`);
-    console.log("Request payload:", letterData);
+    try {
+      const response = await axios.put(`${API_BASE_URL}/${id}`, letterData);
+      setSuccessMessage("Certificate Letter Updated Successfully!");
+      setShowSuccessNotification(true);
 
-    const response = await axios.put(`${API_BASE_URL}/${id}`, letterData);
-    console.log("Response:", response.data);
+      setTimeout(() => {
+        navigate("/all-certificate-letters", { state: { refresh: true } });
+      }, 2000);
 
-    setSuccessMessage("Certificate Letter Updated Successfully!");
-    setShowSuccessNotification(true);
+    } catch (error) {
+      console.error("Error:", error);
+      setErrorMessage(error.response?.data?.error || "An error occurred while updating the letter.");
+      setShowErrorNotification(true);
 
-    // Delay navigation to allow the notification to display
-    setTimeout(() => {
-      navigate("/all-certificate-letters", { state: { refresh: true } });
-    }, 2000); // 2 seconds delay
-
-  } catch (error) {
-    console.error("Error:", error);
-    setErrorMessage(error.response?.data?.error || "An error occurred while updating the letter.");
-    setShowErrorNotification(true);
-
-    setTimeout(() => {
-      setShowErrorNotification(false);
-    }, 3000);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      setTimeout(() => {
+        setShowErrorNotification(false);
+      }, 3000);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -155,21 +151,30 @@ const EditCertificateLetter = ({ darkMode }) => {
                       value={letterData.letterName}
                       onChange={handleInputChange}
                       required
+                      readOnly
                     />
                   </Form.Group>
 
-                  {Array.from({ length: 11 }, (_, i) => (
-                    <Form.Group key={`label${i + 1}`} controlId={`label${i + 1}`} className="mb-3">
-                      <Form.Label>Line {i + 1}</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name={`label${i + 1}`}
-                        value={letterData[`label${i + 1}`]}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </Form.Group>
-                  ))}
+                  {Array.from({ length: 11 }, (_, i) => {
+                    const fieldName = `label${i + 1}`;
+                    const isReadOnly = readOnlyLines.includes(i + 1);
+                    
+                    return (
+                      <Form.Group key={fieldName} controlId={fieldName} className="mb-3">
+                        <Form.Label>Line {i + 1}</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name={fieldName}
+                          value={letterData[fieldName]}
+                          onChange={handleInputChange}
+                          required={!isReadOnly}
+                          readOnly={isReadOnly}
+                          plaintext={isReadOnly}
+                          className={isReadOnly ? (darkMode ? "text-white" : "text-dark") : ""}
+                        />
+                      </Form.Group>
+                    );
+                  })}
 
                   <div className="d-flex justify-content-between mt-3">
                     <Button variant="danger" onClick={() => navigate(-1)} disabled={isSubmitting}>
@@ -207,4 +212,3 @@ EditCertificateLetter.propTypes = {
 };
 
 export default EditCertificateLetter;
-

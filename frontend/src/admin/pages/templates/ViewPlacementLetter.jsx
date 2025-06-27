@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Container, Spinner, Alert, Button } from "react-bootstrap";
+import { Container, Spinner, Alert, Button, Form } from "react-bootstrap";
 import logo from "../../../assets/logo.png";
 import PropTypes from "prop-types";
 import { FaArrowLeft, FaPrint } from "react-icons/fa";
@@ -12,6 +12,25 @@ const ViewPlacementLetter = ({ darkMode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Parse the documents string into an object
+  const parseDocuments = (docString) => {
+    const docs = {
+      policeReport: false,
+      durationCheck: false,
+      agreement: false,
+      nda: false
+    };
+    
+    if (docString) {
+      docs.policeReport = docString.includes("Police report");
+      docs.durationCheck = docString.includes("Duration check");
+      docs.agreement = docString.includes("Agreement");
+      docs.nda = docString.includes("NDA");
+    }
+    
+    return docs;
+  };
+
   // Fetch letter data from the API
   useEffect(() => {
     const fetchLetter = async () => {
@@ -21,7 +40,10 @@ const ViewPlacementLetter = ({ darkMode }) => {
           throw new Error("Failed to fetch letter details");
         }
         const data = await response.json();
-        setLetter(data);
+        setLetter({
+          ...data,
+          documents: parseDocuments(data.label24)
+        });
       } catch (err) {
         setError(err.message);
       } finally {
@@ -157,18 +179,22 @@ const ViewPlacementLetter = ({ darkMode }) => {
             white-space: pre-line;
           }
 
-          .btn-dark-mode {
-            background-color: ${darkMode ? "#444" : "#f8f9fa"};
-            color: ${darkMode ? "#fff" : "#333"};
-            border-color: ${darkMode ? "#666" : "#ccc"};
-          }
-
-          /* Center the letter container better */
-          .letter-container {
+          /* Document checkboxes styling */
+          .document-checkboxes {
             display: flex;
-            justify-content: center;
-            padding: 0;
-            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
+          }
+          
+          .document-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+          }
+          
+          .document-checkbox input[type="checkbox"] {
+            margin-right: 5px;
           }
 
           /* Print-specific styles */
@@ -351,7 +377,52 @@ const ViewPlacementLetter = ({ darkMode }) => {
             <p>{letter.label20}</p>
             <p>{letter.label21}</p>
             <p>{letter.label22}</p>
-            <p>{letter.label24}</p>
+            <p>{letter.label23}</p>
+            
+            {/* Document checkboxes section */}
+            <div>
+              <p>Intern has signed the following documents:</p>
+              <div className="document-checkboxes">
+                <div className="document-checkbox">
+                  <Form.Check
+                    type="checkbox"
+                    id="police-report"
+                    label="Police Report"
+                    checked={letter.documents?.policeReport || false}
+                    readOnly
+                  />
+                </div>
+                <div className="document-checkbox">
+                  <Form.Check
+                    type="checkbox"
+                    id="duration-check"
+                    label="Duration Check"
+                    checked={letter.documents?.durationCheck || false}
+                    readOnly
+                  />
+                </div>
+                <div className="document-checkbox">
+                  <Form.Check
+                    type="checkbox"
+                    id="agreement"
+                    label="Agreement"
+                    checked={letter.documents?.agreement || false}
+                    readOnly
+                  />
+                </div>
+                <div className="document-checkbox">
+                  <Form.Check
+                    type="checkbox"
+                    id="nda"
+                    label="NDA"
+                    checked={letter.documents?.nda || false}
+                    readOnly
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <p>{letter.label25}</p>
           </div>
           
           <div className="signature-block">

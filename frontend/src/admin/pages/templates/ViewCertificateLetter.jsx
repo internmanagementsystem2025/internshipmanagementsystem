@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Container, Spinner, Alert, Button } from "react-bootstrap";
@@ -91,22 +90,34 @@ const ViewCertificateLetter = ({ darkMode }) => {
 
           .letter-header {
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 20px;
           }
 
+          .logo-container {
+            display: flex;
+            align-items: center;
+          }
+
           .company-logo {
+            margin-right: 20px;
+            height: 60px;
+          }
+
+          .company-address {
+            text-align: right;
             margin-bottom: 10px;
           }
 
           .letter-name {
-            margin-bottom: 15px;
             text-align: center;
+            margin: 20px 0;
+            width: 100%;
           }
 
-          .company-address {
-            text-align: left;
+          .date-container {
+            text-align: right;
             margin-bottom: 10px;
           }
 
@@ -119,7 +130,7 @@ const ViewCertificateLetter = ({ darkMode }) => {
             margin-bottom: 20px;
             font-weight: bold;
           }
-
+          
           .subject-line strong {
             font-weight: bold;
           }
@@ -141,35 +152,6 @@ const ViewCertificateLetter = ({ darkMode }) => {
 
           .letter-content {
             white-space: pre-line;
-          }
-
-          .btn-dark-mode {
-            background-color: ${darkMode ? "#444" : "#f8f9fa"};
-            color: ${darkMode ? "#fff" : "#333"};
-            border-color: ${darkMode ? "#666" : "#ccc"};
-          }
-
-          /* Center the letter container better */
-          .letter-container {
-            display: flex;
-            justify-content: center;
-            padding: 0;
-            margin-bottom: 2rem;
-          }
-
-          .letter-body {
-            margin-top: 20px;
-            margin-bottom: 20px;
-          }
-
-          .letter-paragraph {
-            margin-bottom: 15px;
-            text-align: justify;
-          }
-
-          .date-line {
-            text-align: left;
-            margin-bottom: 10px;
           }
 
           /* Print-specific styles */
@@ -222,26 +204,6 @@ const ViewCertificateLetter = ({ darkMode }) => {
             .signature-line {
               border-top-color: #999 !important;
             }
-            
-            /* Ensure proper page breaks */
-            .signature-block {
-              page-break-inside: avoid !important;
-            }
-            
-            /* Ensure cleaner print */
-            html, body {
-              width: 210mm !important;
-              height: 297mm !important;
-              overflow: hidden !important;
-            }
-            
-            /* Ensure container doesn't mess with A4 size */
-            .container, .letter-container {
-              max-width: none !important;
-              width: 100% !important;
-              padding: 0 !important;
-              margin: 0 !important;
-            }
           }
         `}
       </style>
@@ -264,7 +226,6 @@ const ViewCertificateLetter = ({ darkMode }) => {
         <div className="d-flex justify-content-start gap-2">
           <Button 
             variant={darkMode ? "outline-light" : "outline-secondary"} 
-            className="mb-3" 
             onClick={() => navigate("/all-certificate-letters")}
           >
             <FaArrowLeft className="me-2" /> Back to All Certificate Letters
@@ -272,7 +233,6 @@ const ViewCertificateLetter = ({ darkMode }) => {
           
           <Button 
             variant={darkMode ? "outline-light" : "outline-primary"} 
-            className="mb-3" 
             onClick={handlePrint}
           >
             <FaPrint className="me-2" /> Print Certificate Letter
@@ -283,43 +243,47 @@ const ViewCertificateLetter = ({ darkMode }) => {
       {/* The letter content - this is what will be printed */}
       <Container className="letter-container">
         <div className="letter-paper">
-          {/* New header layout */}
+          {/* Header with logo left and address right */}
           <div className="letter-header">
-            <div className="company-logo">
+            <div className="logo-container">
               <img 
                 src={logo} 
                 alt="SLT Logo" 
+                className="company-logo"
                 style={{ 
-                  height: "50px",
                   filter: darkMode ? "brightness(1.2) contrast(1.2)" : "none" 
                 }} 
               />
             </div>
-            <h4 className="letter-name">{letter.letterName}</h4>
+            
+            <div className="company-address">
+              <p style={{ margin: "0" }}>{letter.label1}</p>
+              <p style={{ margin: "0" }}>{letter.label2}</p>
+              <p style={{ margin: "0" }}>{letter.label3}</p>
+            </div>
           </div>
 
-          {/* Company address on the left */}
-          <div className="company-address">
-            <p style={{ margin: "0" }}>{letter.label1}</p>
-            <p style={{ margin: "0" }}>{letter.label2}</p>
-            <p style={{ margin: "0" }}>{letter.label3}</p>
+        
+          
+          {/* Date aligned to the right */}
+          <div className="date-container">
+            <p>{letter.label4}</p>
           </div>
           
-          <p className="date-line">{letter.label4}</p>
-          <div className="divider"></div>
+
           
-          <div className="subject-line">
-            <p><strong>Subject: </strong>{letter.label5 || "Internship Completion Certificate"}</p>
-          </div>
+         <div className="subject-line">
+  <p style={{ textDecoration: "underline" }}>{letter.label5 || "Internship Completion Certificate"}</p>
+</div>
           
           <div className="letter-body">
-            <div className="letter-paragraph">
-              {letter.label6} {letter.label7} {letter.label8}
-            </div>
-            <div className="letter-paragraph">
-              {letter.label9} {letter.label10}
-            </div>
-          </div>
+  <div className="letter-paragraph">
+    {letter.label6} {letter.label7} {letter.label8}
+  </div>
+  <div className="letter-paragraph mt-4"> {/* Added margin-top here */}
+    {letter.label9} {letter.label10}
+  </div>
+</div>
           
           <div className="signature-block">
             <div className="signature-line">

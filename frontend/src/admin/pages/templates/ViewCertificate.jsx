@@ -287,28 +287,24 @@ const ViewCertificate = ({ darkMode }) => {
               </div>
               
               <div className="certificate-footer text-center mt-5">
-                <div className="row mt-5">
-                  <div className="col-6 text-center">
-                    <div className="signature-line"></div>
-                    <p>{certificate.label13}</p>
-                  </div>
-                  <div className="col-6 text-center">
-                    <div className="signature-line"></div>
-                    <p>{certificate.label14}</p>
-                  </div>
-                </div>
-                
-                <div className="certificate-details mt-5 pt-4">
-                  {/* Keep Awarded on: line */}
+  <div className="row mt-5">
+    {/* Left side - Award Date and Certificate Number */}
+    <div className="col-6 text-start">  {/* Changed from text-center to text-start */}
+      <div className="certificate-details mt-0 pt-2">
+  <p className="mb-1">{certificate.label11}</p>  {/* Adds small bottom margin */}
+  <p className="mb-0">{certificate.label12}</p>  {/* Removes bottom margin */}
+</div>
+    </div>
+    
+    {/* Right side - Signature line */}
+    <div className="col-6 text-end">  {/* Changed from text-center to text-end */}
+      <div className="signature-line"></div>
+      <p>{certificate.label13}</p>  {/* Engineer/Talent Development */}
+    </div>
+  </div>
+</div>
 
-                  
-                  {/* Hide Certificate No: if it's now in the top right */}
-                  {!getCertificateNumber().includes(certificate.label12) && (
-                    <p>{certificate.label12}</p>
-                  )}
-
-                </div>
-              </div>
+            
             </Card.Body>
           </Card>
         )}
