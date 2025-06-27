@@ -705,10 +705,7 @@ if (!gmailRegex.test(formData.email)) {
                               width: "100%",
                               padding: "0.75rem 1rem",
                               borderRadius: "12px",
-                              border: `1px solid formData.contactNumber && !validateContactNumber(formData.contactNumber) 
-              ? '#ff4444' 
-              : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
-          }`,
+                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
                               background: darkMode 
                                 ? 'rgba(15, 30, 55, 0.3)' 
                                 : 'rgba(255, 255, 255, 0.8)',
