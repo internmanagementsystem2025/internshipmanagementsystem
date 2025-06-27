@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Row,
@@ -32,6 +32,15 @@ const AddNewInterview = ({ darkMode }) => {
   const [showErrorNotification, setShowErrorNotification] = useState(false);
   const navigate = useNavigate();
 
+  // Get today's date in YYYY-MM-DD format for min date
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -41,6 +50,14 @@ const AddNewInterview = ({ darkMode }) => {
     });
   };
 
+  // Validate interview date is not in the past
+  const validateInterviewDate = (date) => {
+    const today = new Date();
+    const selectedDate = new Date(date);
+    today.setHours(0, 0, 0, 0);
+    return selectedDate >= today;
+  };
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,12 +65,21 @@ const AddNewInterview = ({ darkMode }) => {
     setErrorMessage("");
     setSuccessMessage("");
 
+    // Validate interview date
+    if (!validateInterviewDate(interviewData.interviewDate)) {
+      setErrorMessage("Interview date cannot be in the past");
+      setShowErrorNotification(true);
+      setIsSubmitting(false);
+      setTimeout(() => setShowErrorNotification(false), 3000);
+      return;
+    }
+
     try {
       const response = await axios.post(API_BASE_URL, interviewData);
       setSuccessMessage("Interview Created Successfully!");
-
       setShowSuccessNotification(true);
 
+      // Reset form
       setInterviewData({
         interviewName: "",
         interviewDate: "",
@@ -71,13 +97,8 @@ const AddNewInterview = ({ darkMode }) => {
         error.response?.data?.error ||
           "An error occurred while scheduling the interview."
       );
-
-      // Display error notification
       setShowErrorNotification(true);
-
-      setTimeout(() => {
-        setShowErrorNotification(false);
-      }, 3000);
+      setTimeout(() => setShowErrorNotification(false), 3000);
     } finally {
       setIsSubmitting(false);
     }
@@ -116,8 +137,7 @@ const AddNewInterview = ({ darkMode }) => {
                 <Form onSubmit={handleSubmit}>
                   {/* Form Fields */}
                   <Form.Group controlId="interviewName" className="mb-3">
-                    <Form.Label>Interview Name</Form.Label>{" "}
-                    {/* Changed from Interview Label to Interview Name */}
+                    <Form.Label>Interview Name</Form.Label>
                     <Form.Control
                       type="text"
                       placeholder="Enter Interview Name"
@@ -140,6 +160,7 @@ const AddNewInterview = ({ darkMode }) => {
                       name="interviewDate"
                       value={interviewData.interviewDate}
                       onChange={handleInputChange}
+                      min={getTodayDate()}
                       className={`form-control ${
                         darkMode
                           ? "bg-secondary text-white"
@@ -147,6 +168,11 @@ const AddNewInterview = ({ darkMode }) => {
                       }`}
                       required
                     />
+                    {interviewData.interviewDate && !validateInterviewDate(interviewData.interviewDate) && (
+                      <Form.Text className="text-danger">
+                        Please select a future date
+                      </Form.Text>
+                    )}
                   </Form.Group>
 
                   <Form.Group controlId="interviewTime" className="mb-3">
@@ -208,7 +234,10 @@ const AddNewInterview = ({ darkMode }) => {
                     >
                       Go Back
                     </Button>
-                    <Button type="submit" disabled={isSubmitting}>
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting || (interviewData.interviewDate && !validateInterviewDate(interviewData.interviewDate))}
+                    >
                       {isSubmitting ? (
                         <Spinner animation="border" size="sm" />
                       ) : (

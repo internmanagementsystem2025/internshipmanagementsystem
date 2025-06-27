@@ -111,9 +111,9 @@ import GeneratePlacementLetter  from "./admin/pages/lifecycle/GeneratePlacementL
 import ViewGeneratePlacementLetter  from "./admin/pages/lifecycle/ViewGeneratePlacementLetter";
 import PlacementLetterManagement  from "./admin/pages/others/PlacementLetterManagement";
 import AddNewUniversity  from "./admin/pages/others/AddNewUniversity";
-import InstituteRotational from "./institute/pages/instituterotational/instituteRotational";
 import Rotationalapifirst from "./admin/pages/rotational/RotationalApiFirst";
 import RotationalapiSecond from "./admin/pages/rotational/RotationalApiSecond";
+import ViewInductions from "./admin/pages/induction/ViewInduction";
 
 
 
@@ -178,7 +178,6 @@ function App() {
     "/view-cv/:cvId",
     "/edit-cv/:cvId",
     "/institute-help-support",
-    "/institute-rotational",
     "/bulk-cv-upload"
   ];
 
@@ -247,6 +246,9 @@ function App() {
     "/placement-letter-management",
     "/add-new-university",
     "/generate-placement-letter",
+    "/rotation-api1",
+    "/rotation-api2",
+    "/view-inductions",
   ];
 
   const staffRoutes = [
@@ -348,7 +350,6 @@ function App() {
     <Route path="/view-cv/:cvId" element={<ViewCV darkMode={darkMode} />} />
     <Route path="/edit-cv/:cvId" element={<EditCV darkMode={darkMode} />} />
     <Route path="/institute-help-support" element={<InstituteHelp darkMode={darkMode} />} />
-    <Route path="/institute-rotational" element={<InstituteRotational darkMode={darkMode} />} />
     <Route path="/bulk-cv-upload" element={<BulkCVUploadForm darkMode={darkMode} />} />
 
     {/* Admin */}
@@ -417,6 +418,7 @@ function App() {
     <Route path="/intern-placement" element={<InternPlacement darkMode={darkMode} />} />
     <Route path="/placement-letter-management" element={<PlacementLetterManagement darkMode={darkMode} />} />
     <Route path="/add-new-university" element={<AddNewUniversity darkMode={darkMode} />} />
+     <Route path="/view-inductions/:inductionId" element={<ViewInductions darkMode={darkMode} />} />
 
     {/* Staff */}
     <Route path="/staff-home" element={<StaffHome darkMode={darkMode} />} />

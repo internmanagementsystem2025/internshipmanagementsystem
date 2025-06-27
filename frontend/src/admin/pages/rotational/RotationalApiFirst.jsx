@@ -2,70 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Container, Card, Table, Button, Badge, Row, Col, Form, Modal, ProgressBar } from 'react-bootstrap';
 import axios from 'axios';
 
-// Enhanced StatsCircle component with styling from ViewRotationalStation.jsx
-const StatsCircle = ({ title, value, total, percentage, color, darkMode }) => {
-  // Calculate the percentage if not provided
-  const calculatedPercentage = percentage || Math.round((value / total) * 100) || 0;
-  const strokeDasharray = `${calculatedPercentage * 2.512}, 251.2`; // 251.2 is approx 2π × 40 (circumference)
-  
-  // Background color based on dark mode
-  const bgColor = darkMode ? "#444" : "#e6e6e6";
-  
-  return (
-    <div className="text-center mb-4">
-      <div style={{ 
-        position: "relative", 
-        width: "150px", 
-        height: "150px", 
-        margin: "0 auto",
-        filter: "drop-shadow(0px 4px 8px rgba(0,0,0,0.2))"
-      }}>
-        <svg width="150" height="150" viewBox="0 0 100 100">
-          {/* Background Circle */}
-          <circle
-            cx="50"
-            cy="50"
-            r="40"
-            fill="none"
-            stroke={bgColor}
-            strokeWidth="14"
-            opacity="0.2"
-          />
-          {/* Foreground Circle - The progress indicator */}
-          <circle
-            cx="50"
-            cy="50"
-            r="40"
-            fill="none"
-            stroke={color || "#28a745"} // Default to success green if no color provided
-            strokeWidth="14"
-            strokeDasharray={strokeDasharray}
-            strokeDashoffset="0"
-            transform="rotate(-90 50 50)" // Rotate to start from the top
-            strokeLinecap="round" // Rounded ends for a nicer look
-            style={{
-              filter: "drop-shadow(0px 0px 4px rgba(0,0,0,0.3))"
-            }}
-          />
-        </svg>
-        <div style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          fontSize: "1.75rem",
-          fontWeight: "bold",
-          textShadow: "1px 1px 3px rgba(0,0,0,0.2)"
-        }}>
-          {calculatedPercentage}%
-        </div>
-      </div>
-      <h5 className="mt-3 fw-bold">{title}</h5>
-      <div className="text-muted fs-6 fw-semibold">{value} of {total}</div>
-    </div>
-  );
-};
-
 const RotationalApiFirst = ({ darkMode }) => {
   const [allCVs, setAllCVs] = useState([]);
   const [pendingCVs, setPendingCVs] = useState([]);
@@ -84,27 +20,28 @@ const RotationalApiFirst = ({ darkMode }) => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [assignmentHistory, setAssignmentHistory] = useState([]);
   const [selectedCVForHistory, setSelectedCVForHistory] = useState(null);
+  const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
 
   // Fetch data on component mount
   useEffect(() => {
     fetchAllData();
   }, []);
 
-  // Update the fetchAllData function to include stations
+  // Update the fetchAllData function to use consistent API_BASE_URL
   const fetchAllData = async () => {
     try {
       setLoading(true);
       const [allResponse, pendingResponse, analyticsResponse, stationsResponse] = await Promise.all([
-        axios.get('http://localhost:5000/api/rotational/all-rotational'),
-        axios.get('http://localhost:5000/api/rotational/pending-rotational'),
-        axios.get('http://localhost:5000/api/rotational/analytics'),
-        axios.get('http://localhost:5000/api/rotational/stations')
+        axios.get(`${API_BASE_URL}/rotational/all-rotational`),
+        axios.get(`${API_BASE_URL}/rotational/pending-rotational`),
+        axios.get(`${API_BASE_URL}/rotational/analytics`),
+        axios.get(`${API_BASE_URL}/rotational/stations`)
       ]);
 
       setAllCVs(allResponse.data);
       setPendingCVs(pendingResponse.data);
       setAnalytics(analyticsResponse.data);
-      setStations(stationsResponse.data.data); // Access the data array from the response
+      setStations(stationsResponse.data.data || stationsResponse.data); 
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -145,7 +82,7 @@ const RotationalApiFirst = ({ darkMode }) => {
     setStationAssignments(updatedAssignments);
   };
 
-  // Updated assignment function
+  // Updated assignment function using API_BASE_URL
   const handleAssignToStations = async () => {
     try {
       // Validate all assignments have required fields
@@ -166,7 +103,7 @@ const RotationalApiFirst = ({ darkMode }) => {
       }));
 
       const response = await axios.post(
-        'http://localhost:5000/api/rotational/assign-to-multiple-stations',
+        `${API_BASE_URL}/rotational/assign-to-multiple-stations`,
         {
           cvIds: selectedCVs,
           stations: formattedStations // Send all station assignments
@@ -176,7 +113,6 @@ const RotationalApiFirst = ({ darkMode }) => {
       if (response.data.successfulAssignments.length > 0) {
         alert(`Successfully assigned ${response.data.successfulAssignments.length} CVs to ${formattedStations.length} stations`);
         setShowAssignModal(false);
-        // Reset the station assignments
         setStationAssignments([{ stationId: '', startDate: '', endDate: '' }]);
         setSelectedCVs([]); // Clear selected CVs
         fetchAllData(); // Refresh the data
@@ -194,55 +130,135 @@ const RotationalApiFirst = ({ darkMode }) => {
     }
   };
 
+  // Responsive card component for mobile CV display
+ const CVCard = ({ cv, isPending = false, showSelect = false }) => (
+    <Card className={`mb-3 ${darkMode ? "bg-dark text-white border-secondary" : ""}`}>
+      <Card.Body>
+        {showSelect && (
+          <div className="mb-2">
+            <Form.Check
+              type="checkbox"
+              label="Select"
+              checked={selectedCVs.includes(cv._id)}
+              onChange={() => handleCVSelect(cv._id)}
+              className={darkMode ? "text-white" : ""}
+            />
+          </div>
+        )}
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start">
+          <div className="mb-2 mb-sm-0">
+            <h6 className="mb-1">{cv.fullName}</h6>
+            <small className={darkMode ? "text-light" : "text-muted"}>Ref: {cv.refNo}</small>
+          </div>
+          <div className="d-flex flex-column align-items-start align-items-sm-end">
+            <Badge bg={
+              cv.rotationalAssignment?.status === 'station-assigned' ? 'success' : 'warning'
+            } className="mb-2">
+              {cv.rotationalAssignment?.status || 'Pending'}
+            </Badge>
+            <Button 
+              variant="info" 
+              size="sm" 
+              onClick={() => handleViewHistory(cv._id)}
+            >
+              View History
+            </Button>
+          </div>
+        </div>
+        {!isPending && (
+          <div className="mt-2">
+            <small className={darkMode ? "text-light" : "text-muted"}>Current Station: </small>
+            <span className="fw-bold">
+              {cv.rotationalAssignment?.assignedStations?.find(
+                station => station.isCurrent
+              )?.station?.stationName || 'Not Assigned'}
+            </span>
+          </div>
+        )}
+      </Card.Body>
+    </Card>
+  );
+
+
   // Add this new component for the assignment modal
   const AssignmentModal = () => (
-    <Modal show={showAssignModal} onHide={() => setShowAssignModal(false)} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>Assign Stations to Selected CVs</Modal.Title>
+    <Modal 
+      show={showAssignModal} 
+      onHide={() => setShowAssignModal(false)} 
+      size="lg"
+      data-bs-theme={darkMode ? "dark" : "light"}
+      className="modal-fullscreen-sm-down"
+    >
+      <Modal.Header 
+        closeButton 
+        className={darkMode ? "bg-dark text-white border-secondary" : ""}
+      >
+        <Modal.Title className="fs-6 fs-sm-5">Assign Stations to Selected CVs</Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body className={`${darkMode ? "bg-dark text-white" : ""} p-2 p-sm-3`}>
         <div className="mb-3">
           <strong>Selected CVs: </strong> 
           {selectedCVs.length} CVs selected
         </div>
         
         {stationAssignments.map((assignment, index) => (
-          <Card key={index} className="mb-3">
-            <Card.Body>
-              <Row>
-                <Col md={4}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Select Station</Form.Label>
+          <Card 
+            key={index} 
+            className={`mb-3 ${darkMode ? "bg-secondary text-white border-secondary" : ""}`}
+          >
+            <Card.Body className="p-2 p-sm-3">
+              <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-2">
+                <h6 className="mb-1 mb-sm-0">Station Assignment {index + 1}</h6>
+                {stationAssignments.length > 1 && (
+                  <Button 
+                    variant="outline-danger" 
+                    size="sm"
+                    onClick={() => handleRemoveStation(index)}
+                    className="mt-1 mt-sm-0"
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <Row className="g-2">
+                <Col xs={12} md={4}>
+                  <Form.Group className="mb-2">
+                    <Form.Label className="small">Select Station</Form.Label>
                     <Form.Select
                       value={assignment.stationId}
                       onChange={(e) => handleStationAssignmentChange(index, 'stationId', e.target.value)}
+                      className={`${darkMode ? "bg-dark text-white border-secondary" : ""} form-select-sm`}
                     >
                       <option value="">Choose station...</option>
                       {stations.map(station => (
                         <option key={station._id} value={station._id}>
-                          {station.stationName} ({station.availableSeats} seats available, {station.timePeriod} weeks)
+                          {station.stationName} ({station.availableSeats} seats, {station.timePeriod}w)
                         </option>
                       ))}
                     </Form.Select>
                   </Form.Group>
                 </Col>
-                <Col md={4}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Start Date</Form.Label>
+                <Col xs={6} md={4}>
+                  <Form.Group className="mb-2">
+                    <Form.Label className="small">Start Date</Form.Label>
                     <Form.Control
                       type="date"
+                      size="sm"
                       value={assignment.startDate}
                       onChange={(e) => handleStationAssignmentChange(index, 'startDate', e.target.value)}
+                      className={darkMode ? "bg-dark text-white border-secondary" : ""}
                     />
                   </Form.Group>
                 </Col>
-                <Col md={4}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>End Date</Form.Label>
+                <Col xs={6} md={4}>
+                  <Form.Group className="mb-2">
+                    <Form.Label className="small">End Date</Form.Label>
                     <Form.Control
                       type="date"
+                      size="sm"
                       value={assignment.endDate}
                       onChange={(e) => handleStationAssignmentChange(index, 'endDate', e.target.value)}
+                      className={darkMode ? "bg-dark text-white border-secondary" : ""}
                     />
                   </Form.Group>
                 </Col>
@@ -251,32 +267,47 @@ const RotationalApiFirst = ({ darkMode }) => {
           </Card>
         ))}
         
-        <Button variant="secondary" onClick={handleAddStation} className="mb-3">
+        <Button 
+          variant={darkMode ? "outline-light" : "secondary"} 
+          size="sm"
+          onClick={handleAddStation} 
+          className="mb-3 w-100 w-sm-auto"
+        >
           Add Another Station
         </Button>
       </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={() => setShowAssignModal(false)}>
-          Cancel
-        </Button>
-        <Button 
-          variant="primary" 
-          onClick={handleAssignToStations}
-          disabled={stationAssignments.some(assignment => 
-            !assignment.stationId || !assignment.startDate || !assignment.endDate
-          )}
-        >
-          Assign Stations
-        </Button>
+      <Modal.Footer className={`${darkMode ? "bg-dark text-white border-secondary" : ""} p-2 p-sm-3`}>
+        <div className="d-flex flex-column flex-sm-row w-100 gap-2">
+          <Button 
+            variant={darkMode ? "outline-light" : "secondary"} 
+            size="sm"
+            onClick={() => setShowAssignModal(false)}
+            className="w-100 w-sm-auto"
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="primary" 
+            size="sm"
+            onClick={handleAssignToStations}
+            disabled={stationAssignments.some(assignment => 
+              !assignment.stationId || !assignment.startDate || !assignment.endDate
+            )}
+            className="w-100 w-sm-auto"
+          >
+            Assign Stations
+          </Button>
+        </div>
       </Modal.Footer>
     </Modal>
   );
 
+  // Updated handleViewHistory function to use API_BASE_URL
   const handleViewHistory = async (cvId) => {
     try {
       setSelectedCVForHistory(cvId);
       setShowHistoryModal(true);
-      const response = await axios.get(`http://localhost:5000/api/rotational/assignment-history/${cvId}`);
+      const response = await axios.get(`${API_BASE_URL}/rotational/assignment-history/${cvId}`);
       const currentDate = new Date();
 
       // Categorize stations based on current date
@@ -301,49 +332,111 @@ const RotationalApiFirst = ({ darkMode }) => {
     }
   };
 
+  // Responsive history card component
+  const HistoryCard = ({ assignment, index }) => (
+    <Card className={`mb-2 ${darkMode ? "bg-secondary text-white border-secondary" : ""}`}>
+      <Card.Body className="p-2">
+        <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start">
+          <div className="mb-2 mb-sm-0">
+            <h6 className="mb-1">{assignment.station?.stationName || 'Unknown'}</h6>
+            <small className="text-muted">
+              {assignment.station?.timePeriod || 'N/A'} weeks
+            </small>
+          </div>
+          <Badge bg={
+            assignment.status === 'Currently Working' ? 'success' :
+            assignment.status === 'Completed' ? 'secondary' :
+            'warning'
+          }>
+            {assignment.status}
+          </Badge>
+        </div>
+        <div className="mt-2">
+          <small className="text-muted">
+            {new Date(assignment.startDate).toLocaleDateString()} - {new Date(assignment.endDate).toLocaleDateString()}
+          </small>
+        </div>
+      </Card.Body>
+    </Card>
+  );
+
   const HistoryModal = () => (
-    <Modal show={showHistoryModal} onHide={() => setShowHistoryModal(false)} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>Assignment History</Modal.Title>
+    <Modal 
+      show={showHistoryModal} 
+      onHide={() => setShowHistoryModal(false)} 
+      size="lg"
+      data-bs-theme={darkMode ? "dark" : "light"}
+      className="modal-fullscreen-sm-down"
+    >
+      <Modal.Header 
+        closeButton 
+        className={darkMode ? "bg-dark text-white border-secondary" : ""}
+      >
+        <Modal.Title className="fs-6 fs-sm-5">Assignment History</Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body className={`${darkMode ? "bg-dark text-white" : ""} p-2 p-sm-3`}>
         {assignmentHistory.length > 0 ? (
-          <Table striped bordered hover>
-            <thead>
-              <tr>
-                <th>Station Name</th>
-                <th>Time Period (weeks)</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Desktop Table View */}
+            <div className="d-none d-md-block">
+              <Table 
+                striped 
+                bordered 
+                hover 
+                variant={darkMode ? "dark" : ""}
+                size="sm"
+              >
+                <thead>
+                  <tr>
+                    <th>Station Name</th>
+                    <th>Time Period (weeks)</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assignmentHistory.map((assignment, index) => (
+                    <tr key={index}>
+                      <td>{assignment.station?.stationName || 'Unknown'}</td>
+                      <td>{assignment.station?.timePeriod || 'N/A'}</td>
+                      <td>{new Date(assignment.startDate).toLocaleDateString()}</td>
+                      <td>{new Date(assignment.endDate).toLocaleDateString()}</td>
+                      <td>
+                        <Badge bg={
+                          assignment.status === 'Currently Working' ? 'success' :
+                          assignment.status === 'Completed' ? 'secondary' :
+                          'warning'
+                        }>
+                          {assignment.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+            
+            {/* Mobile Card View */}
+            <div className="d-md-none">
               {assignmentHistory.map((assignment, index) => (
-                <tr key={index}>
-                  <td>{assignment.station?.stationName || 'Unknown'}</td>
-                  <td>{assignment.station?.timePeriod || 'N/A'}</td>
-                  <td>{new Date(assignment.startDate).toLocaleDateString()}</td>
-                  <td>{new Date(assignment.endDate).toLocaleDateString()}</td>
-                  <td>
-                    <Badge bg={
-                      assignment.status === 'Currently Working' ? 'success' :
-                      assignment.status === 'Completed' ? 'secondary' :
-                      'warning'
-                    }>
-                      {assignment.status}
-                    </Badge>
-                  </td>
-                </tr>
+                <HistoryCard key={index} assignment={assignment} index={index} />
               ))}
-            </tbody>
-          </Table>
+            </div>
+          </>
         ) : (
-          <div>No assignment history available for this CV.</div>
+          <div className="text-center py-4">
+            <p>No assignment history available for this CV.</p>
+          </div>
         )}
       </Modal.Body>
-      <Modal.Footer>
-        <Button variant="secondary" onClick={() => setShowHistoryModal(false)}>
+      <Modal.Footer className={`${darkMode ? "bg-dark text-white border-secondary" : ""} p-2 p-sm-3`}>
+        <Button 
+          variant={darkMode ? "outline-light" : "secondary"} 
+          size="sm"
+          onClick={() => setShowHistoryModal(false)}
+          className="w-100 w-sm-auto"
+        >
           Close
         </Button>
       </Modal.Footer>
@@ -365,90 +458,205 @@ const RotationalApiFirst = ({ darkMode }) => {
   };
 
   return (
-    <Container className="py-4">
-      {loading ? (
-        <div className="text-center p-5">
-          <div className="spinner-border text-primary" role="status" style={{ width: "3rem", height: "3rem" }}>
-            <span className="visually-hidden">Loading...</span>
+    <div 
+      className={`
+        min-vh-100 
+        ${darkMode ? "bg-dark text-white" : "bg-white text-dark"}
+      `}
+    >
+      <Container fluid className="py-2 py-sm-4 px-2 px-sm-3">
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
           </div>
-          <p className="mt-3 fs-5">Loading data...</p>
-        </div>
-      ) : (
-        <>
-          {/* Analytics Section with improved styling */}
-          <Card className={`mb-4 shadow ${darkMode ? 'bg-dark text-white' : ''}`}>
-            <Card.Header as="h5" className={`py-3 ${darkMode ? 'bg-secondary' : 'bg-primary text-white'}`}>
-              Station Analytics
-            </Card.Header>
-            <Card.Body className="p-4">
-              <Row className="g-4">
-                {analytics.map(station => (
-                  <Col lg={4} md={6} key={station.stationId} className="mb-4">
-                    <Card className={`h-100 shadow ${darkMode ? 'bg-dark text-white border-secondary' : 'border-0'}`}>
-                      <Card.Header className={`text-center py-3 ${darkMode ? 'bg-secondary' : 'bg-light'}`}>
-                        <h5 className="fw-bold mb-0">{station.stationName}</h5>
-                      </Card.Header>
-                      <Card.Body className="text-center p-4">
-                        {/* Enhanced StatsCircle component */}
-                        <StatsCircle 
-                          title={getUtilizationStatus(station.utilizationPercentage)} 
-                          value={station.assignedCVs} 
-                          total={station.maxStudents || station.assignedCVs + station.availableSeats} 
-                          percentage={station.utilizationPercentage} 
-                          color={getUtilizationColor(station.utilizationPercentage)}
-                          darkMode={darkMode}
-                        />
-                        
-                        <div className="mt-4 px-3">
-                          <div className="d-flex justify-content-between align-items-center mb-3">
-                            <span className="fs-6 fw-semibold">Assigned CVs:</span>
-                            <Badge bg="primary" pill className="px-3 py-2 fs-6">{station.assignedCVs}</Badge>
-                          </div>
-                          <div className="d-flex justify-content-between align-items-center mb-4">
-                            <span className="fs-6 fw-semibold">Available Seats:</span>
-                            <Badge bg="success" pill className="px-3 py-2 fs-6">{station.availableSeats}</Badge>
-                          </div>
-                          
-                          {/* Progress bar with improved styling */}
-                          <div className="mt-3">
-                            <ProgressBar 
-                              now={station.utilizationPercentage} 
-                              variant={
-                                station.utilizationPercentage >= 80 ? "danger" : 
-                                station.utilizationPercentage >= 50 ? "warning" : "info"
-                              }
-                              style={{ height: "10px", borderRadius: "5px" }}
-                              className="mb-2"
-                            />
-                            <div className="d-flex justify-content-between mt-2 px-2">
-                              <small className={`${darkMode ? "text-light" : "text-muted"}`}>0%</small>
-                              <small className={`${darkMode ? "text-light" : "text-muted"} fw-semibold`}>Utilization</small>
-                              <small className={`${darkMode ? "text-light" : "text-muted"}`}>100%</small>
+        ) : (
+          <>
+            {/* Analytics Section */}
+            <Card className={`mb-3 mb-sm-4 ${darkMode ? "bg-secondary text-white border-secondary" : ""}`}>
+              <Card.Header className={`${darkMode ? "bg-dark text-white border-secondary" : ""} p-2 p-sm-3`}>
+                <h6 className="mb-0">Station Analytics</h6>
+              </Card.Header>
+              <Card.Body className="p-2 p-sm-3">
+                <Row className="g-2">
+                  {analytics.map(station => (
+                    <Col xs={12} sm={6} lg={4} key={station.stationId}>
+                      <Card className={`${darkMode ? "bg-dark text-white border-secondary" : ""} h-100`}>
+                        <Card.Body className="p-2 p-sm-3">
+                          <Card.Title className="fs-6 mb-2">{station.stationName}</Card.Title>
+                          <div className="small">
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Assigned CVs:</span>
+                              <strong>{station.assignedCVs}</strong>
+                            </div>
+                            <div className="d-flex justify-content-between mb-1">
+                              <span>Available Seats:</span>
+                              <strong>{station.availableSeats}</strong>
+                            </div>
+                            <div className="d-flex justify-content-between">
+                              <span>Utilization:</span>
+                              <strong>{station.utilizationPercentage}%</strong>
                             </div>
                           </div>
-                        </div>
-                      </Card.Body>
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
-            </Card.Body>
-          </Card>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              </Card.Body>
+            </Card>
 
-          {/* Add the modal components */}
-          <AssignmentModal />
-          <HistoryModal />
-        </>
-      )}
-      <style jsx="true">{`
-        .shadow {
-          box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
-        }
-        .border-0 {
-          border: none!important;
-        }
-      `}</style>
-    </Container>
+            {/* Pending CVs Section */}
+            <Card className={`mb-3 mb-sm-4 ${darkMode ? "bg-secondary text-white border-secondary" : ""}`}>
+              <Card.Header className={`${darkMode ? "bg-dark text-white border-secondary" : ""} p-2 p-sm-3`}>
+                <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center">
+                  <h6 className="mb-1 mb-sm-0">Pending CVs</h6>
+                  <Button 
+                    variant={darkMode ? "light" : "primary"} 
+                    size="sm" 
+                    disabled={selectedCVs.length === 0}
+                    onClick={handleOpenAssignModal}
+                    className="mt-1 mt-sm-0 w-20 w-sm-auto"
+                  >
+                    Assign Selected CVs ({selectedCVs.length})
+                  </Button>
+                </div>
+              </Card.Header>
+              <Card.Body className="p-2 p-sm-3">
+                {/* Desktop Table View */}
+                <div className="d-none d-lg-block">
+                  <Table 
+                    striped 
+                    bordered 
+                    hover 
+                    variant={darkMode ? "dark" : ""}
+                    size="sm"
+                  >
+                    <thead>
+                      <tr>
+                        <th style={{ width: '80px' }}>Select</th>
+                        <th>Name</th>
+                        <th>Reference No</th>
+                        <th>Status</th>
+                        <th style={{ width: '120px' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingCVs.map(cv => (
+                        <tr key={cv._id}>
+                          <td>
+                            <Form.Check
+                              type="checkbox"
+                              checked={selectedCVs.includes(cv._id)}
+                              onChange={() => handleCVSelect(cv._id)}
+                            />
+                          </td>
+                          <td>{cv.fullName}</td>
+                          <td>{cv.refNo}</td>
+                          <td>
+                            <Badge bg="warning">
+                              {cv.rotationalAssignment?.status || 'Pending'}
+                            </Badge>
+                          </td>
+                          <td>
+                            <Button 
+                              variant="info" 
+                              size="sm" 
+                              onClick={() => handleViewHistory(cv._id)}
+                            >
+                              View History
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="d-lg-none">
+                  {pendingCVs.map(cv => (
+                    <CVCard key={cv._id} cv={cv} isPending={true} showSelect={true} />
+                  ))}
+                </div>
+              </Card.Body>
+            </Card>
+
+            {/* All Rotational CVs Section */}
+            <Card className={darkMode ? "bg-dark text-white border-secondary" : ""}>
+              <Card.Header className={`${darkMode ? "bg-secondary text-white border-secondary" : ""} p-2 p-sm-3`}>
+                <h6 className="mb-0">All Rotational CVs</h6>
+              </Card.Header>
+              <Card.Body className="p-2 p-sm-3">
+                {/* Desktop Table View */}
+                <div className="d-none d-lg-block">
+                  <Table 
+                    striped 
+                    bordered 
+                    hover 
+                    variant={darkMode ? "dark" : ""}
+                    size="sm"
+                  >
+                    <thead>
+                      <tr>
+                        <th className={darkMode ? "text-white" : ""}>Name</th>
+                        <th className={darkMode ? "text-white" : ""}>Reference No</th>
+                        <th className={darkMode ? "text-white" : ""}>Current Station</th>
+                        <th className={darkMode ? "text-white" : ""}>Status</th>
+                        <th style={{ width: '120px' }} className={darkMode ? "text-white" : ""}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allCVs.map(cv => (
+                        <tr key={cv._id}>
+                          <td className={darkMode ? "text-white" : ""}>{cv.fullName}</td>
+                          <td className={darkMode ? "text-white" : ""}>{cv.refNo}</td>
+                          <td className={darkMode ? "text-white" : ""}>
+                            {cv.rotationalAssignment?.assignedStations?.find(
+                              station => station.isCurrent
+                            )?.station?.stationName || 'Not Assigned'}
+                          </td>
+                          <td>
+                            <Badge bg={
+                              cv.rotationalAssignment?.status === 'station-assigned' 
+                                ? 'success' 
+                                : 'warning'
+                            }>
+                              {cv.rotationalAssignment?.status || 'Pending'}
+                            </Badge>
+                          </td>
+                          <td>
+                            <Button 
+                              variant="info" 
+                              size="sm" 
+                              onClick={() => handleViewHistory(cv._id)}
+                            >
+                              View History
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="d-lg-none">
+                  {allCVs.map(cv => (
+                    <CVCard key={cv._id} cv={cv} />
+                  ))}
+                </div>
+              </Card.Body>
+            </Card>
+
+            {/* Add the modal components */}
+            <AssignmentModal />
+            <HistoryModal />
+          </>
+        )}
+      </Container>
+    </div>
   );
 };
 

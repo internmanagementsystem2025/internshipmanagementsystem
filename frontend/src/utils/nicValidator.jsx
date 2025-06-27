@@ -1,9 +1,7 @@
-// Function to validate Sri Lankan NIC
 export const validateSriLankanNIC = (nicNumber, birthday) => {
-  // Remove any spaces or hyphens
   const nic = nicNumber.replace(/[\s-]/g, '');
   
-  // Initialize validation result
+
   const result = {
     isValid: false,
     nicBirthday: null,
@@ -88,11 +86,7 @@ export const validateSriLankanNIC = (nicNumber, birthday) => {
       age--;
     }
     
-    result.ageValid = (age >= 18 && age <= 30);
     
-    if (!result.ageValid) {
-      result.message = `Age must be between 18-30 years. Current age: ${age}`;
-    }
   }
   
   // If we have both a valid NIC birthday and input birthday, compare them
@@ -117,18 +111,12 @@ function normalizeDate(dateInput) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-// Fixed helper function to calculate birthday from year and days
 function calculateBirthdayFromDays(year, days) {
-  // In Sri Lankan NIC format, days are counted starting from January 1st
-  // Fix: The previous implementation was off by one day
-  
-  // Create a Date object for January 1st of the birth year
+
   const date = new Date(year, 0, 1);
-  
-  // Add the number of days minus 1 (since day 1 is January 1st)
+
   date.setDate(date.getDate() + (days - 1));
   
-  // Format as YYYY-MM-DD for consistency
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 

@@ -156,13 +156,35 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
     }
   };
 
-  const handleChange = (e) => {
+  /*const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
     }));
-  };
+  };*/
+
+  const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  // Remove ALL spaces for username, password, confirmPassword, email, contact number and NIC fields
+  if (name === 'username' || name === 'password' || name === 'confirmPassword'  || name === 'email' || name === 'contactNumber' || name === 'nic') {
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value.replace(/\s/g, '')
+    }));
+  } else if (name === 'email') {
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value.trim()
+    }));
+  } else {
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value
+    }));
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -183,13 +205,29 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
       setLoading(false);
       return;
     }
-// Validate contact number
+  // Validate contact number
     if (!validateContactNumber(formData.contactNumber)) {
       setError("Please enter a valid Sri Lankan phone number (10 digits starting with 0)");
       setLoading(false);
       return;
     }
-    
+
+// Validate Gmail format (strong validation: only @gmail.com, no underscores, no consecutive dots, no leading/trailing dot)
+const gmailRegex = /^(?!.*\.\.)(?!.*\.$)(?!^\.)[a-zA-Z0-9.%+-]+@gmail\.com$/;
+if (!gmailRegex.test(formData.email)) {
+  setError("Please enter a valid Gmail address (no underscores, no consecutive dots, must end with @gmail.com).");
+  setLoading(false);
+  return;
+}
+
+    /*// Validate password strength (must include lowercase, uppercase, and symbol)
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_\-+=\[\]{};':"\\|,.<>\/?]).+$/;
+    if (!passwordStrengthRegex.test(formData.password)) {
+      setError("Password must include uppercase, lowercase letters, and a symbol.");
+      setLoading(false);
+      return;
+    }*/
+ 
     // Validate password match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -198,8 +236,9 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
     }
 
     // Validate password strength (optional)
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_\-+=\[\]{};':"\\|,.<>\/?]).+$/;
+    if (formData.password.length < 8 || !passwordStrengthRegex.test(formData.password)){
+      setError("Password must be at least 8 characters long and include uppercase, lowercase letters, and a symbols.");
       setLoading(false);
       return;
     }
@@ -666,10 +705,7 @@ const RegisterPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) 
                               width: "100%",
                               padding: "0.75rem 1rem",
                               borderRadius: "12px",
-                              border: `1px solid formData.contactNumber && !validateContactNumber(formData.contactNumber) 
-              ? '#ff4444' 
-              : darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'
-          }`,
+                              border: `1px solid ${darkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
                               background: darkMode 
                                 ? 'rgba(15, 30, 55, 0.3)' 
                                 : 'rgba(255, 255, 255, 0.8)',
