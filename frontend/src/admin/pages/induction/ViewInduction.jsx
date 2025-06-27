@@ -1,19 +1,19 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Container, Dropdown } from "react-bootstrap";
 
 import logo from "../../../assets/logo.png";
 import ViewInductionDetails from "./ViewInductionDetails";
+import ViewInductionInterns from "./ViewInductionInterns";
 
-
-const ViewInductions = ({ darkMode }) => {
+const ViewInduction = ({ darkMode }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("Induction-info");
+  const { id } = useParams();
+  const [activeTab, setActiveTab] = useState("induction-info");
 
   const tabs = [
     { id: "induction-info", label: "Induction Info" },
-    { id: "induction-details", label: "Induction Details" },
-
+    { id: "induction-details", label: "Induction Interns" },
   ];
 
   const renderTabContent = () => {
@@ -21,12 +21,14 @@ const ViewInductions = ({ darkMode }) => {
       case "induction-info":
         return <ViewInductionDetails darkMode={darkMode} />;
       case "induction-details":
-        return <ViewInductions darkMode={darkMode} />;
+        return <ViewInductionInterns darkMode={darkMode} inductionId={id} />;
+      default:
+        return <ViewInductionDetails darkMode={darkMode} />;
     }
   };
 
   return (
-    <div 
+    <div
       className={`
         d-flex 
         flex-column 
@@ -42,10 +44,10 @@ const ViewInductions = ({ darkMode }) => {
             src={logo}
             alt="SLT Mobitel Logo"
             className="mx-auto d-block mb-3"
-            style={{ 
-              height: "50px", 
-              maxWidth: "100%", 
-              objectFit: "contain" 
+            style={{
+              height: "50px",
+              maxWidth: "100%",
+              objectFit: "contain",
             }}
           />
           <h3 className="mt-2 px-3">VIEW INDUCTION DETAILS</h3>
@@ -54,17 +56,15 @@ const ViewInductions = ({ darkMode }) => {
         {/* Responsive Navigation */}
         <div className="d-block d-md-none px-3 mb-3">
           <Dropdown>
-            <Dropdown.Toggle 
-              variant={darkMode ? "secondary" : "outline-primary"} 
+            <Dropdown.Toggle
+              variant={darkMode ? "secondary" : "outline-primary"}
               className="w-100"
             >
-              {tabs.find(tab => tab.id === activeTab)?.label || "Select Tab"}
+              {tabs.find((tab) => tab.id === activeTab)?.label || "Select Tab"}
             </Dropdown.Toggle>
-            <Dropdown.Menu 
-              className={darkMode ? "dropdown-menu-dark" : ""}
-            >
+            <Dropdown.Menu className={darkMode ? "dropdown-menu-dark" : ""}>
               {tabs.map((tab) => (
-                <Dropdown.Item 
+                <Dropdown.Item
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   active={activeTab === tab.id}
@@ -77,7 +77,7 @@ const ViewInductions = ({ darkMode }) => {
         </div>
 
         {/* Desktop Tabs */}
-        <div 
+        <div
           className={`
             d-none 
             d-md-flex 
@@ -94,8 +94,10 @@ const ViewInductions = ({ darkMode }) => {
               className={`
                 btn 
                 ${
-                  activeTab === tab.id 
-                    ? (darkMode ? "btn-light text-dark" : "btn-primary") 
+                  activeTab === tab.id
+                    ? darkMode
+                      ? "btn-light text-dark"
+                      : "btn-primary"
                     : "btn-outline-secondary"
                 }
                 btn-sm 
@@ -109,7 +111,7 @@ const ViewInductions = ({ darkMode }) => {
         </div>
 
         {/* Tab Content */}
-        <div 
+        <div
           className={`
             flex-grow-1 
             overflow-auto 
@@ -125,4 +127,4 @@ const ViewInductions = ({ darkMode }) => {
   );
 };
 
-export default ViewInductions;
+export default ViewInduction;
