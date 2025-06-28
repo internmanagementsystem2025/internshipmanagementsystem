@@ -84,15 +84,13 @@ exports.getInternsByInterviewId = async (req, res) => {
     const interns = await CV.find({
       "interview.interviews.interviewId": id,
     }).select(
-      "fullName nic emailAddress institute selectedRole currentStatus interview"
+      "fullName nic emailAddress institute selectedRole currentStatus interview refNo"
     );
     res.status(200).json(interns);
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        error: "Failed to fetch interns for this interview",
-        details: error.message,
-      });
+    res.status(500).json({
+      error: "Failed to fetch interns for this interview",
+      details: error.message,
+    });
   }
 };

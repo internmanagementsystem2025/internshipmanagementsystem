@@ -232,9 +232,11 @@ const ViewInterviewInterns = ({ darkMode, interviewId }) => {
                     <td>{intern.emailAddress || "N/A"}</td>
                     <td>
                       {intern.category ||
-                        (intern.selectedRole === "Data Entry Operator"
+                        (intern.selectedRole === "dataEntry"
                           ? "Data Entry Operator"
-                          : "Internship")}
+                          : intern.selectedRole === "internship"
+                          ? "Internship"
+                          : "N/A")}
                     </td>
                     <td className="text-center">
                       <Button 
