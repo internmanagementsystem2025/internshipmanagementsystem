@@ -75,6 +75,9 @@ const EditPlacementLetter = ({ darkMode }) => {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [showErrorNotification, setShowErrorNotification] = useState(false);
 
+  // Define read-only lines
+  const readOnlyLines = [1, 2, 5, 6, 7, 8, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 25, 26, 27, 28];
+
   useEffect(() => {
     const fetchLetter = async () => {
       try {
@@ -92,7 +95,6 @@ const EditPlacementLetter = ({ darkMode }) => {
     fetchLetter();
   }, [id]);
 
-  // Handle input field changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setLetterData({
@@ -101,40 +103,29 @@ const EditPlacementLetter = ({ darkMode }) => {
     });
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
-  e.preventDefault();
-  setIsSubmitting(true);
-  setErrorMessage("");
-  setSuccessMessage("");
+    e.preventDefault();
+    setIsSubmitting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
 
-  try {
-    console.log("Sending update request to:", `${API_BASE_URL}/${id}`);
-    console.log("Request payload:", letterData);
+    try {
+      const response = await axios.put(`${API_BASE_URL}/${id}`, letterData);
+      setSuccessMessage("Placement Letter Updated Successfully!");
+      setShowSuccessNotification(true);
 
-    const response = await axios.put(`${API_BASE_URL}/${id}`, letterData);
-    console.log("Response:", response.data);
+      setTimeout(() => {
+        navigate("/all-placement-letters", { state: { refresh: true } });
+      }, 2000);
 
-    setSuccessMessage("Placement Letter Updated Successfully!");
-    setShowSuccessNotification(true);
-
-    // Delay navigation to allow the notification to display
-    setTimeout(() => {
-      navigate("/all-placement-letters", { state: { refresh: true } });
-    }, 2000); // 2 seconds delay
-
-  } catch (error) {
-    console.error("Error:", error);
-    setErrorMessage(error.response?.data?.error || "An error occurred while updating the letter.");
-    setShowErrorNotification(true);
-
-    setTimeout(() => {
-      setShowErrorNotification(false);
-    }, 3000);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+    } catch (error) {
+      setErrorMessage(error.response?.data?.error || "An error occurred while updating the letter.");
+      setShowErrorNotification(true);
+      setTimeout(() => setShowErrorNotification(false), 3000);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -159,7 +150,6 @@ const EditPlacementLetter = ({ darkMode }) => {
             <Card className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}>
               <Card.Body>
                 <Form onSubmit={handleSubmit}>
-                  {/* Letter Name field */}
                   <Form.Group controlId="letterName" className="mb-3">
                     <Form.Label>Letter Name</Form.Label>
                     <Form.Control
@@ -168,21 +158,30 @@ const EditPlacementLetter = ({ darkMode }) => {
                       value={letterData.letterName}
                       onChange={handleInputChange}
                       required
+                      readOnly
                     />
                   </Form.Group>
 
-                  {Array.from({ length: 28 }, (_, i) => (
-                    <Form.Group key={`label${i + 1}`} controlId={`label${i + 1}`} className="mb-3">
-                      <Form.Label>Line {i + 1}</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name={`label${i + 1}`}
-                        value={letterData[`label${i + 1}`]}
-                        onChange={handleInputChange}
-                        {...(i + 1 === 14 ? {} : { required: true })}
-                      />
-                    </Form.Group>
-                  ))}
+                  {Array.from({ length: 28 }, (_, i) => {
+                    const fieldName = `label${i + 1}`;
+                    const isReadOnly = readOnlyLines.includes(i + 1);
+                    
+                    return (
+                      <Form.Group key={fieldName} controlId={fieldName} className="mb-3">
+                        <Form.Label>Line {i + 1}</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name={fieldName}
+                          value={letterData[fieldName]}
+                          onChange={handleInputChange}
+                          required={!isReadOnly}
+                          readOnly={isReadOnly}
+                          plaintext={isReadOnly}
+                          className={isReadOnly ? (darkMode ? "text-white" : "text-dark") : ""}
+                        />
+                      </Form.Group>
+                    );
+                  })}
 
                   <div className="d-flex justify-content-between mt-3">
                     <Button variant="danger" onClick={() => navigate(-1)} disabled={isSubmitting}>

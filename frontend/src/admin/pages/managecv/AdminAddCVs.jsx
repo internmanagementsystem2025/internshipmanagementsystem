@@ -26,28 +26,24 @@ const AdminAddCVs = ({ darkMode }) => {
     selectedRole: "",
     roleData: {
       dataEntry: {
-        // O/L Results (Required subjects) - Same structure as individual
         language: "",
         mathematics: "",
         science: "",
         english: "",
         history: "",
         religion: "",
-        // Optional subjects
         optional1Name: "",
         optional1Result: "",
         optional2Name: "",
         optional2Result: "",
         optional3Name: "",
         optional3Result: "",
-        // A/L Results
         aLevelSubject1Name: "",
         aLevelSubject1Result: "",
         aLevelSubject2Name: "",
         aLevelSubject2Result: "",
         aLevelSubject3Name: "",
         aLevelSubject3Result: "",
-        // Other fields
         preferredLocation: "",
         otherQualifications: "",
       },
@@ -85,7 +81,8 @@ const AdminAddCVs = ({ darkMode }) => {
   const navigate = useNavigate();
   const [autoApprove, setAutoApprove] = useState(false);
 
-  // Fetch districts and institutes on mount
+  /*const [fileInputKey, setFileInputKey] = useState(Date.now());*/
+
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
@@ -123,7 +120,6 @@ const AdminAddCVs = ({ darkMode }) => {
     fetchInstitutes();
   }, []);
 
-  // Handle back navigation with confirmation if form is modified
   const handleBackClick = () => {
     if (formModified) {
       setShowBackConfirmation(true);
@@ -132,7 +128,6 @@ const AdminAddCVs = ({ darkMode }) => {
     }
   };
 
-  // Handle confirmation dialog responses
   const handleConfirmBack = () => {
     setShowBackConfirmation(false);
     navigate(-1);
@@ -142,7 +137,6 @@ const AdminAddCVs = ({ darkMode }) => {
     setShowBackConfirmation(false);
   };
 
-  // Handle Role Change
   const handleRoleChange = (event) => {
     const role = event.target.value;
     setSelectedRole(role);
@@ -151,7 +145,6 @@ const AdminAddCVs = ({ darkMode }) => {
       selectedRole: role,
     }));
     setFormModified(true);
-    // Clear role-specific errors when changing roles
     const commonErrors = {};
     Object.entries(formErrors).forEach(([key, value]) => {
       if (!key.includes('roleData')) {
@@ -241,47 +234,16 @@ const AdminAddCVs = ({ darkMode }) => {
     }
   };
 
-  // Handle Input Change with improved nested object handling - Same as individual
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormModified(true);
-
-    // Special handling for NIC input
-    if (name === 'nic') {
-      const nicInfo = extractBirthdayFromNIC(value);
-      if (nicInfo.isValid) {
-        setCvData(prevState => ({
-          ...prevState,
-          nic: value,
-          birthday: nicInfo.birthday,
-          gender: nicInfo.gender
-        }));
-
-        // Clear any existing errors
-        setFormErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors.nic;
-          delete newErrors.birthday;
-          delete newErrors.gender;
-          return newErrors;
-        });
-        return;
-      } else {
-        setFormErrors(prev => ({
-          ...prev,
-          nic: nicInfo.error
-        }));
-      }
-    }
-
-    // Handle nested paths like "roleData.dataEntry.proficiency.msWord"
+    
     if (name.includes(".")) {
       const parts = name.split(".");
       setCvData(prevState => {
         const newState = { ...prevState };
         let current = newState;
         
-        // Navigate to the deepest level except the last part
         for (let i = 0; i < parts.length - 1; i++) {
           if (!current[parts[i]]) {
             current[parts[i]] = {};
@@ -289,10 +251,8 @@ const AdminAddCVs = ({ darkMode }) => {
           current = current[parts[i]];
         }
         
-        // Set the value at the last part
         const lastPart = parts[parts.length - 1];
         
-        // Handle numeric values for proficiency
         if (parts.includes("proficiency") && 
             (lastPart === "msWord" || lastPart === "msExcel" || lastPart === "msPowerPoint")) {
           current[lastPart] = parseInt(value) || 0;
@@ -303,7 +263,6 @@ const AdminAddCVs = ({ darkMode }) => {
         return newState;
       });
       
-      // Clear error for nested field if it exists
       if (formErrors[name]) {
         setFormErrors(prev => {
           const newErrors = { ...prev };
@@ -312,13 +271,28 @@ const AdminAddCVs = ({ darkMode }) => {
         });
       }
     } else {
-      // Handle simple fields
       setCvData(prevState => ({
         ...prevState,
         [name]: value
       }));
       
-      // Clear error for this field if it exists
+      // Special handling for email validation on change
+      if (name === "emailAddress" && value) {
+        const emailRegex = /^(?!.*\.\.)(?!.*\.$)(?!^\.)[a-zA-Z0-9.%+-]+@gmail\.com$/;
+        if (!emailRegex.test(value)) {
+          setFormErrors(prev => ({
+            ...prev,
+            emailAddress: "Please enter a valid email address (e.g., example@domain.com)"
+          }));
+        } else if (formErrors.emailAddress) {
+          setFormErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors.emailAddress;
+            return newErrors;
+          });
+        }
+      }
+      
       if (formErrors[name]) {
         setFormErrors(prev => {
           const newErrors = { ...prev };
@@ -329,7 +303,6 @@ const AdminAddCVs = ({ darkMode }) => {
     }
   };
 
-  // Handle File Upload
   const handleFileChange = (e) => {
     const { name, files } = e.target;
     setFormModified(true);
@@ -338,7 +311,6 @@ const AdminAddCVs = ({ darkMode }) => {
       [name]: files[0] || null,
     }));
     
-    // Clear error for this field if it exists
     if (formErrors[name]) {
       setFormErrors(prev => {
         const newErrors = { ...prev };
@@ -348,29 +320,67 @@ const AdminAddCVs = ({ darkMode }) => {
     }
   };
 
-  // Validate form before submission - Same as individual but without required field validation
   const validateForm = () => {
     const errors = {};
+    const requiredFields = [
+      'fullName', 'nameWithInitials', 'gender', 'district', 
+      'birthday', 'nic', 'mobileNumber', 'emailAddress', 'institute'
+    ];
     
-    // Check if a role is selected
+    // Basic required fields validation
+    requiredFields.forEach(field => {
+      if (!cvData[field]) {
+        errors[field] = "This field is required";
+      }
+    });
+
+    // Email validation
+    if (!cvData.emailAddress) {
+      errors.emailAddress = "Email address is required";
+    } else {
+      const emailRegex =/^(?!.*\.\.)(?!.*\.$)(?!^\.)[a-zA-Z0-9.%+-]+@gmail\.com$/;
+      if (!emailRegex.test(cvData.emailAddress)) {
+        errors.emailAddress = "Please enter a valid email address (e.g., example@domain.com)";
+      }
+    }
+
+    // NIC validation
+    if (!cvData.nic) {
+      errors.nic = "NIC is required";
+    } else {
+      const nicRegex = /^([0-9]{9}[vVxX]|[0-9]{12})$/;
+      if (!nicRegex.test(cvData.nic)) {
+        errors.nic = "Please enter a valid NIC number (e.g., 123456789V or 123456789012)";
+      }
+    }
+
+    // Mobile number validation
+    if (!cvData.mobileNumber) {
+      errors.mobileNumber = "Mobile number is required";
+    } else {
+      const mobileRegex = /^0[0-9]{9}$/;
+      if (!mobileRegex.test(cvData.mobileNumber)) {
+        errors.mobileNumber = "Please enter a valid mobile number (e.g., 0712345678)";
+      }
+    }
+
+    // Role selection validation
     if (!cvData.selectedRole) {
       errors.selectedRole = "Please select a role";
     }
     
     // Data Entry specific validations
     if (cvData.selectedRole === "dataEntry") {
-      // Check preferred location
-      if (!cvData.roleData?.dataEntry?.preferredLocation) {
-        errors["roleData.dataEntry.preferredLocation"] = "Please select a preferred location";
-      }
-      
-      // Check required O/L results - FIXED: Access direct fields, not nested olResults
       const requiredSubjects = ["language", "mathematics", "science", "english"];
       requiredSubjects.forEach(subject => {
         if (!cvData.roleData?.dataEntry?.[subject]) {
           errors[`roleData.dataEntry.${subject}`] = "This field is required";
         }
       });
+      
+      if (!cvData.roleData?.dataEntry?.preferredLocation) {
+        errors["roleData.dataEntry.preferredLocation"] = "Please select a preferred location";
+      }
     }
     
     // Internship specific validations
@@ -379,16 +389,29 @@ const AdminAddCVs = ({ darkMode }) => {
         errors["roleData.internship.categoryOfApply"] = "Please select a category";
       }
     }
-    
+
+    // Emergency contact validation
+    if (!cvData.emergencyContactName1 || !cvData.emergencyContactNumber1) {
+      errors.emergencyContactName1 = "At least one emergency contact is required";
+      errors.emergencyContactNumber1 = "At least one emergency contact is required";
+    }
+
+  
+    // File validations
+    if (!cvData.updatedCv) {
+      errors.updatedCv = "CV file is required";
+    }
+    if (!cvData.nicFile) {
+      errors.nicFile = "NIC copy is required";
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  // Form Submission - Fixed to match individual version exactly
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate form first
     if (!validateForm()) {
       setNotification({
         show: true,
@@ -413,14 +436,10 @@ const AdminAddCVs = ({ darkMode }) => {
       return;
     }
 
-    // Create FormData object
     const formData = new FormData();
-
-    // Add admin-specific fields
     formData.append("autoApprove", autoApprove);
     formData.append("createdByAdmin", true);
 
-    // Add basic fields
     const basicFields = [
       'fullName', 'nameWithInitials', 'gender', 'postalAddress', 'referredBy',
       'district', 'birthday', 'nic', 'mobileNumber', 'landPhone', 'emailAddress',
@@ -434,33 +453,27 @@ const AdminAddCVs = ({ darkMode }) => {
       }
     });
 
-    // Handle role-specific data with correct field names for backend - SAME AS INDIVIDUAL
     if (cvData.selectedRole === 'dataEntry') {
       const dataEntryData = cvData.roleData?.dataEntry || {};
       
-      // O/L Results - Send as flat fields (what backend expects)
       const olSubjects = ['language', 'mathematics', 'science', 'english', 'history', 'religion'];
       olSubjects.forEach(subject => {
         formData.append(subject, dataEntryData[subject] || '');
       });
       
-      // Optional subjects
       for (let i = 1; i <= 3; i++) {
         formData.append(`optional${i}Name`, dataEntryData[`optional${i}Name`] || '');
         formData.append(`optional${i}Result`, dataEntryData[`optional${i}Result`] || '');
       }
       
-      // A/L Results - Send as flat fields (what backend expects)
       for (let i = 1; i <= 3; i++) {
         formData.append(`aLevelSubject${i}Name`, dataEntryData[`aLevelSubject${i}Name`] || '');
         formData.append(`aLevelSubject${i}Result`, dataEntryData[`aLevelSubject${i}Result`] || '');
       }
       
-      // Other fields
       formData.append('preferredLocation', dataEntryData.preferredLocation || '');
       formData.append('otherQualifications', dataEntryData.otherQualifications || '');
       
-      // Add proficiency data if it exists
       if (dataEntryData.proficiency) {
         formData.append('msWordProficiency', dataEntryData.proficiency.msWord || '0');
         formData.append('msExcelProficiency', dataEntryData.proficiency.msExcel || '0');
@@ -468,14 +481,12 @@ const AdminAddCVs = ({ darkMode }) => {
       }
     } 
     else if (cvData.selectedRole === 'internship') {
-      // Internship specific fields
       const internshipData = cvData.roleData?.internship || {};
       formData.append('categoryOfApply', internshipData.categoryOfApply || '');
       formData.append('higherEducation', internshipData.higherEducation || '');
       formData.append('otherQualifications', internshipData.otherQualifications || '');
     }
 
-    // Add files
     const fileFields = ['updatedCv', 'nicFile', 'policeClearanceReport', 'internshipRequestLetter'];
     fileFields.forEach(field => {
       if (cvData[field]) {
@@ -484,7 +495,6 @@ const AdminAddCVs = ({ darkMode }) => {
     });
 
     try {
-      // Set loading state
       setNotification({
         show: true,
         message: "Submitting CV...",
@@ -555,20 +565,17 @@ const AdminAddCVs = ({ darkMode }) => {
 
   return (
     <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
-      {/* Header */}
       <div className="text-center mt-4 mb-3">
         <img src={logo} alt="Company Logo" className="mx-auto d-block" style={{ height: "50px" }} />
         <h3 className="mt-3">ADD NEW CV</h3>
       </div>
 
-      {/* Main Content */}
       <main className={`container p-4 rounded shadow ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"} mb-5`}>
         <div className={`p-4 border rounded shadow-sm ${darkMode ? "border-light" : "border-secondary"}`}>
           <h2 className="text-start">New CV</h2>
           <p className="text-start">You can add a new CV and later schedule an interview for it.</p>
           <hr />
 
-          {/* Form */}
           <form onSubmit={handleSubmit}>
             <UserInfoSection
               districts={districts}
@@ -596,6 +603,8 @@ const AdminAddCVs = ({ darkMode }) => {
               setFormErrors={setFormErrors}
             />
             <PreviousTrainingSection 
+            selectedRole={selectedRole}
+            handleRoleChange={handleRoleChange}
               cvData={cvData} 
               handleInputChange={handleInputChange} 
               darkMode={darkMode}
@@ -625,7 +634,6 @@ const AdminAddCVs = ({ darkMode }) => {
               </Form.Text>
             </Form.Group>
 
-            {/* Form Navigation Buttons */}
             <div className="d-flex flex-wrap gap-2 justify-content-between mt-4">
               <button 
                 type="button" 
@@ -633,6 +641,23 @@ const AdminAddCVs = ({ darkMode }) => {
                 onClick={handleBackClick}
               >
                 Back
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-danger px-5"
+                onClick={() => {
+                  setCvData(JSON.parse(JSON.stringify(defaultCVData)));
+                  setFormErrors({});
+                  setFormModified(false);
+                  setFileInputKey(prev => prev + 1);
+                  setNotification({
+                    show: true,
+                    message: "All changes discarded.",
+                    variant: "info"
+                  });
+                }}
+              >
+                Discard Changes
               </button>
               <button 
                 type="submit" 
@@ -645,7 +670,6 @@ const AdminAddCVs = ({ darkMode }) => {
         </div>
       </main>
 
-      {/* Back Confirmation Modal */}
       {showBackConfirmation && (
         <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 1050 }}>
@@ -677,10 +701,7 @@ const AdminAddCVs = ({ darkMode }) => {
       <Notification
         show={notification.show}
         onClose={() => {
-          // First close the notification
           setNotification({ ...notification, show: false });
-          
-          // Then execute any onClose callback if it exists
           if (notification.onClose && typeof notification.onClose === 'function') {
             notification.onClose();
           }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -33,6 +33,8 @@ import {
   FaCalendarAlt,
   FaUserTie,
   FaBriefcase,
+  FaFilter,
+  FaTimes,
 } from "react-icons/fa";
 import logo from "../../../assets/logo.png";
 import DeleteConfirmationModal from "../../../components/notifications/DeleteConfirmationModal";
@@ -99,65 +101,63 @@ const ViewAllCVs = ({ darkMode = false }) => {
     "#dee2e6",
   ];
 
-const calculateColumnWidths = () => {
-  if (!filteredData.length) return {};
+  const calculateColumnWidths = () => {
+    if (!filteredData.length) return {};
 
-  const columnWidths = {};
+    const columnWidths = {};
 
-  const calculateWidth = (values, headerText, minWidth = 80, maxWidth = 600) => {
-    const allValues = [...values.filter(v => v != null), headerText];
+    const calculateWidth = (values, headerText, minWidth = 80, maxWidth = 600) => {
+      const allValues = [...values.filter(v => v != null), headerText];
+      
+      const maxLength = Math.max(
+        ...allValues.map(val => String(val || "").length)
+      );
+      
+      const calculatedWidth = Math.max(minWidth, Math.min(maxWidth, maxLength * 10 + 40));
+      return calculatedWidth;
+    };
+
+    // Fixed width columns
+    const nicValues = [...filteredData.map(cv => cv.nic), "NIC"];
+    columnWidths["nic"] = calculateWidth(nicValues, "NIC", 100, 180);
+
+    const refNoValues = [...filteredData.map(cv => cv.refNo), "Ref No"];
+    columnWidths["refNo"] = calculateWidth(refNoValues, "Ref No", 80, 150);
+
+    const nameValues = [...filteredData.map(cv => renderNameWithPrefix(cv.fullName, cv.gender)), "Name"];
+    columnWidths["name"] = calculateWidth(nameValues, "Name", 150, 250);
+
+    const cvFromValues = [...filteredData.map(cv => cv.userType), "CV From"];
+    columnWidths["cvFrom"] = calculateWidth(cvFromValues, "CV From", 90, 140);
+
+    const internTypeValues = [...filteredData.map(cv => cv.selectedRole), "Intern Type"];
+    columnWidths["internType"] = calculateWidth(internTypeValues, "Intern Type", 100, 160);
+
+    columnWidths["applicationDate"] = 150; 
+
+    const districtValues = [...filteredData.map(cv => cv.district), "District"];
+    columnWidths["district"] = calculateWidth(districtValues, "District", 100, 180);
+
+    const instituteValues = [...filteredData.map(cv => cv.institute), "Institute"];
+    columnWidths["institute"] = calculateWidth(instituteValues, "Institute", 150, 300);
+
+    const referredByValues = [...filteredData.map(cv => cv.referredBy), "Referred By"];
+    columnWidths["referredBy"] = calculateWidth(referredByValues, "Referred By", 100, 180);
+
+    columnWidths["status"] = 200; 
     
-    const maxLength = Math.max(
-      ...allValues.map(val => String(val || "").length)
-    );
-    
-    const calculatedWidth = Math.max(minWidth, Math.min(maxWidth, maxLength * 10 + 40));
-    return calculatedWidth;
+    if (hasInternshipCVs()) {
+      const categoryValues = [
+        ...filteredData
+          .filter(cv => cv.selectedRole === 'internship')
+          .map(cv => cv.roleData?.internship?.categoryOfApply),
+        "Category of Apply"
+      ];
+      columnWidths["categoryOfApply"] = calculateWidth(categoryValues, "Category of Apply", 120, 200);
+    }
+
+    return columnWidths;
   };
-
-
-  // Fixed width columns
-  const nicValues = [...filteredData.map(cv => cv.nic), "NIC"];
-  columnWidths["nic"] = calculateWidth(nicValues, 100, 180);
-
-  const refNoValues = [...filteredData.map(cv => cv.refNo), "Ref No"];
-  columnWidths["refNo"] = calculateWidth(refNoValues, 80, 150);
-
-  const nameValues = [...filteredData.map(cv => renderNameWithPrefix(cv.fullName, cv.gender)), "Name"];
-  columnWidths["name"] = calculateWidth(nameValues, 150, 250);
-
-  const cvFromValues = [...filteredData.map(cv => cv.userType), "CV From"];
-  columnWidths["cvFrom"] = calculateWidth(cvFromValues, 90, 140);
-
-  const internTypeValues = [...filteredData.map(cv => cv.selectedRole), "Intern Type"];
-  columnWidths["internType"] = calculateWidth(internTypeValues, 100, 160);
-
-  columnWidths["applicationDate"] = 150; 
-
-  const districtValues = [...filteredData.map(cv => cv.district), "District"];
-  columnWidths["district"] = calculateWidth(districtValues, 100, 180);
-
-  const instituteValues = [...filteredData.map(cv => cv.institute), "Institute"];
-  columnWidths["institute"] = calculateWidth(instituteValues, 150, 300);
-
-  const referredByValues = [...filteredData.map(cv => cv.referredBy), "Referred By"];
-  columnWidths["referredBy"] = calculateWidth(referredByValues, 100, 180);
-
-  columnWidths["status"] = 200; 
-  
-if (hasInternshipCVs()) {
-    const categoryValues = [
-      ...filteredData
-        .filter(cv => cv.selectedRole === 'internship')
-        .map(cv => cv.roleData?.internship?.categoryOfApply),
-      "Category of Apply"
-    ];
-    columnWidths["categoryOfApply"] = calculateWidth(categoryValues, 120, 200);
-  }
-
-  return columnWidths;
-};
-
 
   const colorPalette = darkMode ? darkModeColors : lightModeColors;
   const genderColors = darkMode
@@ -219,7 +219,25 @@ if (hasInternshipCVs()) {
     }
   };
 
-  // Fetch CVs from API
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setFilterCategory("fullName");
+    setStatusFilter("all");
+    setDateFilter("all");
+    setCurrentPage(1);
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = () => {
+    return (
+      searchTerm !== "" ||
+      statusFilter !== "all" ||
+      dateFilter !== "all"
+    );
+  };
+
+  // Fetch CVs from API - runs only once on mount
   useEffect(() => {
     const fetchCVs = async () => {
       setLoading(true);
@@ -237,11 +255,6 @@ if (hasInternshipCVs()) {
           `${API_BASE_URL}/cvs/get-all-with-filtering`,
           {
             headers: { Authorization: `Bearer ${token}` },
-            params: {
-              status: statusFilter === "all" ? undefined : statusFilter,
-              search: searchTerm || undefined,
-              filterBy: filterCategory,
-            },
           }
         );
 
@@ -271,70 +284,71 @@ if (hasInternshipCVs()) {
     };
 
     fetchCVs();
-  }, [navigate, statusFilter, searchTerm, filterCategory]);
+  }, [navigate]);
 
-  // Apply filters to CV data
+  // Apply filters to CV data - runs when filter criteria changes
+  const applyFilters = useCallback(() => {
+    let filtered = [...cvData];
+
+    // Apply search term filter
+    if (searchTerm && searchTerm.trim()) {
+      filtered = filtered.filter((cv) => {
+        const value = (cv[filterCategory] || "").toString().toLowerCase();
+        return value.includes(searchTerm.toLowerCase().trim());
+      });
+    }
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((cv) => {
+        const currentStatus = cv.currentStatus || "";
+
+        switch (statusFilter) {
+          case "cv-approved":
+            return currentStatus === "cv-approved";
+          case "cv-pending":
+            return (
+              currentStatus === "cv-submitted" ||
+              currentStatus === "cv-pending" ||
+              !currentStatus
+            );
+          case "interview-scheduled":
+            return (
+              currentStatus === "interview-scheduled" ||
+              currentStatus === "induction-scheduled" ||
+              currentStatus === "schema-assigned" ||
+              currentStatus.includes("interview") ||
+              currentStatus.includes("induction") ||
+              currentStatus.includes("schema")
+            );
+          case "cv-rejected":
+            return currentStatus === "cv-rejected";
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply date filter
+    if (dateFilter !== "all") {
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.applicationDate || 0);
+        const dateB = new Date(b.applicationDate || 0);
+        return dateFilter === "newest" ? dateB - dateA : dateA - dateB;
+      });
+    }
+
+    setFilteredData(filtered);
+    setCurrentPage(1);
+  }, [cvData, searchTerm, filterCategory, statusFilter, dateFilter]);
+
+  // Run filters when filter criteria changes
   useEffect(() => {
-    const applyFilters = () => {
-      let filtered = [...cvData];
-
-      // Apply search term filter
-      if (searchTerm && searchTerm.trim()) {
-        filtered = filtered.filter((cv) => {
-          const value = (cv[filterCategory] || "").toString().toLowerCase();
-          return value.includes(searchTerm.toLowerCase().trim());
-        });
-      }
-
-      // Apply status filter
-      if (statusFilter !== "all") {
-        filtered = filtered.filter((cv) => {
-          const currentStatus = cv.currentStatus || "";
-
-          switch (statusFilter) {
-            case "cv-approved":
-              return currentStatus === "cv-approved";
-            case "cv-pending":
-              return (
-                currentStatus === "cv-submitted" ||
-                currentStatus === "cv-pending" ||
-                !currentStatus
-              );
-            case "interview-scheduled":
-              return (
-                currentStatus === "interview-scheduled" ||
-                currentStatus === "induction-scheduled" ||
-                currentStatus === "schema-assigned" ||
-                currentStatus.includes("interview") ||
-                currentStatus.includes("induction") ||
-                currentStatus.includes("schema")
-              );
-            case "cv-rejected":
-              return currentStatus === "cv-rejected";
-            default:
-              return true;
-          }
-        });
-      }
-
-      // Apply date filter
-      if (dateFilter !== "all") {
-        filtered.sort((a, b) => {
-          const dateA = new Date(a.applicationDate || 0);
-          const dateB = new Date(b.applicationDate || 0);
-          return dateFilter === "newest" ? dateB - dateA : dateA - dateB;
-        });
-      }
-
-      setFilteredData(filtered);
-      setCurrentPage(1);
-    };
-
     applyFilters();
-  }, [searchTerm, filterCategory, statusFilter, dateFilter, cvData]);
+  }, [applyFilters]);
 
   // Analytics data processing functions
-  const getMonthlySubmissionData = () => {
+  const getMonthlySubmissionData = useCallback(() => {
     const monthlyData = Array.from({ length: 12 }, (_, i) => ({
       month: new Date(0, i).toLocaleString("default", { month: "short" }),
       count: 0,
@@ -351,9 +365,9 @@ if (hasInternshipCVs()) {
     });
 
     return monthlyData;
-  };
+  }, [cvData, selectedYear]);
 
-  const getStatusData = () => {
+  const getStatusData = useCallback(() => {
     const statusCounts = {};
 
     // Initialize all statuses with 0
@@ -377,9 +391,9 @@ if (hasInternshipCVs()) {
         count,
         color: colorPalette[index % colorPalette.length],
       }));
-  };
+  }, [cvData, colorPalette]);
 
-  const getGenderData = () => {
+  const getGenderData = useCallback(() => {
     const genderCounts = { Male: 0, Female: 0, Other: 0 };
 
     cvData.forEach((cv) => {
@@ -410,9 +424,9 @@ if (hasInternshipCVs()) {
         count,
         color: genderColors[gender],
       }));
-  };
+  }, [cvData, selectedYear, genderColors]);
 
-  const getInternTypeData = () => {
+  const getInternTypeData = useCallback(() => {
     const internTypes = {};
 
     cvData.forEach((cv) => {
@@ -431,9 +445,9 @@ if (hasInternshipCVs()) {
         count,
         color: colorPalette[index % colorPalette.length],
       }));
-  };
+  }, [cvData, selectedYear, colorPalette]);
 
-  const getAvailableYears = () => {
+  const getAvailableYears = useCallback(() => {
     const years = new Set();
     cvData.forEach((cv) => {
       if (cv.applicationDate) {
@@ -441,7 +455,7 @@ if (hasInternshipCVs()) {
       }
     });
     return Array.from(years).sort((a, b) => b - a);
-  };
+  }, [cvData]);
 
   // Custom Tooltip components
   const CustomTooltip = ({ active, payload, label }) => {
@@ -586,47 +600,43 @@ The CV has been moved to deleted items and can be restored by administrators if 
     setDeleteLoading(false);
   };
 
-
   // Table columns and pagination
   const getColumns = () => {
-  const columnWidths = calculateColumnWidths();
-  
-  const baseColumns = [
-    { key: "#", label: "#", width: `${columnWidths["#"] || 60}px` },
-    { key: "nic", label: "NIC", width: `${columnWidths["nic"] || 140}px` },
-    { key: "refNo", label: "Ref No", width: `${columnWidths["refNo"] || 120}px` },
-    { key: "name", label: "Name", width: `${columnWidths["name"] || 180}px` },
-    { key: "cvFrom", label: "CV From", width: `${columnWidths["cvFrom"] || 110}px` },
-    { key: "internType", label: "Intern Type", width: `${columnWidths["internType"] || 130}px` },
-    { key: "applicationDate", label: "Application Date", width: `${columnWidths["applicationDate"] || 150}px` },
-    { key: "district", label: "District", width: `${columnWidths["district"] || 120}px` },
-    { key: "institute", label: "Institute", width: `${columnWidths["institute"] || 200}px` },
-    { key: "referredBy", label: "Referred By", width: `${columnWidths["referredBy"] || 140}px` },
-  ];
+    const columnWidths = calculateColumnWidths();
+    
+    const baseColumns = [
+      { key: "#", label: "#", width: `${columnWidths["#"] || 60}px` },
+      { key: "nic", label: "NIC", width: `${columnWidths["nic"] || 140}px` },
+      { key: "refNo", label: "Ref No", width: `${columnWidths["refNo"] || 120}px` },
+      { key: "name", label: "Name", width: `${columnWidths["name"] || 180}px` },
+      { key: "cvFrom", label: "CV From", width: `${columnWidths["cvFrom"] || 110}px` },
+      { key: "internType", label: "Intern Type", width: `${columnWidths["internType"] || 130}px` },
+      { key: "applicationDate", label: "Application Date", width: `${columnWidths["applicationDate"] || 150}px` },
+      { key: "district", label: "District", width: `${columnWidths["district"] || 120}px` },
+      { key: "institute", label: "Institute", width: `${columnWidths["institute"] || 200}px` },
+      { key: "referredBy", label: "Referred By", width: `${columnWidths["referredBy"] || 140}px` },
+    ];
 
-  if (hasInternshipCVs()) {
-    baseColumns.push({
-      key: "categoryOfApply",
-      label: "Category of Apply",
-      width: `${columnWidths["categoryOfApply"] || 160}px`,
-    });
-  }
+    if (hasInternshipCVs()) {
+      baseColumns.push({
+        key: "categoryOfApply",
+        label: "Category of Apply",
+        width: `${columnWidths["categoryOfApply"] || 160}px`,
+      });
+    }
 
-  baseColumns.push(
-    { key: "status", label: "Status", width: `${columnWidths["status"] || 120}px` },
-    { key: "view", label: "View", width: `${columnWidths["view"] || 80}px` },
-    { key: "delete", label: "Delete", width: `${columnWidths["delete"] || 80}px` }
-  );
+    baseColumns.push(
+      { key: "status", label: "Status", width: `${columnWidths["status"] || 120}px` },
+      { key: "view", label: "View", width: `${columnWidths["view"] || 80}px` },
+      { key: "delete", label: "Delete", width: `${columnWidths["delete"] || 80}px` }
+    );
 
-  return baseColumns;
-};
-
-useEffect(() => {
-}, [filteredData]);
+    return baseColumns;
+  };
 
   const columns = getColumns();
   const totalTableWidth = columns.reduce((total, col) => {
-  return total + parseInt(col.width.replace("px", ""));
+    return total + parseInt(col.width.replace("px", ""));
   }, 0);
   const minTableWidth = 1200; 
   const finalTableWidth = Math.max(totalTableWidth, minTableWidth);
@@ -636,126 +646,126 @@ useEffect(() => {
   const currentCVs = filteredData.slice(indexOfFirstCV, indexOfLastCV);
 
   // Table styles
-const tableContainerStyles = {
-  overflowX: "auto",
-  overflowY: "visible",
-  WebkitOverflowScrolling: "touch",
-  scrollbarWidth: "auto",
-  scrollbarColor: darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa",
-  border: darkMode ? "1px solid #454d55" : "1px solid #dee2e6",
-  borderRadius: "0.375rem",
-  boxShadow: darkMode
-    ? "0 0.125rem 0.25rem rgba(255, 255, 255, 0.075)"
-    : "0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)",
-  position: "relative",
-  minHeight: "200px",
-};
+  const tableContainerStyles = {
+    overflowX: "auto",
+    overflowY: "visible",
+    WebkitOverflowScrolling: "touch",
+    scrollbarWidth: "auto",
+    scrollbarColor: darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa",
+    border: darkMode ? "1px solid #454d55" : "1px solid #dee2e6",
+    borderRadius: "0.375rem",
+    boxShadow: darkMode
+      ? "0 0.125rem 0.25rem rgba(255, 255, 255, 0.075)"
+      : "0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)",
+    position: "relative",
+    minHeight: "200px",
+  };
 
   const scrollbarStyles = `
-  .enhanced-table-container::-webkit-scrollbar {
-    height: 12px;
-    background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
-    border-radius: 6px;
-  }
-  
-  .enhanced-table-container::-webkit-scrollbar-track {
-    background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
-    border-radius: 6px;
-    border: 1px solid ${darkMode ? "#454d55" : "#dee2e6"};
-  }
-  
-  .enhanced-table-container::-webkit-scrollbar-thumb {
-    background-color: ${darkMode ? "#6c757d" : "#adb5bd"};
-    border-radius: 6px;
-    border: 2px solid ${darkMode ? "#343a40" : "#f8f9fa"};
-    transition: background-color 0.2s ease;
-  }
-  
-  .enhanced-table-container::-webkit-scrollbar-thumb:hover {
-    background-color: ${darkMode ? "#868e96" : "#868e96"};
-  }
-  
-  .enhanced-table-container::-webkit-scrollbar-thumb:active {
-    background-color: ${darkMode ? "#495057" : "#6c757d"};
-  }
-  
-  .enhanced-table-container {
-    scrollbar-width: auto;
-    scrollbar-color: ${darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa"};
-  }
+    .enhanced-table-container::-webkit-scrollbar {
+      height: 12px;
+      background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
+      border-radius: 6px;
+    }
+    
+    .enhanced-table-container::-webkit-scrollbar-track {
+      background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
+      border-radius: 6px;
+      border: 1px solid ${darkMode ? "#454d55" : "#dee2e6"};
+    }
+    
+    .enhanced-table-container::-webkit-scrollbar-thumb {
+      background-color: ${darkMode ? "#6c757d" : "#adb5bd"};
+      border-radius: 6px;
+      border: 2px solid ${darkMode ? "#343a40" : "#f8f9fa"};
+      transition: background-color 0.2s ease;
+    }
+    
+    .enhanced-table-container::-webkit-scrollbar-thumb:hover {
+      background-color: ${darkMode ? "#868e96" : "#868e96"};
+    }
+    
+    .enhanced-table-container::-webkit-scrollbar-thumb:active {
+      background-color: ${darkMode ? "#495057" : "#6c757d"};
+    }
+    
+    .enhanced-table-container {
+      scrollbar-width: auto;
+      scrollbar-color: ${darkMode ? "#6c757d #343a40" : "#6c757d #f8f9fa"};
+    }
 
-  /* Fixed table layout with dynamic column widths */
-  .enhanced-table-container table {
-    table-layout: fixed;
-    width: ${totalTableWidth}px;
-    min-width: ${totalTableWidth}px;
-  }
+    /* Fixed table layout with dynamic column widths */
+    .enhanced-table-container table {
+      table-layout: fixed;
+      width: ${totalTableWidth}px;
+      min-width: ${totalTableWidth}px;
+    }
 
-  .enhanced-table-container th,
-  .enhanced-table-container td {
-    white-space: nowrap;
-    padding: 0.75rem 0.5rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    vertical-align: middle;
-  }
+    .enhanced-table-container th,
+    .enhanced-table-container td {
+      white-space: nowrap;
+      padding: 0.75rem 0.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      vertical-align: middle;
+    }
 
-  /* Specific column widths */
-  ${columns
-    .map(
-      (col, index) => `
-  .enhanced-table-container th:nth-child(${index + 1}),
-  .enhanced-table-container td:nth-child(${index + 1}) { 
-    width: ${col.width}; 
-    min-width: ${col.width}; 
-    max-width: ${col.width}; 
-  }`
-    )
-    .join("\n")}
+    /* Specific column widths */
+    ${columns
+      .map(
+        (col, index) => `
+    .enhanced-table-container th:nth-child(${index + 1}),
+    .enhanced-table-container td:nth-child(${index + 1}) { 
+      width: ${col.width}; 
+      min-width: ${col.width}; 
+      max-width: ${col.width}; 
+    }`
+      )
+      .join("\n")}
 
-  /* Smooth scrolling behavior */
-  .enhanced-table-container {
-    scroll-behavior: smooth;
-  }
+    /* Smooth scrolling behavior */
+    .enhanced-table-container {
+      scroll-behavior: smooth;
+    }
 
-  /* Focus styles for accessibility */
-  .enhanced-table-container:focus {
-    outline: 2px solid ${darkMode ? "#0d6efd" : "#0d6efd"};
-    outline-offset: 2px;
-  }
+    /* Focus styles for accessibility */
+    .enhanced-table-container:focus {
+      outline: 2px solid ${darkMode ? "#0d6efd" : "#0d6efd"};
+      outline-offset: 2px;
+    }
 
-  /* Sticky header */
-  .enhanced-table-container thead th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
-    border-bottom: 2px solid ${darkMode ? "#454d55" : "#dee2e6"};
-  }
+    /* Sticky header */
+    .enhanced-table-container thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background-color: ${darkMode ? "#343a40" : "#f8f9fa"};
+      border-bottom: 2px solid ${darkMode ? "#454d55" : "#dee2e6"};
+    }
 
-  /* Better cell content handling */
-  .enhanced-table-container td {
-    position: relative;
-  }
+    /* Better cell content handling */
+    .enhanced-table-container td {
+      position: relative;
+    }
 
-  .enhanced-table-container td:hover {
-    overflow: visible;
-    z-index: 5;
-  }
+    .enhanced-table-container td:hover {
+      overflow: visible;
+      z-index: 5;
+    }
 
-  /* Button sizing in action columns */
-  .enhanced-table-container .btn-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    white-space: nowrap;
-  }
+    /* Button sizing in action columns */
+    .enhanced-table-container .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      white-space: nowrap;
+    }
 
-  /* Badge styling */
-  .enhanced-table-container .badge {
-    font-size: 0.75rem;
-    white-space: nowrap;
-  }
-`;
+    /* Badge styling */
+    .enhanced-table-container .badge {
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+  `;
 
   // Loading and error states
   if (loading) {
@@ -813,10 +823,10 @@ const tableContainerStyles = {
 
       <Container className="py-4">
         {/* Header */}
-      <div className="text-center mt-4 mb-3">
-        <img src={logo} alt="Company Logo" className="mx-auto d-block" style={{ height: "50px" }} />
-        <h3 className="mt-3">VIEW ALL CVs</h3>
-      </div>
+        <div className="text-center mt-4 mb-3">
+          <img src={logo} alt="Company Logo" className="mx-auto d-block" style={{ height: "50px" }} />
+          <h3 className="mt-3">VIEW ALL CVs</h3>
+        </div>
 
         {/* Year Filter */}
         <Row className="mb-4">
@@ -868,7 +878,7 @@ const tableContainerStyles = {
         {/* Analytics Charts */}
         <Row className="g-4 mb-5">
           {/* Monthly Submissions Chart */}
-          <Col  md={4} className="mb-4">
+          <Col md={4} className="mb-4">
             <Card
               className={`border-0 shadow-lg h-100 ${
                 darkMode ? "bg-dark" : "bg-white"
@@ -919,7 +929,7 @@ const tableContainerStyles = {
           </Col>
 
           {/* Status Distribution Chart - ALL TIME */}
-          <Col  md={4} className="mb-4">
+          <Col md={4} className="mb-4">
             <Card
               className={`border-0 shadow-lg h-100 ${
                 darkMode ? "bg-dark" : "bg-white"
@@ -967,9 +977,8 @@ const tableContainerStyles = {
             </Card>
           </Col>
 
-
           {/* Intern Type Distribution Chart */}
-          <Col  md={4} className="mb-4">
+          <Col md={4} className="mb-4">
             <Card
               className={`border-0 shadow-lg h-100 ${
                 darkMode ? "bg-dark" : "bg-white"
@@ -1034,293 +1043,309 @@ const tableContainerStyles = {
             border: darkMode ? "1px solid #454d55" : "1px solid #ced4da",
           }}
         >
-          <h5 className="mb-3">
-            <FaFileCode
-              className="me-2"
-              style={{ fontSize: "1.2rem", color: darkMode ? "white" : "black" }}
-            />
-            View All CVs
-          </h5>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h5 className="mb-0">
+              <FaFileCode
+                className="me-2"
+                style={{ fontSize: "1.2rem", color: darkMode ? "white" : "black" }}
+              />
+              View All CVs
+            </h5>
+           
+          </div>
           <hr className={darkMode ? "border-light mt-3" : "border-dark mt-3"} />
 
           {/* Filter Section */}
-          <Row className="mb-3">
-            <Col md={3} sm={6} xs={12}>
-              <Form.Group controlId="filterCategory">
-                <Form.Label>Filter Category</Form.Label>
-                <Form.Select
-                  value={filterCategory}
-                  onChange={(e) => setFilterCategory(e.target.value)}
-                >
-                  <option value="fullName">Name</option>
-                  <option value="nic">NIC</option>
-                  <option value="refNo">Ref No</option>
-                  <option value="district">District</option>
-                  <option value="institute">Institute</option>
-                  <option value="userType">CV From</option>
-                  <option value="selectedRole">Intern Type</option>
-                  <option value="referredBy">Referred By</option>
-                </Form.Select>
-              </Form.Group>
+<Row className="mb-3">
+  <Col md={3} sm={6} xs={12}>
+    <Form.Group controlId="filterCategory">
+      <Form.Label>Filter Category</Form.Label>
+      <Form.Select
+        value={filterCategory}
+        onChange={(e) => setFilterCategory(e.target.value)}
+      >
+        <option value="fullName">Name</option>
+        <option value="nic">NIC</option>
+        <option value="refNo">Ref No</option>
+        <option value="district">District</option>
+        <option value="institute">Institute</option>
+        <option value="userType">CV From</option>
+        <option value="selectedRole">Intern Type</option>
+        <option value="referredBy">Referred By</option>
+      </Form.Select>
+    </Form.Group>
+  </Col>
+  <Col md={5} sm={12} xs={12}>
+    <Form.Group controlId="searchInput">
+      <Form.Label>Search</Form.Label>
+      <div className="d-flex align-items-center">
+        <Form.Control
+          type="text"
+          placeholder={`Search by ${filterCategory}`}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ width: "100%" }}
+        />
+        {hasActiveFilters() && (
+          <Button
+            variant="outline-danger"
+            size="sm"
+            onClick={clearAllFilters}
+            className="ms-2"
+            style={{ height: "38px", whiteSpace: "nowrap" }}
+          >
+            <FaTimes className="me-1" />
+            Clear Filters
+          </Button>
+        )}
+      </div>
+    </Form.Group>
+  </Col>
+  <Col
+    md={4}
+    sm={6}
+    xs={12}
+    className="d-flex justify-content-md-end justify-content-left mt-3 mt-md-0"
+  >
+    <Button
+      variant="primary"
+      onClick={() => navigate("/admin-add-cv")}
+      className="mx-0"
+      style={{ width: "auto" }}
+    >
+      Add New CV
+    </Button>
+
+    <Button
+      variant="secondary"
+      onClick={() => navigate("/admin-approve-cvs")}
+      className="mx-2"
+      style={{ width: "auto" }}
+    >
+      Approve CVs
+    </Button>
+  </Col>
+</Row>
+
+          {/* Button Filter Section */}
+          <Row className="mb-4">
+            {/* Status Filter */}
+            <Col md={6}>
+              <Form.Label>Status Filter</Form.Label>
+              <div>
+                <ButtonGroup className="flex-wrap">
+                  {[
+                    { key: "all", label: "All CVs" },
+                    { key: "cv-approved", label: "Approved CVs" },
+                    { key: "cv-pending", label: "Pending CVs" },
+                    { key: "interview-scheduled", label: "Interview Stage" },
+                    { key: "cv-rejected", label: "Rejected CVs" }
+                  ].map(({ key, label }) => (
+                    <Button
+                      key={key}
+                      variant="outline-dark"
+                      onClick={() => setStatusFilter(key)}
+                      style={
+                        statusFilter === key
+                          ? { backgroundColor: "#6c757d", color: "white" }
+                          : {}
+                      }
+                      className="mb-2"
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+              </div>
             </Col>
-          <Col md={5} sm={12} xs={12}>
-            <Form.Group controlId="searchInput">
-              <Form.Label>Search</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder={`Search by ${filterCategory}`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: "100%" }}
-              />
-            </Form.Group>
-          </Col>
-          <Col
-            md={4}
-            sm={6}
-            xs={12}
-            className="d-flex justify-content-md-end justify-content-left mt-3 mt-md-0"
+
+            {/* Date Filter */}
+            <Col md={6}>
+              <Form.Label>Date Filter</Form.Label>
+              <div>
+                <ButtonGroup className="flex-wrap">
+                  {[
+                    { key: "all", label: "All Dates" },
+                    { key: "newest", label: "Newest First" },
+                    { key: "earliest", label: "Earliest First" }
+                  ].map(({ key, label }) => (
+                    <Button
+                      key={key}
+                      variant="outline-dark"
+                      onClick={() => setDateFilter(key)}
+                      style={
+                        dateFilter === key
+                          ? { backgroundColor: "#6c757d", color: "white" }
+                          : {}
+                      }
+                      className="mb-2"
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+              </div>
+            </Col>
+          </Row>
+
+          {/* Enhanced CV Table Container with Professional Horizontal Scrolling */}
+          <div 
+            className="enhanced-table-container" 
+            style={tableContainerStyles}
+            tabIndex="0" 
+            role="region"
+            aria-label="CV data table with horizontal scrolling"
           >
-            <Button
-              variant="primary"
-              onClick={() => navigate("/admin-add-cv")}
-              className="mx-0"
-              style={{ width: "auto" }}
+            <Table
+              striped
+              bordered
+              hover
+              variant={darkMode ? "dark" : "light"}
+              className="mb-0"
             >
-              Add New CV
-            </Button>
-
-            <Button
-              variant="secondary"
-              onClick={() => navigate("/admin-approve-cvs")}
-              className="mx-2"
-              style={{ width: "auto" }}
-            >
-              Approve CVs
-            </Button>
-          </Col>
-        </Row>
-
-        {/* Button Filter Section */}
-        <Row className="mb-4">
-          {/* Status Filter */}
-          <Col md={6}>
-            <Form.Label>Status Filter</Form.Label>
-            <div>
-              <ButtonGroup className="flex-wrap">
-                {[
-                  { key: "all", label: "All CVs" },
-                  { key: "cv-approved", label: "Approved CVs" },
-                  { key: "cv-pending", label: "Pending CVs" },
-                  { key: "interview-scheduled", label: "Interview Stage" },
-                  { key: "cv-rejected", label: "Rejected CVs" }
-                ].map(({ key, label }) => (
-                  <Button
-                    key={key}
-                    variant="outline-dark"
-                    onClick={() => setStatusFilter(key)}
-                    style={
-                      statusFilter === key
-                        ? { backgroundColor: "#6c757d", color: "white" }
-                        : {}
-                    }
-                    className="mb-2"
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </ButtonGroup>
-            </div>
-          </Col>
-
-          {/* Date Filter */}
-          <Col md={6}>
-            <Form.Label>Date Filter</Form.Label>
-            <div>
-              <ButtonGroup className="flex-wrap">
-                {[
-                  { key: "all", label: "All Dates" },
-                  { key: "newest", label: "Newest First" },
-                  { key: "earliest", label: "Earliest First" }
-                ].map(({ key, label }) => (
-                  <Button
-                    key={key}
-                    variant="outline-dark"
-                    onClick={() => setDateFilter(key)}
-                    style={
-                      dateFilter === key
-                        ? { backgroundColor: "#6c757d", color: "white" }
-                        : {}
-                    }
-                    className="mb-2"
-                  >
-                    {label}
-                  </Button>
-                ))}
-              </ButtonGroup>
-            </div>
-          </Col>
-        </Row>
-
-        {/* Enhanced CV Table Container with Professional Horizontal Scrolling */}
-        <div 
-          className="enhanced-table-container" 
-          style={tableContainerStyles}
-          tabIndex="0" 
-          role="region"
-          aria-label="CV data table with horizontal scrolling"
-        >
-          <Table
-            striped
-            bordered
-            hover
-            variant={darkMode ? "dark" : "light"}
-            className="mb-0"
-          >
-            <thead>
-              <tr>
-                {columns.map((col, index) => (
-                  <th key={index} className="text-center align-middle">
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {currentCVs.length > 0 ? (
-                currentCVs.map((cv, index) => (
-                  <tr key={cv._id || index}>
-                    <td className="text-center">{indexOfFirstCV + index + 1}</td>
-                    <td title={cv.nic || "N/A"}>{cv.nic || "N/A"}</td>
-                    <td title={cv.refNo || "N/A"}>{cv.refNo || "N/A"}</td>
-                    <td title={renderNameWithPrefix(cv.fullName, cv.gender)}>
-                      {renderNameWithPrefix(cv.fullName, cv.gender)}
-                    </td>
-                    <td title={cv.userType || "N/A"}>{cv.userType || "N/A"}</td>
-                    <td title={cv.selectedRole || "N/A"}>{cv.selectedRole || "N/A"}</td>
-                    <td title={cv.applicationDate ? new Date(cv.applicationDate).toLocaleDateString() : "N/A"}>
-                      {cv.applicationDate
-                        ? new Date(cv.applicationDate).toLocaleDateString()
-                        : "N/A"}
-                    </td>
-                    <td title={cv.district || "N/A"}>{cv.district || "N/A"}</td>
-                    <td title={cv.institute || "N/A"}>{cv.institute || "N/A"}</td>
-                    <td title={cv.referredBy || "N/A"}>{cv.referredBy || "N/A"}</td>
-                    {hasInternshipCVs() && (
-                      <td title={cv.selectedRole === 'internship' ? cv.roleData?.internship?.categoryOfApply || "N/A" : "-"}>
-                        {cv.selectedRole === 'internship' 
-                          ? cv.roleData?.internship?.categoryOfApply || "N/A"
-                          : "-"
-                        }
+              <thead>
+                <tr>
+                  {columns.map((col, index) => (
+                    <th key={index} className="text-center align-middle">
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {currentCVs.length > 0 ? (
+                  currentCVs.map((cv, index) => (
+                    <tr key={cv._id || index}>
+                      <td className="text-center">{indexOfFirstCV + index + 1}</td>
+                      <td title={cv.nic || "N/A"}>{cv.nic || "N/A"}</td>
+                      <td title={cv.refNo || "N/A"}>{cv.refNo || "N/A"}</td>
+                      <td title={renderNameWithPrefix(cv.fullName, cv.gender)}>
+                        {renderNameWithPrefix(cv.fullName, cv.gender)}
                       </td>
-                    )}
-                    <td className="text-center">
-                      <span
-                        className={`badge ${getStatusBadgeClass(cv.currentStatus)}`}
-                        title={formatStatus(cv.currentStatus)}
-                      >
-                        {formatStatus(cv.currentStatus)}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <Button
-                        size="sm"
-                        variant="outline-primary"
-                        onClick={() => handleView(cv._id)}
-                        className="fw-semibold"
-                      >
-                        View
-                      </Button>
-                    </td>
-                    <td className="text-center">
-                      <Button
-                        size="sm"
-                        variant="outline-danger"
-                        onClick={() => handleDeleteClick(cv._id)}
-                        className="fw-semibold"
-                      >
-                        Delete
-                      </Button>
+                      <td title={cv.userType || "N/A"}>{cv.userType || "N/A"}</td>
+                      <td title={cv.selectedRole || "N/A"}>{cv.selectedRole || "N/A"}</td>
+                      <td title={cv.applicationDate ? new Date(cv.applicationDate).toLocaleDateString() : "N/A"}>
+                        {cv.applicationDate
+                          ? new Date(cv.applicationDate).toLocaleDateString()
+                          : "N/A"}
+                      </td>
+                      <td title={cv.district || "N/A"}>{cv.district || "N/A"}</td>
+                      <td title={cv.institute || "N/A"}>{cv.institute || "N/A"}</td>
+                      <td title={cv.referredBy || "N/A"}>{cv.referredBy || "N/A"}</td>
+                      {hasInternshipCVs() && (
+                        <td title={cv.selectedRole === 'internship' ? cv.roleData?.internship?.categoryOfApply || "N/A" : "-"}>
+                          {cv.selectedRole === 'internship' 
+                            ? cv.roleData?.internship?.categoryOfApply || "N/A"
+                            : "-"
+                          }
+                        </td>
+                      )}
+                      <td className="text-center">
+                        <span
+                          className={`badge ${getStatusBadgeClass(cv.currentStatus)}`}
+                          title={formatStatus(cv.currentStatus)}
+                        >
+                          {formatStatus(cv.currentStatus)}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <Button
+                          size="sm"
+                          variant="outline-primary"
+                          onClick={() => handleView(cv._id)}
+                          className="fw-semibold"
+                        >
+                          View
+                        </Button>
+                      </td>
+                      <td className="text-center">
+                        <Button
+                          size="sm"
+                          variant="outline-danger"
+                          onClick={() => handleDeleteClick(cv._id)}
+                          className="fw-semibold"
+                        >
+                          Delete
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={columns.length} className="text-center py-4">
+                      <div>
+                        <i className="fa fa-search mb-2" style={{ fontSize: '2rem' }}></i>
+                        <br />
+                        {searchTerm || statusFilter !== "all" || dateFilter !== "all" 
+                          ? "No CVs found matching your criteria" 
+                          : "No CVs found"}
+                      </div>
                     </td>
                   </tr>
-                ))
-              ) : (
+                )}
+              </tbody>
+              <tfoot>
                 <tr>
-                  <td colSpan={columns.length} className="text-center py-4">
-                    <div>
-                      <i className="fa fa-search mb-2" style={{ fontSize: '2rem' }}></i>
-                      <br />
-                      {searchTerm || statusFilter !== "all" || dateFilter !== "all" 
-                        ? "No CVs found matching your criteria" 
-                        : "No CVs found"}
+                  <td
+                    colSpan={columns.length}
+                    style={{ padding: "5px", fontSize: "14px" }}
+                  >
+                    <div
+                      className="d-flex justify-content-between align-items-center"
+                      style={{ minHeight: "30px" }}
+                    >
+                      <div className="flex-grow-1 text-center">
+                        <span>
+                          {filteredData.length} of {cvData.length} CV(s) shown
+                        </span>
+                      </div>
+                      <div className="d-flex align-items-center">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() =>
+                            setCurrentPage((prev) => Math.max(prev - 1, 1))
+                          }
+                          disabled={currentPage === 1}
+                          style={{
+                            color: darkMode ? "white" : "black",
+                            padding: 0,
+                            margin: 0,
+                          }}
+                        >
+                          <FaChevronLeft />
+                          <FaChevronLeft />
+                        </Button>
+                        <span className="mx-2">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() =>
+                            setCurrentPage((prev) =>
+                              Math.min(prev + 1, totalPages)
+                            )
+                          }
+                          disabled={currentPage === totalPages}
+                          style={{
+                            color: darkMode ? "white" : "black",
+                            padding: 0,
+                            margin: 0,
+                          }}
+                        >
+                          <FaChevronRight />
+                          <FaChevronRight />
+                        </Button>
+                      </div>
                     </div>
                   </td>
                 </tr>
-              )}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  style={{ padding: "5px", fontSize: "14px" }}
-                >
-                  <div
-                    className="d-flex justify-content-between align-items-center"
-                    style={{ minHeight: "30px" }}
-                  >
-                    <div className="flex-grow-1 text-center">
-                      <span>
-                        {filteredData.length} of {cvData.length} CV(s) shown
-                      </span>
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() =>
-                          setCurrentPage((prev) => Math.max(prev - 1, 1))
-                        }
-                        disabled={currentPage === 1}
-                        style={{
-                          color: darkMode ? "white" : "black",
-                          padding: 0,
-                          margin: 0,
-                        }}
-                      >
-                        <FaChevronLeft />
-                        <FaChevronLeft />
-                      </Button>
-                      <span className="mx-2">
-                        Page {currentPage} of {totalPages}
-                      </span>
-                      <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() =>
-                          setCurrentPage((prev) =>
-                            Math.min(prev + 1, totalPages)
-                          )
-                        }
-                        disabled={currentPage === totalPages}
-                        style={{
-                          color: darkMode ? "white" : "black",
-                          padding: 0,
-                          margin: 0,
-                        }}
-                      >
-                        <FaChevronRight />
-                        <FaChevronRight />
-                      </Button>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tfoot>
-          </Table>
-        </div>
-
-      </Container>
+              </tfoot>
+            </Table>
+          </div>
         </Container>
+      </Container>
       
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
@@ -1331,9 +1356,7 @@ const tableContainerStyles = {
         darkMode={darkMode}
         loading={deleteLoading}
       />
-    
     </div>
-    
   );
 };
 

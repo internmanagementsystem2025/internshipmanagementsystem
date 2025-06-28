@@ -18,9 +18,19 @@ const AddNewInduction = ({ darkMode }) => {
   const [inductionData, setInductionData] = useState({
     induction: "",
     startDate: "",
-    endDate: "",
+    time: "",
     location: "",
+    note: "",
   });
+
+   const [formErrors, setFormErrors] = useState({
+    induction: "",
+    startDate: "",
+    time: "",
+    location: "",
+    note: "",
+  });
+
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -54,8 +64,9 @@ const AddNewInduction = ({ darkMode }) => {
       setInductionData({
         induction: "",
         startDate: "",
-        endDate: "",
+        time: "",
         location: "",
+        note: "",
       });
 
       setTimeout(() => {
@@ -77,6 +88,53 @@ const AddNewInduction = ({ darkMode }) => {
       setIsSubmitting(false);
     }
   };
+
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    if (!inductionData.induction.trim()) {
+      errors.induction = "Induction name is required";
+      isValid = false;
+    }
+
+    if (!inductionData.startDate) {
+      errors.startDate = "Start date is required";
+      isValid = false;
+    } else {
+      const selectedDate = new Date(inductionData.startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        errors.startDate = "Date cannot be in the past";
+        isValid = false;
+      }
+    }
+
+    if (!inductionData.time) {
+      errors.time = "Time is required";
+      isValid = false;
+    } else if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(inductionData.time)) {
+      errors.time = "Invalid time format (use HH:MM)";
+      isValid = false;
+    }
+
+    if (!inductionData.location.trim()) {
+      errors.location = "Location is required";
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
+  const getMinDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+
 
   return (
     <div
@@ -134,30 +192,33 @@ const AddNewInduction = ({ darkMode }) => {
                       name="startDate"
                       value={inductionData.startDate}
                       onChange={handleInputChange}
-                      className={`form-control ${
-                        darkMode
-                          ? "bg-secondary text-white"
-                          : "bg-white text-dark"
-                      }`}
+                      min={getMinDate()}
+                      isInvalid={!!formErrors.startDate}
+                      className={darkMode ? "bg-secondary text-white" : "bg-white text-dark"}
                       required
                     />
+                    <Form.Control.Feedback type="invalid">
+                      {formErrors.startDate}
+                    </Form.Control.Feedback>
                   </Form.Group>
 
-                  <Form.Group controlId="endDate" className="mb-3">
-                    <Form.Label>End Date</Form.Label>
+
+                  <Form.Group controlId="time" className="mb-3">
+                    <Form.Label>Start Time</Form.Label>
                     <Form.Control
-                      type="date"
-                      name="endDate"
-                      value={inductionData.endDate}
+                      type="time"
+                      name="time"
+                      value={inductionData.time}
                       onChange={handleInputChange}
-                      className={`form-control ${
-                        darkMode
-                          ? "bg-secondary text-white"
-                          : "bg-white text-dark"
-                      }`}
+                      isInvalid={!!formErrors.time}
+                      className={darkMode ? "bg-secondary text-white" : "bg-white text-dark"}
                       required
                     />
+                    <Form.Control.Feedback type="invalid">
+                      {formErrors.time}
+                    </Form.Control.Feedback>
                   </Form.Group>
+
 
                   <Form.Group controlId="location" className="mb-3">
                     <Form.Label>Location</Form.Label>
@@ -173,6 +234,18 @@ const AddNewInduction = ({ darkMode }) => {
                           : "bg-white text-dark"
                       }`}
                       required
+                    />
+                  </Form.Group>
+
+                  <Form.Group controlId="note" className="mb-3">
+                    <Form.Label>Note (Optional)</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      name="note"
+                      value={inductionData.note}
+                      onChange={handleInputChange}
+                      className={darkMode ? "bg-secondary text-white" : "bg-white text-dark"}
                     />
                   </Form.Group>
 

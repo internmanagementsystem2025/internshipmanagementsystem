@@ -45,7 +45,7 @@ const PasswordInput = React.memo(React.forwardRef(({
         }
       }, 0);
     }
-  }, [togglePassword]);
+  }, [togglePassword, inputRef]);
 
   const containerStyle = useMemo(() => ({
     position: 'relative',
@@ -66,7 +66,7 @@ const PasswordInput = React.memo(React.forwardRef(({
     border: 'none',
     background: 'transparent',
     outline: 'none',
-    fontSize: isMobile ? '16px' : '1rem', // 16px prevents zoom on iOS
+    fontSize: isMobile ? '16px' : '1rem',
     color: theme.textPrimary,
     fontFamily: 'inherit',
     padding: isMobile ? '0.875rem 0.5rem' : '0.75rem 0.5rem',
@@ -174,6 +174,17 @@ const ChangePassword = ({ darkMode }) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Password validation states
+  const [validation, setValidation] = useState({
+    minLength: false,
+    hasUpperCase: false,
+    hasLowerCase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+    noSpaces: true,
+    notSameAsCurrent: true
+  });
+
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
   const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
@@ -220,6 +231,32 @@ const ChangePassword = ({ darkMode }) => {
     };
   }, [isMobile]);
 
+  // Validate password whenever newPassword changes
+  useEffect(() => {
+    if (passwordData.newPassword) {
+      const newValidation = {
+        minLength: passwordData.newPassword.length >= 8,
+        hasUpperCase: /[A-Z]/.test(passwordData.newPassword),
+        hasLowerCase: /[a-z]/.test(passwordData.newPassword),
+        hasNumber: /\d/.test(passwordData.newPassword),
+        hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(passwordData.newPassword),
+        noSpaces: !/\s/.test(passwordData.newPassword),
+        notSameAsCurrent: passwordData.newPassword !== passwordData.currentPassword
+      };
+      setValidation(newValidation);
+    } else {
+      setValidation({
+        minLength: false,
+        hasUpperCase: false,
+        hasLowerCase: false,
+        hasNumber: false,
+        hasSpecialChar: false,
+        noSpaces: true,
+        notSameAsCurrent: true
+      });
+    }
+  }, [passwordData.newPassword, passwordData.currentPassword]);
+
   // Theme configuration with mobile optimizations
   const theme = {
     backgroundColor: darkMode ? "#000000" : "#f8fafc",
@@ -246,20 +283,36 @@ const ChangePassword = ({ darkMode }) => {
 
   // Handle password form changes
   const handlePasswordChange = (e) => {
-    setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
     if (passwordError) setPasswordError("");
   };
 
   // Password strength indicator
   const getPasswordStrength = (password) => {
-    if (password.length === 0) return { strength: 0, text: "", color: theme.textSecondary };
-    if (password.length < 6) return { strength: 25, text: "Too short", color: theme.danger };
-    if (password.length < 8) return { strength: 50, text: "Fair", color: "#f59e0b" };
-    if (password.length < 12) return { strength: 75, text: "Good", color: theme.accentColor };
-    return { strength: 100, text: "Strong", color: theme.success };
+    if (!password) return { strength: 0, text: "", color: theme.textSecondary };
+    
+    // Calculate strength based on validation criteria
+    let strength = 0;
+    if (password.length >= 8) strength += 20;
+    if (/[A-Z]/.test(password)) strength += 20;
+    if (/[a-z]/.test(password)) strength += 20;
+    if (/\d/.test(password)) strength += 20;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 20;
+    
+    if (strength <= 20) return { strength: 25, text: "Very Weak", color: theme.danger };
+    if (strength <= 40) return { strength: 50, text: "Weak", color: "#f59e0b" };
+    if (strength <= 60) return { strength: 75, text: "Good", color: theme.accentColor };
+    if (strength <= 80) return { strength: 90, text: "Strong", color: "#4ade80" };
+    return { strength: 100, text: "Very Strong", color: theme.success };
   };
 
   const passwordStrength = getPasswordStrength(passwordData.newPassword);
+
+  // Check if all validation requirements are met
+  const isPasswordValid = useMemo(() => {
+    return Object.values(validation).every(Boolean);
+  }, [validation]);
 
   // Handle password change submission
   const handleSubmitPasswordChange = async (e) => {
@@ -267,13 +320,21 @@ const ChangePassword = ({ darkMode }) => {
     setPasswordError("");
 
     // Validate passwords
-    if (passwordData.newPassword !== passwordData.confirmNewPassword) {
-      setPasswordError("New passwords do not match");
+    if (!passwordData.currentPassword) {
+      setPasswordError("Current password is required");
+      currentPasswordRef.current?.focus();
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      setPasswordError("Password must be at least 6 characters");
+    if (!isPasswordValid) {
+      setPasswordError("New password doesn't meet requirements");
+      newPasswordRef.current?.focus();
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmNewPassword) {
+      setPasswordError("New passwords do not match");
+      confirmPasswordRef.current?.focus();
       return;
     }
 
@@ -334,6 +395,68 @@ const ChangePassword = ({ darkMode }) => {
   const handleCancel = () => {
     navigate(-1);
   };
+
+ const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: "Unauthorized access" });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    // ✅ Send password reset confirmation email
+    try {
+      await EmailService.sendPasswordResetConfirmation(user.email, user.username);
+    } catch (emailError) {
+      console.error("Failed to send password reset confirmation email:", emailError.message);
+      // Optional: log but don't fail the response
+    }
+
+    res.json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+  // Validation requirement component
+  const ValidationRequirement = ({ valid, text }) => (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3 }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        marginBottom: '0.25rem',
+        fontSize: isMobile ? '0.8rem' : '0.875rem'
+      }}
+    >
+      {valid ? (
+        <FiCheck size={isMobile ? 14 : 16} color={theme.success} />
+      ) : (
+        <FiX size={isMobile ? 14 : 16} color={theme.danger} />
+      )}
+      <span style={{ color: valid ? theme.success : theme.textSecondary }}>
+        {text}
+      </span>
+    </motion.div>
+  );
 
   return (
     <div
@@ -594,14 +717,58 @@ const ChangePassword = ({ darkMode }) => {
                         </motion.div>
                       )}
                       
-                      <div style={{ 
-                        fontSize: isMobile ? '0.8rem' : '0.875rem',
-                        color: theme.textSecondary,
-                        marginTop: '0.5rem',
-                        lineHeight: 1.4
-                      }}>
-                        Password must be at least 6 characters long and different from your current password.
-                      </div>
+                      {/* Password Requirements */}
+                      {passwordData.newPassword && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          style={{ 
+                            marginTop: '1rem',
+                            padding: isMobile ? '0.75rem' : '1rem',
+                            background: darkMode ? 'rgba(30, 30, 30, 0.7)' : 'rgba(241, 245, 249, 0.7)',
+                            borderRadius: isMobile ? '10px' : '12px',
+                            border: `1px solid ${theme.border}`
+                          }}
+                        >
+                          <div style={{
+                            fontSize: isMobile ? '0.8rem' : '0.875rem',
+                            color: theme.textPrimary,
+                            fontWeight: '600',
+                            marginBottom: '0.5rem'
+                          }}>
+                            Password Requirements:
+                          </div>
+                          
+                          <ValidationRequirement 
+                            valid={validation.minLength} 
+                            text="At least 8 characters long" 
+                          />
+                          <ValidationRequirement 
+                            valid={validation.hasUpperCase} 
+                            text="At least one uppercase letter (A-Z)" 
+                          />
+                          <ValidationRequirement 
+                            valid={validation.hasLowerCase} 
+                            text="At least one lowercase letter (a-z)" 
+                          />
+                          <ValidationRequirement 
+                            valid={validation.hasNumber} 
+                            text="At least one number (0-9)" 
+                          />
+                          <ValidationRequirement 
+                            valid={validation.hasSpecialChar} 
+                            text="At least one special character (!@#$%^&*)" 
+                          />
+                          <ValidationRequirement 
+                            valid={validation.noSpaces} 
+                            text="No spaces" 
+                          />
+                          <ValidationRequirement 
+                            valid={validation.notSameAsCurrent} 
+                            text="Different from current password" 
+                          />
+                        </motion.div>
+                      )}
                     </Form.Group>
 
                     <Form.Group className="mb-4">
@@ -661,7 +828,7 @@ const ChangePassword = ({ darkMode }) => {
                         whileHover={{ scale: isMobile ? 1 : 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         type="submit"
-                        disabled={changingPassword}
+                        disabled={changingPassword || !isPasswordValid}
                         style={{
                           background: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
                           border: "none",
@@ -677,7 +844,7 @@ const ChangePassword = ({ darkMode }) => {
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '0.5rem',
-                          opacity: changingPassword ? 0.8 : 1,
+                          opacity: changingPassword || !isPasswordValid ? 0.7 : 1,
                           WebkitTapHighlightColor: 'transparent',
                           minHeight: isMobile ? '50px' : '52px'
                         }}

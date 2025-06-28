@@ -1,14 +1,30 @@
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
-const inductionSchema = new mongoose.Schema(
-  {
-    induction: { type: String, required: true },
-    startDate: { type: String, required: true },
-    endDate: { type: String, required: true },
-    location: { type: String, required: true },
-    note: { type: String },
+const InductionSchema = new mongoose.Schema({
+  induction: {
+    type: String,
+    required: true,
+    trim: true
   },
-  { timestamps: true }
-);
+  startDate: {
+    type: String, // or Date if you want to store as Date object
+    required: true
+  },
+  endDate: {
+    type: String, // or Date if you want to store as Date object
+    required: true
+  },
+  location: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  note: {
+    type: String,
+    trim: true
+  }
+}, {
+  timestamps: true // This adds createdAt and updatedAt automatically
+});
 
-module.exports = mongoose.model("Induction", inductionSchema);
+module.exports = mongoose.model('Induction', InductionSchema);

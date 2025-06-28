@@ -1,8 +1,8 @@
-import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Container, Card, Button, Form, Spinner } from "react-bootstrap";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FiLock, FiKey, FiArrowLeft, FiSave, FiX, FiCheck, FiEye, FiEyeOff, FiShield} from "react-icons/fi";
+import { FiLock, FiKey, FiArrowLeft, FiSave, FiX, FiCheck, FiEye, FiEyeOff, FiShield } from "react-icons/fi";
 import axios from "axios";
 import logo from "../../assets/logo.png";
 import Notification from "../notifications/Notification";
@@ -11,24 +11,22 @@ const OTPInput = React.memo(React.forwardRef(({
   value, 
   onChange, 
   theme,
-  darkMode
+  darkMode,
+  error
 }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef([]);
 
-  // Initialize refs
   useEffect(() => {
     inputRefs.current = inputRefs.current.slice(0, 6);
   }, []);
-
 
   useEffect(() => {
     const otpString = otpValues.join('');
     onChange({ target: { value: otpString } });
   }, [otpValues, onChange]);
 
-  // Parse existing value into array
   useEffect(() => {
     if (value && value.length <= 6) {
       const newValues = [...otpValues];
@@ -47,18 +45,15 @@ const OTPInput = React.memo(React.forwardRef(({
     newValues[index] = digit;
     setOtpValues(newValues);
 
-    // Auto-focus next input
     if (digit && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index, e) => {
-    // Handle backspace
     if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
-    // Handle paste
     else if (e.key === 'Backspace' && otpValues[index]) {
       const newValues = [...otpValues];
       newValues[index] = '';
@@ -76,7 +71,6 @@ const OTPInput = React.memo(React.forwardRef(({
     }
     setOtpValues(newValues);
     
-    // Focus the next empty input or the last one
     const nextIndex = Math.min(pastedData.length, 5);
     inputRefs.current[nextIndex]?.focus();
   };
@@ -106,14 +100,14 @@ const OTPInput = React.memo(React.forwardRef(({
               textAlign: 'center',
               fontSize: '1.25rem',
               fontWeight: '600',
-              border: `2px solid ${digit ? theme.accentColor : (isFocused ? theme.accentColor : theme.inputBorder)}`,
+              border: `2px solid ${error ? theme.danger : (digit ? theme.accentColor : (isFocused ? theme.accentColor : theme.inputBorder))}`,
               borderRadius: '12px',
               background: theme.inputBackground,
               color: theme.textPrimary,
               outline: 'none',
               transition: 'all 0.3s ease',
               backdropFilter: 'blur(10px)',
-              boxShadow: digit || isFocused ? `0 0 0 3px ${theme.accentColor}20` : 'none'
+              boxShadow: (digit || isFocused) ? `0 0 0 3px ${theme.accentColor}20` : 'none'
             }}
             maxLength={1}
           />
@@ -122,16 +116,15 @@ const OTPInput = React.memo(React.forwardRef(({
       <div style={{
         textAlign: 'center',
         fontSize: '0.875rem',
-        color: theme.textSecondary,
+        color: error ? theme.danger : theme.textSecondary,
         marginTop: '0.5rem'
       }}>
-        Enter the 6-digit code sent to your email
+        {error ? 'Invalid OTP, please enter a valid code' : 'Enter the 6-digit code sent to your email'}
       </div>
     </div>
   );
 }));
 
-// Modern Password Input Component
 const PasswordInput = React.memo(React.forwardRef(({ 
   type, 
   name,
@@ -143,34 +136,27 @@ const PasswordInput = React.memo(React.forwardRef(({
   theme,
   darkMode,
   showPassword,
-  onTogglePassword
+  onTogglePassword,
+  error
 }, ref) => {
   const [isFocused, setIsFocused] = useState(false);
   const internalRef = useRef(null);
   const inputRef = ref || internalRef;
 
-  const handleFocus = useCallback(() => {
-    setIsFocused(true);
-  }, []);
-
-  const handleBlur = useCallback(() => {
-    setIsFocused(false);
-  }, []);
-
-  const containerStyle = useMemo(() => ({
+  const containerStyle = {
     position: 'relative',
     display: 'flex',
     alignItems: 'center',
     background: theme.inputBackground,
-    border: `2px solid ${isFocused ? theme.accentColor : theme.inputBorder}`,
+    border: `2px solid ${error ? theme.danger : (isFocused ? theme.accentColor : theme.inputBorder)}`,
     borderRadius: '12px',
     transition: 'all 0.3s ease',
     backdropFilter: 'blur(10px)',
     boxShadow: isFocused ? `0 0 0 3px ${theme.accentColor}20` : 'none',
     cursor: 'text'
-  }), [isFocused, theme]);
+  };
 
-  const inputStyle = useMemo(() => ({
+  const inputStyle = {
     flex: 1,
     border: 'none',
     background: 'transparent',
@@ -184,17 +170,13 @@ const PasswordInput = React.memo(React.forwardRef(({
     width: '100%',
     height: 'auto',
     lineHeight: '1.5'
-  }), [theme.textPrimary]);
+  };
 
   return (
     <div className="position-relative mb-3">
       <div 
         style={containerStyle}
-        onClick={() => {
-          if (inputRef.current) {
-            inputRef.current.focus();
-          }
-        }}
+        onClick={() => inputRef.current?.focus()}
       >
         <div style={{
           display: 'flex',
@@ -203,7 +185,7 @@ const PasswordInput = React.memo(React.forwardRef(({
           flexShrink: 0,
           pointerEvents: 'none'
         }}>
-          <Icon size={20} color={isFocused ? theme.accentColor : theme.textSecondary} />
+          <Icon size={20} color={error ? theme.danger : (isFocused ? theme.accentColor : theme.textSecondary)} />
         </div>
         
         <input
@@ -212,8 +194,8 @@ const PasswordInput = React.memo(React.forwardRef(({
           name={name}
           value={value || ''}
           onChange={onChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           required={required}
           style={inputStyle}
@@ -231,8 +213,8 @@ const PasswordInput = React.memo(React.forwardRef(({
           onClick={onTogglePassword}
           >
             {showPassword ? 
-              <FiEyeOff size={20} color={theme.textSecondary} /> : 
-              <FiEye size={20} color={theme.textSecondary} />
+              <FiEyeOff size={20} color={error ? theme.danger : theme.textSecondary} /> : 
+              <FiEye size={20} color={error ? theme.danger : theme.textSecondary} />
             }
           </div>
         )}
@@ -256,17 +238,17 @@ const VerifyOTPPage = ({ darkMode }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [otpError, setOtpError] = useState(false);
+  const [passwordError, setPasswordError] = useState(false);
+  const [confirmPasswordError, setConfirmPasswordError] = useState(false);
 
   const otpRef = useRef(null);
   const passwordRef = useRef(null);
   const confirmPasswordRef = useRef(null);
 
-
-  // Extract email from URL
   const queryParams = new URLSearchParams(location.search);
   const email = queryParams.get("email");
 
-  // Theme configuration
   const theme = {
     backgroundColor: darkMode ? "#000000" : "#f8fafc",
     cardBackground: darkMode ? "#1E1E1E" : "rgba(255, 255, 255, 0.4)",
@@ -283,7 +265,6 @@ const VerifyOTPPage = ({ darkMode }) => {
     success: darkMode ? "#10b981" : "#198754"
   };
 
-  // Countdown timer effect
   useEffect(() => {
     let timer;
     if (countdown > 0) {
@@ -292,30 +273,30 @@ const VerifyOTPPage = ({ darkMode }) => {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  // Function to trigger notifications
   const triggerNotification = (message, variant = "success") => {
     setNotification(message);
     setNotificationVariant(variant);
     setShowNotification(true);
   };
 
-  // Handle input changes
   const handleOtpChange = (e) => {
     setOtp(e.target.value);
+    setOtpError(false);
     if (error) setError("");
   };
 
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
+    setPasswordError(false);
     if (error) setError("");
   };
 
   const handleConfirmPasswordChange = (e) => {
     setConfirmPassword(e.target.value);
+    setConfirmPasswordError(false);
     if (error) setError("");
   };
 
-  // Password validation
   const validatePassword = (password) => {
     if (password.length < 8) {
       return "Password must be at least 8 characters long";
@@ -332,34 +313,42 @@ const VerifyOTPPage = ({ darkMode }) => {
     return null;
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setOtpError(false);
+    setPasswordError(false);
+    setConfirmPasswordError(false);
 
-    // Validate OTP
-    if (otp.length !== 6) {
-      setError("Please enter the complete 6-digit OTP code");
+    // Validate OTP format
+    if (otp.length !== 6 || !/^\d+$/.test(otp)) {
+      setOtpError(true);
+      setError("Please enter a valid 6-digit OTP code");
+      if (otpRef.current) otpRef.current.focus();
       return;
     }
 
     // Validate password
     const passwordError = validatePassword(password);
     if (passwordError) {
+      setPasswordError(true);
       setError(passwordError);
+      if (passwordRef.current) passwordRef.current.focus();
       return;
     }
 
     // Check password match
     if (password !== confirmPassword) {
+      setConfirmPasswordError(true);
       setError("Passwords do not match");
+      if (confirmPasswordRef.current) confirmPasswordRef.current.focus();
       return;
     }
 
     setLoading(true);
 
     try {
-      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/verify-otp-reset-password`, {
+      const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/verify-otp-reset-password`, {
         email,
         otp,
         newPassword: password,
@@ -373,7 +362,22 @@ const VerifyOTPPage = ({ darkMode }) => {
 
     } catch (err) {
       console.error("OTP verification error:", err);
-      const errorMessage = err.response?.data?.message || "Error verifying OTP or resetting password";
+      
+      // Handle different error cases
+      let errorMessage = "Invalid OTP, please enter a valid code";
+      if (err.response) {
+        if (err.response.status === 400) {
+          setOtpError(true);
+          if (otpRef.current) otpRef.current.focus();
+        } else if (err.response.status === 410) {
+          errorMessage = "OTP has expired, please request a new one";
+          setOtpError(true);
+          if (otpRef.current) otpRef.current.focus();
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+      }
+      
       setError(errorMessage);
       triggerNotification(errorMessage, "danger");
     } finally {
@@ -381,10 +385,10 @@ const VerifyOTPPage = ({ darkMode }) => {
     }
   };
 
-  // Handle resend OTP
   const handleResendOTP = async () => {
     setResendLoading(true);
     setError("");
+    setOtpError(false);
 
     try {
       await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/request-password-reset-otp`, { email });
@@ -404,7 +408,6 @@ const VerifyOTPPage = ({ darkMode }) => {
     navigate("/forgot-password");
   };
 
-  // Password strength indicator
   const getPasswordStrength = (password) => {
     let strength = 0;
     if (password.length >= 8) strength++;
@@ -431,7 +434,6 @@ const VerifyOTPPage = ({ darkMode }) => {
         transition: 'background-color 0.3s ease'
       }}
     >
-      {/* Background Effects */}
       <div style={{
         position: 'fixed',
         top: 0,
@@ -446,7 +448,6 @@ const VerifyOTPPage = ({ darkMode }) => {
           : 'radial-gradient(circle at 20% 50%, #00cc66 0%, transparent 50%), radial-gradient(circle at 80% 20%, #00aa88 0%, transparent 50%)'
       }} />
 
-      {/* Main Content */}
       <div style={{ position: 'relative', zIndex: 1, padding: "2rem 0" }}>
         <Container>
           <Notification 
@@ -456,14 +457,13 @@ const VerifyOTPPage = ({ darkMode }) => {
             variant={notificationVariant} 
           />
           
-          {/* Header */}
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="text-center mb-5"
           >
-            <img src={logo} alt="SLT Mobitel Logo" className="mx-auto d-block" style={{ height: "50px" }} />
+            <img src={logo} alt="Logo" className="mx-auto d-block" style={{ height: "50px" }} />
             <h3 className="mt-3">VERIFY & RESET</h3>
             
             <p style={{ 
@@ -477,7 +477,6 @@ const VerifyOTPPage = ({ darkMode }) => {
             </p>
           </motion.div>
 
-          {/* Verification Form */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -495,7 +494,6 @@ const VerifyOTPPage = ({ darkMode }) => {
                   overflow: 'hidden'
                 }}
               >
-                {/* Card Header */}
                 <div style={{
                   background: `linear-gradient(135deg, ${theme.gradientStart}, ${theme.gradientEnd})`,
                   padding: '2rem',
@@ -566,9 +564,9 @@ const VerifyOTPPage = ({ darkMode }) => {
                         onChange={handleOtpChange}
                         theme={theme}
                         darkMode={darkMode}
+                        error={otpError}
                       />
                       
-                      {/* Resend OTP */}
                       <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                         {countdown > 0 ? (
                           <span style={{ 
@@ -621,9 +619,9 @@ const VerifyOTPPage = ({ darkMode }) => {
                         darkMode={darkMode}
                         showPassword={showPassword}
                         onTogglePassword={() => setShowPassword(!showPassword)}
+                        error={passwordError}
                       />
                       
-                      {/* Password Strength Indicator */}
                       {password && (
                         <div style={{ marginTop: '0.5rem' }}>
                           <div style={{
@@ -676,9 +674,9 @@ const VerifyOTPPage = ({ darkMode }) => {
                         darkMode={darkMode}
                         showPassword={showConfirmPassword}
                         onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
+                        error={confirmPasswordError}
                       />
                       
-                      {/* Password Match Indicator */}
                       {confirmPassword && (
                         <div style={{
                           fontSize: '0.875rem',
@@ -761,7 +759,6 @@ const VerifyOTPPage = ({ darkMode }) => {
                 </Card.Body>
               </Card>
 
-              {/* Security Note */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
