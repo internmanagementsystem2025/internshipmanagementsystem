@@ -582,4 +582,37 @@ cvSchema.index({ nic: 1, isDeleted: 1 }, { unique: true });
 cvSchema.index({ isDeleted: 1 });
 cvSchema.index({ "deletionInfo.deletedDate": 1 });
 
+// Update rotational status check middleware
+cvSchema.pre('save', function(next) {
+  if (this.isModified('rotationalAssignment') || this.isNew) {
+    const rotational = this.rotationalAssignment;
+    
+    // Check if there are any current assignments
+    const hasCurrentAssignments = rotational.assignedStations.some(
+      station => station.isCurrent === true
+    );
+
+    // Update status based on assignments
+    if (hasCurrentAssignments) {
+      rotational.status = 'station-assigned';
+      rotational.isRotational = true;
+    } else if (rotational.assignedStations.length > 0) {
+      // Has assignments but none are current
+      rotational.status = 'rotational-completed';
+      rotational.isRotational = true;
+    } else {
+      rotational.status = 'station-not-assigned';
+      rotational.isRotational = false;
+    }
+
+    console.log('Rotational Status Update:', {
+      isRotational: rotational.isRotational,
+      hasCurrentAssignments,
+      stationsCount: rotational.assignedStations.length,
+      newStatus: rotational.status
+    });
+  }
+  next();
+});
+
 module.exports = mongoose.model("CV", cvSchema);
