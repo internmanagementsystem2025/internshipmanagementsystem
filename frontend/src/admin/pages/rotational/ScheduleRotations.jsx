@@ -97,23 +97,25 @@ const ScheduleRotations = ({ darkMode }) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    // Set both dates to midnight to avoid timezone issues
+    // Set time to midnight for accurate calculation
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
 
-    // Calculate difference in days (inclusive of both dates)
-    const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    // Calculate total days (including both start and end dates)
+    const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Calculate weeks and days
+    const weeks = Math.floor(totalDays / 7);
+    const days = totalDays % 7;
 
-    const weeks = Math.floor(diffDays / 7);
-    const remainingDays = diffDays % 7;
-
-    return [
-      weeks > 0 && `${weeks} week${weeks !== 1 ? "s" : ""}`,
-      remainingDays > 0 &&
-        `${remainingDays} day${remainingDays !== 1 ? "s" : ""}`,
-    ]
-      .filter(Boolean)
-      .join(" and ");
+    // Format the duration string
+    if (weeks === 0) {
+      return `${totalDays} day${totalDays !== 1 ? 's' : ''}`;
+    } else if (days === 0) {
+      return `${weeks} week${weeks !== 1 ? 's' : ''}`;
+    } else {
+      return `${weeks}w ${days}d`;
+    }
   };
 
   // Data fetching
@@ -406,7 +408,7 @@ const ScheduleRotations = ({ darkMode }) => {
   const handleViewHistory = async (cvId) => {
     try {
       const response = await axios.get(
-        `http://localhost:5000/api/rotational/assignment-history/${cvId}`
+        `${API_BASE_URL}/rotational/assignment-history/${cvId}`
       );
 
       const currentDate = new Date();
@@ -414,18 +416,44 @@ const ScheduleRotations = ({ darkMode }) => {
         const startDate = new Date(assignment.startDate);
         const endDate = new Date(assignment.endDate);
 
+        // Set time to midnight for accurate date comparison
+        currentDate.setHours(0, 0, 0, 0);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+
+        let status;
+        let badgeVariant;
+        let dayCount;
+
         if (currentDate >= startDate && currentDate <= endDate) {
-          return { ...assignment, status: 'Currently Working' };
+          // Currently Working - show remaining days
+          const remainingDays = Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24));
+          status = `Currently Working (${remainingDays} days remaining)`;
+          badgeVariant = 'success';
         } else if (currentDate > endDate) {
-          return { ...assignment, status: 'Completed' };
-        } else {
-          return { ...assignment, status: 'Upcoming' };
+          // Completed - show days since completion
+          const daysSinceCompletion = Math.ceil((currentDate - endDate) / (1000 * 60 * 60 * 24));
+          status = `Completed ${daysSinceCompletion} days ago`;
+          badgeVariant = 'secondary';
+        } else if (currentDate < startDate) {
+          // Upcoming - show days until start
+          const daysUntilStart = Math.ceil((startDate - currentDate) / (1000 * 60 * 60 * 24));
+          status = `Starts in ${daysUntilStart} days`;
+          badgeVariant = 'warning';
         }
+
+        return {
+          ...assignment,
+          status,
+          badgeVariant,
+          duration: formatDuration(assignment.startDate, assignment.endDate)
+        };
       });
 
       setStationHistory(categorizedHistory);
       setShowHistoryModal(true);
     } catch (error) {
+      console.error("Error fetching history:", error);
       setError("Failed to fetch assignment history");
     }
   };
@@ -1092,33 +1120,25 @@ const ScheduleRotations = ({ darkMode }) => {
                 <th>Station</th>
                 <th>Start Date</th>
                 <th>End Date</th>
-                <th>Duration</th>
+                <th style={{ width: '100px' }}>Duration</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {stationHistory.map((assignment, index) => (
-                <tr
-                  key={index}
-                  style={
-                    assignment.isCurrent
-                      ? {
-                          backgroundColor: darkMode ? "#2a6b9e" : "#cfe8ff",
-                          fontWeight: "bold",
-                        }
-                      : {}
-                  }
-                >
+                <tr key={index}>
                   <td>{index + 1}</td>
-                  <td>
-                    {assignment.station?.stationName || "Unknown Station"}
-                  </td>
+                  <td>{assignment.station?.stationName || "Unknown Station"}</td>
                   <td>{formatDate(assignment.startDate, "ddmmyyyy")}</td>
                   <td>{formatDate(assignment.endDate, "ddmmyyyy")}</td>
-                  <td>{assignment.duration}</td>
+                  <td className="text-center">
+                    <Badge bg="info">
+                      {formatDuration(assignment.startDate, assignment.endDate)}
+                    </Badge>
+                  </td>
                   <td>
-                    <Badge bg={assignment.isCurrent ? "success" : "secondary"}>
-                      {assignment.isCurrent ? "Current" : "Past"}
+                    <Badge bg={assignment.badgeVariant}>
+                      {assignment.status}
                     </Badge>
                   </td>
                 </tr>
