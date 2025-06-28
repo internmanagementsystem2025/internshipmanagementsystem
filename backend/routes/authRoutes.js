@@ -12,10 +12,13 @@ const {
   verifyOTPAndResetPassword,
   getUserProfileByNic,
   verifyEmail,
-  getGoogleProfile
+  getGoogleProfile,
+  azureStaffLogin
+  
 } = require("../controllers/authController");
 const { passport, generateTokenAndRedirect } = require('../config/oauthStrategies');
 const authMiddleware = require("../middleware/authMiddleware");
+const { verifyAzureToken } = require("../middleware/azureAuth");
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
@@ -50,5 +53,13 @@ router.get('/google/callback',
   generateTokenAndRedirect
 );
 
+// // Azure AD Authentication Routes
+// router.get('/azure', AuthController.initiateAzureLogin);
+// router.post('/azure/callback', AuthController.handleAzureCallback);
+
+// // Token Validation Route
+// router.post('/validate', AuthController.validateToken);
+
+router.post("/staff/login", verifyAzureToken, azureStaffLogin);
 
 module.exports = router;

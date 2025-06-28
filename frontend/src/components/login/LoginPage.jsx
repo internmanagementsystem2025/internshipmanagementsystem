@@ -2,9 +2,11 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Logo from "../../assets/logo.png";
 import { useMsal } from '@azure/msal-react';
-import { loginRequest } from '../../authconfig';
+import { loginRequest,msalConfig } from '../../authconfig';
 import LoadingSpinner from './LoadingSpinner'; 
 import { useNavigation, handleAuthSuccess, checkAuthAndRedirect } from '../../utils/navigationUtils';
+import { PublicClientApplication } from '@azure/msal-browser';
+import { useNavigate } from "react-router-dom";
 
 // Icon components
 const SunIcon = () => (
@@ -295,6 +297,10 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   };
 
   const theme = darkMode ? darkTheme : lightTheme;
+  const navigate = useNavigate();
+  const [isLoggingIn, setIsLoggingIn] = useState(
+    () => localStorage.getItem("isLoggingIn") === "true"
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -445,15 +451,116 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
     window.location.href = `${import.meta.env.VITE_BASE_URL}/api/auth/google`;
   };
 
-  const handleAzureLogin = async () => {
-    try {
-      setIsOAuthLoading(true);
-      await instance.loginRedirect(loginRequest);
-    } catch (err) {
-      console.error('Azure login error', err);
-      setIsOAuthLoading(false);
-    }
-  };
+  // const handleAzureLogin = async () => {
+  //   try {
+  //     setIsOAuthLoading(true);
+  //     await instance.loginRedirect(loginRequest);
+  //   } catch (err) {
+  //     console.error('Azure login error', err);
+  //     setIsOAuthLoading(false);
+  //   }
+  // };
+
+  // Add this import at the top of your LoginPage.jsx
+
+
+//  const handleAzureLogin = async () => {
+//   try {
+//     // Initialize MSAL instance
+//     const msalInstance = new PublicClientApplication(msalConfig);
+
+//      //  Initialize the application
+//      await msalInstance.initialize(); 
+    
+//     // 1. Login with Azure AD
+//     const loginResponse = await msalInstance.loginPopup(loginRequest);
+    
+//     // 2. Get access token silently
+//     const tokenResponse = await msalInstance.acquireTokenSilent({
+//       ...loginRequest,
+//       account: loginResponse.account
+//     });
+
+//     // 3. Send token to backend for verification
+//     const backendResponse = await fetch('http://localhost:5000/api/auth/azure/callback', {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//         'Authorization': `Bearer ${tokenResponse.accessToken}`
+//       }
+//     });
+
+//     if (!backendResponse.ok) {
+//       throw new Error('Azure authentication failed');
+//     }
+
+//     const data = await backendResponse.json();
+    
+//     // 4. Store user details
+//     localStorage.setItem('azureUser', JSON.stringify({
+//       id: data.user.id,
+//       email: data.user.email,
+//       name: data.user.name,
+//       userType: data.user.userType,
+//       token: data.token
+//     }));
+
+//     // 5. Redirect to staff home
+//     navigate('/staff-home');
+
+//   } catch (error) {
+//     console.error('Azure login error:', error);
+//     setError(error.message || 'Failed to login with Azure. Please try again.');
+//   }
+// };
+
+useEffect(() => {
+  const handleAzureRedirect = async () => {
+     try{
+      const msalInstance = new PublicClientApplication(msalConfig);
+      await msalInstance.initialize();
+      const response = await msalInstance.handleRedirectPromise();
+      if (response) {
+        // Successful login
+        console.log("Azure login successful", response);
+        
+        // Send token to your backend for verification
+        const backendResponse = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/staff/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${response.accessToken}`
+          }
+        });
+  
+        if (backendResponse.ok) {
+          const data = await backendResponse.json();
+          handleAuthSuccess(data, navigateToUserDashboard);
+        } else {
+          throw new Error('Backend token validation failed');
+        }
+      }
+     }catch(error){
+      console.error('Azure login error:', error);
+      setError(error.message || 'Failed to login with Azure. Please try again.');
+     }
+
+  }
+
+  handleAzureRedirect();
+}, []);
+
+
+const handleAzureLogin = async () => {
+  try {
+        setIsOAuthLoading(true);
+        await instance.loginRedirect(loginRequest);
+      } catch (err) {
+        console.error('Azure login error', err);
+        setIsOAuthLoading(false);
+      }
+};
+
   
   const toggleStaffNotification = () => {
     setShowStaffNotification(!showStaffNotification);

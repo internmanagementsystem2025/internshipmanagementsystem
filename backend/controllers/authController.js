@@ -7,6 +7,11 @@ const { updateStats } = require("../controllers/statsController");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const passport = require('passport');
+const jwt = require('jsonwebtoken');
+const { azureConfig } = require('../config/AuthConfig');
+const jwksClient = require('jwks-rsa');
+const Staff = require("../models/Staff");
 
 // Temporary storage for pending registrations (use Redis in production)
 const pendingRegistrations = new Map();
@@ -631,6 +636,139 @@ const getGoogleProfile = async (req, res) => {
   }
 };
 
+
+
+// const AuthController = {
+//   /**
+//    * Initiates Azure AD login
+//    */
+//   initiateAzureLogin: passport.authenticate('oauth-bearer', { session: false }),
+
+//   /**
+//    * Handles Azure AD callback
+//    */
+//   handleAzureCallback: async (req, res) => {
+//     try {
+//       const token = req.headers.authorization.split(' ')[1];
+//       const decoded = jwt.decode(token); // Decode without verification since Azure already validated
+      
+//       // Find or create staff user in your database
+//       let staff = await Staff.findOne({ 
+//         $or: [
+//           { email: decoded.preferred_username || decoded.email },
+//           { azureId: decoded.oid || decoded.sub }
+//         ]
+//       });
+  
+//       if (!staff) {
+//         // Create new staff record if not exists
+//         staff = await Staff.create({
+//           name: decoded.name || decoded.preferred_username.split('@')[0],
+//           email: decoded.preferred_username || decoded.email,
+//           azureId: decoded.oid || decoded.sub,
+//           jobPosition: "Staff" // Default position
+//         });
+//       }
+  
+//       // Generate your app's JWT token
+//       const appToken = jwt.sign(
+//         {
+//           id: staff._id,
+//           email: staff.email,
+//           name: staff.name,
+//           userType: 'staff',
+//           jobPosition: staff.jobPosition
+//         },
+//         process.env.JWT_SECRET,
+//         { expiresIn: '7d' }
+//       );
+  
+//       // Return the token and user data
+//       res.json({
+//         token: appToken,
+//         user: {
+//           id: staff._id,
+//           email: staff.email,
+//           name: staff.name,
+//           userType: 'staff',
+//           jobPosition: staff.jobPosition
+//         }
+//       });
+  
+//     } catch (error) {
+//       console.error('Azure callback error:', error);
+//       res.status(500).json({ error: 'Azure authentication failed' });
+//     }
+//   },
+
+//   /**
+//    * Validates JWT token
+//    */
+//   validateToken: (req, res) => {
+//     const token = req.body.token;
+    
+//     if (!token) {
+//       return res.status(401).json({ error: 'No token provided' });
+//     }
+    
+//     try {
+//       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//       res.json({ valid: true, user: decoded });
+//     } catch (err) {
+//       res.status(401).json({ valid: false, error: err.message });
+//     }
+//   }
+// };`
+
+const azureStaffLogin = async (req, res) => {
+  const decoded = req.azureUser;
+  
+  try {
+  let staff = await Staff.findOne({
+  $or: [
+  { email: decoded.preferred_username || decoded.email },
+  { azureId: decoded.oid || decoded.sub },
+  ],
+  });
+  
+  
+  if (!staff) {
+    staff = await Staff.create({
+      name: decoded.name || decoded.preferred_username.split("@")[0],
+      email: decoded.preferred_username || decoded.email,
+      azureId: decoded.oid || decoded.sub,
+      jobPosition: "Staff",
+    });
+  }
+  
+  const appToken = jwt.sign(
+    {
+      id: staff._id,
+      name: staff.name,
+      email: staff.email,
+      role: "staff",
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+  
+  res.json({
+    token: appToken,
+    user: {
+      id: staff._id,
+      name: staff.name,
+      email: staff.email,
+      role: "staff",
+    },
+  });
+  } catch (error) {
+  console.error("Azure login error:", error.message);
+  res.status(500).json({ error: "Login failed" });
+  }
+  };
+
+
+
 module.exports = { 
   registerUser, 
   loginUser, 
@@ -643,5 +781,6 @@ module.exports = {
   getUserProfileByNic,
   verifyEmail,
   getGoogleProfile,
-  upload 
+  upload,
+  azureStaffLogin
 };

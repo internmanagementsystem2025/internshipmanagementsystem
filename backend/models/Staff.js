@@ -15,6 +15,18 @@ const staffSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  // Azure AD Integration Fields
+  azureId: {
+    type: String,
+    unique: true,
+    sparse: true // Allows null for non-Azure users
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    match: [/^[\w-]+(\.[\w-]+)*@mobitel\.lk$/, 'Please use a valid Mobitel email']
   }
 });
 
