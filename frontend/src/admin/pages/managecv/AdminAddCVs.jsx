@@ -600,6 +600,8 @@ const AdminAddCVs = ({ darkMode }) => {
               setFormErrors={setFormErrors}
             />
             <PreviousTrainingSection 
+            selectedRole={selectedRole}
+            handleRoleChange={handleRoleChange}
               cvData={cvData} 
               handleInputChange={handleInputChange} 
               darkMode={darkMode}
