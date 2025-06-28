@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Container, Card, Table, Button, Badge, Row, Col, Form, Modal } from 'react-bootstrap';
 import axios from 'axios';
 
+// Add this line to define API_BASE_URL
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
+
 const RotationalApiFirst = ({ darkMode }) => {
   const [allCVs, setAllCVs] = useState([]);
   const [pendingCVs, setPendingCVs] = useState([]);
@@ -19,8 +22,7 @@ const RotationalApiFirst = ({ darkMode }) => {
   ]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [assignmentHistory, setAssignmentHistory] = useState([]);
-  const [selectedCVForHistory, setSelectedCVForHistory] = useState(null);
-  const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
+  const [selectedCVForHistory, setSelectedCVForHistory] = useState(null)
 
   // Fetch data on component mount
   useEffect(() => {
@@ -44,6 +46,24 @@ const RotationalApiFirst = ({ darkMode }) => {
       setStations(stationsResponse.data.data || stationsResponse.data); 
     } catch (error) {
       console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update the fetchData function
+  const fetchData = async () => {
+    try {
+      const [stationsResponse, analyticsResponse] = await Promise.all([
+        axios.get('http://localhost:5000/api/rotational/stations'),
+        axios.get('http://localhost:5000/api/rotational/analytics')
+      ]);
+
+      setStations(stationsResponse.data.data);
+      setAnalytics(analyticsResponse.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setError(error.response?.data?.message || "Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -442,6 +462,38 @@ const RotationalApiFirst = ({ darkMode }) => {
       </Modal.Footer>
     </Modal>
   );
+
+  const [stationCVs, setStationCVs] = useState([]);
+  const [showCVsModal, setShowCVsModal] = useState(false);
+
+  // Update the fetchCVsForStation function
+  const fetchCVsForStation = async (stationId, stationName) => {
+    try {
+      setLoadingCVs(true);
+      setCurrentStationName(stationName);
+      
+      const response = await axios.get(
+        `http://localhost:5000/api/rotational/get-cvs/${stationId}`
+      );
+
+      if (response.data) {
+        const transformedCVs = response.data.map(cv => ({
+          ...cv,
+          startDate: cv.startDate ? new Date(cv.startDate) : null,
+          endDate: cv.endDate ? new Date(cv.endDate) : null,
+          remainingDays: calculateRemainingDays(cv.endDate)
+        }));
+
+        setStationCVs(transformedCVs);
+        setShowCVsModal(true);
+      }
+    } catch (error) {
+      console.error("Error fetching CVs:", error);
+      setError("Failed to load CVs for this station");
+    } finally {
+      setLoadingCVs(false);
+    }
+  };
 
   return (
     <div 
