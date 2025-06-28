@@ -123,7 +123,7 @@ const ViewAllInterviews = ({ darkMode }) => {
             <Button
               variant="primary"
               onClick={() => navigate("/add-new-interview")}
-              className="mx-0 mb-2 mb-sm-0"
+              className="mx-2 mb-2 mb-sm-0"
             >
               Add New Interview
             </Button>
