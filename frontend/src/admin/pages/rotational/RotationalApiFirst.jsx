@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Container, Card, Table, Button, Badge, Row, Col, Form, Modal } from 'react-bootstrap';
 import axios from 'axios';
 
+// Add this line to define API_BASE_URL
+const API_BASE_URL = `${import.meta.env.VITE_BASE_URL}/api`;
+
 const RotationalApiFirst = ({ darkMode }) => {
   const [allCVs, setAllCVs] = useState([]);
   const [pendingCVs, setPendingCVs] = useState([]);
