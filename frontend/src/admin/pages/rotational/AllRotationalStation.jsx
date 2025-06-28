@@ -9,6 +9,8 @@ import {
   Form,
   Modal,
   Badge,
+  Row,
+  Col,
 } from "react-bootstrap";
 import { FaChevronLeft, FaChevronRight, FaCalendarCheck } from "react-icons/fa";
 import axios from "axios";
@@ -31,6 +33,9 @@ const AllRotationalStation = ({ darkMode }) => {
   const [stationCVs, setStationCVs] = useState([]);
   const [loadingCVs, setLoadingCVs] = useState(false);
   const [currentStationName, setCurrentStationName] = useState("");
+  const [showStationModal, setShowStationModal] = useState(false);
+  const [stationDetails, setStationDetails] = useState(null);
+  const [loadingStationDetails, setLoadingStationDetails] = useState(false);
   const itemsPerPage = 10;
 
   const [analytics, setAnalytics] = useState([]);
@@ -161,6 +166,31 @@ const AllRotationalStation = ({ darkMode }) => {
       setLoadingCVs(false);
     }
   };
+
+  // Fetch station details
+  const fetchStationDetails = async (stationId) => {
+    try {
+      setLoadingStationDetails(true);
+      setError(null);
+
+      const response = await axios.get(
+        `${API_BASE_URL}/rotational/station/${stationId}`
+      );
+
+      if (response.data.success) {
+        setStationDetails(response.data.data);
+        setShowStationModal(true);
+      } else {
+        throw new Error(response.data.error || "Failed to fetch station details");
+      }
+    } catch (error) {
+      console.error("Error fetching station details:", error);
+      setError(error.response?.data?.error || "Failed to load station details");
+    } finally {
+      setLoadingStationDetails(false);
+    }
+  };
+
   return (
     <div
       className={`d-flex flex-column min-vh-100 ${
@@ -259,7 +289,6 @@ const AllRotationalStation = ({ darkMode }) => {
                   <th>Active Status</th>
                   <th>View</th>
                   <th>Edit</th>
-                  <th>View CVs</th>
                   <th>Delete</th>
                 </tr>
               </thead>
@@ -278,9 +307,7 @@ const AllRotationalStation = ({ darkMode }) => {
                         <Button
                           size="sm"
                           variant="outline-primary"
-                          onClick={() =>
-                            navigate(`/view-rotational-stations/${station._id}`)
-                          }
+                          onClick={() => fetchStationDetails(station._id)}
                           className="fw-semibold"
                         >
                           View
@@ -298,18 +325,7 @@ const AllRotationalStation = ({ darkMode }) => {
                           Edit
                         </Button>
                       </td>
-                      <td>
-                        <Button
-                          size="sm"
-                          variant="outline-info"
-                          onClick={() =>
-                            fetchCVsForStation(station._id, station.stationName)
-                          }
-                          className="fw-semibold"
-                        >
-                          View CVs
-                        </Button>
-                      </td>
+                      
                       <td>
                         <Button
                           size="sm"
@@ -484,6 +500,134 @@ const AllRotationalStation = ({ darkMode }) => {
           <Button
             variant={darkMode ? "outline-light" : "secondary"}
             onClick={() => setShowCVsModal(false)}
+          >
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Station Details Modal */}
+      <Modal
+        show={showStationModal}
+        onHide={() => setShowStationModal(false)}
+        size="lg"
+        centered
+        className={darkMode ? "dark-modal" : ""}
+      >
+        <Modal.Header
+          closeButton
+          closeVariant={darkMode ? "white" : undefined}
+          className={darkMode ? "bg-dark text-white" : ""}
+        >
+          <Modal.Title>Station Details</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className={darkMode ? "bg-dark text-white" : ""}>
+          {loadingStationDetails ? (
+            <div className="text-center">
+              <Spinner animation="border" variant={darkMode ? "light" : "dark"} />
+              <p>Loading station details...</p>
+            </div>
+          ) : stationDetails ? (
+            <div>
+              <Row>
+                <Col md={6}>
+                  <h5>Basic Information</h5>
+                  <Table bordered variant={darkMode ? "dark" : "light"}>
+                    <tbody>
+                      <tr>
+                        <td><strong>Station Name:</strong></td>
+                        <td>{stationDetails.stationName}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Display Name:</strong></td>
+                        <td>{stationDetails.displayName}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Priority Level:</strong></td>
+                        <td>{stationDetails.priority}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Time Period:</strong></td>
+                        <td>{stationDetails.timePeriod} weeks</td>
+                      </tr>
+                    </tbody>
+                  </Table>
+                </Col>
+                <Col md={6}>
+                  <h5>Capacity Information</h5>
+                  <Table bordered variant={darkMode ? "dark" : "light"}>
+                    <tbody>
+                      <tr>
+                        <td><strong>Maximum Students:</strong></td>
+                        <td>{stationDetails.maxStudents}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Available Seats:</strong></td>
+                        <td>{stationDetails.availableSeats}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Utilization:</strong></td>
+                        <td>{stationDetails.utilization}</td>
+                      </tr>
+                      <tr>
+                        <td><strong>Status:</strong></td>
+                        <td>
+                          <Badge bg={stationDetails.activeStatus ? "success" : "danger"}>
+                            {stationDetails.activeStatus ? "Active" : "Inactive"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </Table>
+                </Col>
+              </Row>
+
+              {stationDetails.currentAssignments?.length > 0 && (
+                <>
+                  <h5 className="mt-4">Current Assignments</h5>
+                  <Table bordered variant={darkMode ? "dark" : "light"}>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>NIC</th>
+                        <th>Role</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Days Remaining</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stationDetails.currentAssignments.map((assignment, index) => (
+                        <tr key={assignment._id}>
+                          <td>{index + 1}</td>
+                          <td>{assignment.fullName}</td>
+                          <td>{assignment.nic}</td>
+                          <td>{assignment.role}</td>
+                          <td>{formatDate(assignment.startDate)}</td>
+                          <td>{formatDate(assignment.endDate)}</td>
+                          <td>
+                            <Badge bg={assignment.remainingDays <= 0 ? "danger" : 
+                                assignment.remainingDays <= 7 ? "warning" : "success"}>
+                              {assignment.remainingDays <= 0 ? "Expired" : 
+                               `${assignment.remainingDays} days`}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </>
+              )}
+            </div>
+          ) : (
+            <Alert variant="danger">Failed to load station details</Alert>
+          )}
+        </Modal.Body>
+        <Modal.Footer className={darkMode ? "bg-dark text-white" : ""}>
+          <Button
+            variant={darkMode ? "outline-light" : "secondary"}
+            onClick={() => setShowStationModal(false)}
           >
             Close
           </Button>
