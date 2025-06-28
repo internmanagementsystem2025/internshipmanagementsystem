@@ -81,6 +81,8 @@ const AdminAddCVs = ({ darkMode }) => {
   const navigate = useNavigate();
   const [autoApprove, setAutoApprove] = useState(false);
 
+  /*const [fileInputKey, setFileInputKey] = useState(Date.now());*/
+
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
@@ -638,7 +640,23 @@ const AdminAddCVs = ({ darkMode }) => {
               >
                 Back
               </button>
-              
+              <button 
+                type="button" 
+                className="btn btn-danger px-5"
+                onClick={() => {
+                  setCvData(JSON.parse(JSON.stringify(defaultCVData)));
+                  setFormErrors({});
+                  setFormModified(false);
+                  setFileInputKey(prev => prev + 1);
+                  setNotification({
+                    show: true,
+                    message: "All changes discarded.",
+                    variant: "info"
+                  });
+                }}
+              >
+                Discard Changes
+              </button>
               <button 
                 type="submit" 
                 className={`btn ${darkMode ? "btn-primary" : "btn-success"} px-5`}
