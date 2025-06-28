@@ -9,7 +9,7 @@ exports.createScheme = async (req, res) => {
       totalAllocatedCount: 0,
       totalEmptyCount: req.body.totalAllocation
     };
-    
+
     const newScheme = new Scheme(schemeData);
     await newScheme.save();
     res.status(201).json({ message: 'Scheme created successfully', scheme: newScheme });
@@ -39,28 +39,33 @@ exports.getSchemeById = async (req, res) => {
   }
 };
 
-// Update a scheme
+// ✅ Update a scheme (with editComment)
 exports.updateScheme = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
-    
-    // If totalAllocation has changed, recalculate totalEmptyCount
+
+    // Handle recalculation of totalEmptyCount if totalAllocation is changed
     if (updateData.totalAllocation !== undefined) {
-      const scheme = await Scheme.findById(id);
-      if (!scheme) return res.status(404).json({ error: 'Scheme not found' });
-      
-      updateData.totalEmptyCount = updateData.totalAllocation - scheme.totalAllocatedCount;
+      const existingScheme = await Scheme.findById(id);
+      if (!existingScheme) return res.status(404).json({ error: 'Scheme not found' });
+
+      updateData.totalEmptyCount = updateData.totalAllocation - existingScheme.totalAllocatedCount;
     }
-    
+
+    // Save edit comment if provided
+    if (updateData.editComment !== undefined) {
+      updateData.editComment = updateData.editComment.trim();
+    }
+
     const updatedScheme = await Scheme.findByIdAndUpdate(
-      id, 
-      updateData, 
+      id,
+      updateData,
       { new: true, runValidators: true }
     );
-    
+
     if (!updatedScheme) return res.status(404).json({ error: 'Scheme not found' });
-    
+
     res.status(200).json({ message: 'Scheme updated successfully', scheme: updatedScheme });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update scheme', details: error.message });
@@ -81,118 +86,106 @@ exports.deleteScheme = async (req, res) => {
 // Assign managers to a scheme with allocation counts
 exports.assignManagers = async (req, res) => {
   try {
-    const { 
-      generalManager, 
-      deputyManager, 
+    const {
+      generalManager,
+      deputyManager,
       supervisor,
       generalManagerAllocation,
       deputyManagerAllocation,
       supervisorAllocation
     } = req.body;
-    
+
     const scheme = await Scheme.findById(req.params.id);
     if (!scheme) return res.status(404).json({ error: 'Scheme not found' });
 
-    // Update General Manager with allocation count
     if (generalManager) {
       scheme.generalManager = {
         name: generalManager,
-        allocationCount: generalManagerAllocation || scheme.generalManager?.allocationCount || 0, 
-        availableAllocation: generalManagerAllocation || 0, 
+        allocationCount: generalManagerAllocation || scheme.generalManager?.allocationCount || 0,
+        availableAllocation: generalManagerAllocation || 0,
         assignedCount: scheme.generalManager?.assignedCount || 0
       };
     }
-    
-    // Update Deputy Manager with allocation count
+
     if (deputyManager) {
       scheme.deputyManager = {
         name: deputyManager,
-        allocationCount: deputyManagerAllocation || scheme.deputyManager?.allocationCount || 0, 
+        allocationCount: deputyManagerAllocation || scheme.deputyManager?.allocationCount || 0,
         availableAllocation: deputyManagerAllocation || 0,
         assignedCount: scheme.deputyManager?.assignedCount || 0
       };
     }
-    
-    // Update Supervisor with allocation count
+
     if (supervisor) {
       scheme.supervisor = {
         name: supervisor,
         allocationCount: supervisorAllocation || scheme.supervisor?.allocationCount || 0,
-        availableAllocation: supervisorAllocation || 0, 
+        availableAllocation: supervisorAllocation || 0,
         assignedCount: scheme.supervisor?.assignedCount || 0
       };
     }
 
     await scheme.save();
-    res.status(200).json({ 
-      message: 'Managers assigned successfully with allocation counts', 
-      scheme 
+    res.status(200).json({
+      message: 'Managers assigned successfully with allocation counts',
+      scheme
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to assign managers', details: error.message });
   }
 };
 
-
+// Recalculate allocation counts
 exports.recalculateAllocation = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    // Find the scheme
+
     const scheme = await Scheme.findById(id);
-    if (!scheme) {
-      return res.status(404).json({ error: 'Scheme not found' });
-    }
-    
-    // Count all interns assigned to this scheme
+    if (!scheme) return res.status(404).json({ error: 'Scheme not found' });
+
     const allocatedCount = await Intern.countDocuments({ schemeId: id });
-    
-    // Count interns assigned to each manager type using the managerType field
-    const generalManagerCount = await Intern.countDocuments({ 
-      schemeId: id, 
+
+    const generalManagerCount = await Intern.countDocuments({
+      schemeId: id,
       managerType: 'generalManager'
     });
-    
-    const deputyManagerCount = await Intern.countDocuments({ 
-      schemeId: id, 
-      managerType: 'deputyManager' 
+
+    const deputyManagerCount = await Intern.countDocuments({
+      schemeId: id,
+      managerType: 'deputyManager'
     });
-    
-    const supervisorCount = await Intern.countDocuments({ 
-      schemeId: id, 
-      managerType: 'supervisor' 
+
+    const supervisorCount = await Intern.countDocuments({
+      schemeId: id,
+      managerType: 'supervisor'
     });
-    
-    console.log(`Scheme ${id} counts - GM: ${generalManagerCount}, DM: ${deputyManagerCount}, S: ${supervisorCount}, Total: ${allocatedCount}`);
-    
-    // Update the scheme with counts
+
     scheme.totalAllocatedCount = allocatedCount;
     scheme.totalEmptyCount = scheme.totalAllocation - allocatedCount;
-    
-    // Update assigned counts for each manager
+
     if (scheme.generalManager) {
       scheme.generalManager.assignedCount = generalManagerCount;
     }
-    
+
     if (scheme.deputyManager) {
       scheme.deputyManager.assignedCount = deputyManagerCount;
     }
-    
+
     if (scheme.supervisor) {
       scheme.supervisor.assignedCount = supervisorCount;
     }
-    
+
     await scheme.save();
-    
-    res.status(200).json({ 
-      message: 'Allocation counts recalculated successfully', 
-      scheme 
+
+    res.status(200).json({
+      message: 'Allocation counts recalculated successfully',
+      scheme
     });
   } catch (error) {
     console.error('Recalculation error:', error);
-    res.status(500).json({ 
-      error: 'Failed to recalculate allocation counts', 
-      details: error.message 
+    res.status(500).json({
+      error: 'Failed to recalculate allocation counts',
+      details: error.message
     });
   }
 };

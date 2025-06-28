@@ -23,6 +23,8 @@ const EditScheme = ({ darkMode }) => {
     schemeEndDate: "",
   });
 
+  const [editComment, setEditComment] = useState(""); // NEW: Edit comment field
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -31,9 +33,9 @@ const EditScheme = ({ darkMode }) => {
   const [showErrorNotification, setShowErrorNotification] = useState(false);
 
   const navigate = useNavigate();
-  const { schemeId } = useParams(); // Get scheme ID from URL
+  const { schemeId } = useParams();
 
-  // Fetch scheme details when component mounts
+  // Fetch scheme details
   useEffect(() => {
     const fetchSchemeDetails = async () => {
       try {
@@ -69,7 +71,6 @@ const EditScheme = ({ darkMode }) => {
     fetchSchemeDetails();
   }, [schemeId]);
 
-  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setSchemeData(prevData => ({
@@ -78,20 +79,30 @@ const EditScheme = ({ darkMode }) => {
     }));
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");
 
+    // ✅ Validate comment
+    if (!editComment.trim()) {
+      setErrorMessage("Please enter a comment before updating.");
+      setShowErrorNotification(true);
+      setTimeout(() => setShowErrorNotification(false), 3000);
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      const response = await axios.put(`${API_BASE_URL}/${schemeId}`, {
+      // Optional: include editComment in payload if backend supports it
+      await axios.put(`${API_BASE_URL}/${schemeId}`, {
         ...schemeData,
         totalAllocation: Number(schemeData.totalAllocation),
-        perHeadAllowance: Number(schemeData.perHeadAllowance)
+        perHeadAllowance: Number(schemeData.perHeadAllowance),
+        editComment: editComment.trim(), // Include only if backend accepts
       });
-      
+
       setSuccessMessage("Scheme Updated Successfully!");
       setShowSuccessNotification(true);
 
@@ -103,16 +114,12 @@ const EditScheme = ({ darkMode }) => {
     } catch (error) {
       setErrorMessage(error.response?.data?.error || "An error occurred while updating the scheme.");
       setShowErrorNotification(true);
-
-      setTimeout(() => {
-        setShowErrorNotification(false);
-      }, 3000);
+      setTimeout(() => setShowErrorNotification(false), 3000);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Render loading state
   if (isLoading) {
     return (
       <Container className="d-flex justify-content-center align-items-center min-vh-100">
@@ -125,14 +132,11 @@ const EditScheme = ({ darkMode }) => {
 
   return (
     <div className={`d-flex flex-column min-vh-100 ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}>
-      {/* Header */}
       <Container className="text-center mt-4 mb-3">
         <img src={logo} alt="Company Logo" className="mx-auto d-block" style={{ height: "50px" }} />
         <h3 className="mt-3">EDIT SCHEME</h3>
       </Container>
-      
 
-      {/* Main Form Section */}
       <Container className={`p-4 rounded shadow ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"} mb-5`}>
         <Row>
           <Col md={12}>
@@ -142,7 +146,6 @@ const EditScheme = ({ darkMode }) => {
             <Card className={darkMode ? "bg-dark text-white" : "bg-light text-dark"}>
               <Card.Body>
                 <Form onSubmit={handleSubmit}>
-                  {/* Scheme Name */}
                   <Form.Group controlId="schemeName" className="mb-3">
                     <Form.Label>Scheme Name</Form.Label>
                     <Form.Control
@@ -156,7 +159,6 @@ const EditScheme = ({ darkMode }) => {
                     />
                   </Form.Group>
 
-                  {/* Total Allocation */}
                   <Form.Group controlId="totalAllocation" className="mb-3">
                     <Form.Label>Total Allocation</Form.Label>
                     <Form.Control
@@ -170,38 +172,30 @@ const EditScheme = ({ darkMode }) => {
                     />
                   </Form.Group>
 
-                  {/* Radio Buttons for OnRequest, Recurring, Rotational */}
                   {["onRequest", "recurring", "rotational"].map((field) => (
                     <Form.Group key={field} controlId={field} className="mb-3">
-                      <Form.Label className="font-semibold">
-                        {field.charAt(0).toUpperCase() + field.slice(1)}
-                      </Form.Label>
+                      <Form.Label>{field.charAt(0).toUpperCase() + field.slice(1)}</Form.Label>
                       <div className="d-flex gap-4">
                         <Form.Check
                           type="radio"
-                          id={`${field}-yes`}
                           label="Yes"
                           name={field}
                           value="yes"
                           checked={schemeData[field] === "yes"}
                           onChange={handleInputChange}
-                          className="me-2"
                         />
                         <Form.Check
                           type="radio"
-                          id={`${field}-no`}
                           label="No"
                           name={field}
                           value="no"
                           checked={schemeData[field] === "no"}
                           onChange={handleInputChange}
-                          className="me-2"
                         />
                       </div>
                     </Form.Group>
                   ))}
 
-                  {/* Scheme Start Date */}
                   <Form.Group controlId="schemeStartDate" className="mb-3">
                     <Form.Label>Scheme Start Date</Form.Label>
                     <Form.Control
@@ -214,7 +208,6 @@ const EditScheme = ({ darkMode }) => {
                     />
                   </Form.Group>
 
-                  {/* Scheme End Date */}
                   <Form.Group controlId="schemeEndDate" className="mb-3">
                     <Form.Label>Scheme End Date</Form.Label>
                     <Form.Control
@@ -227,12 +220,10 @@ const EditScheme = ({ darkMode }) => {
                     />
                   </Form.Group>
 
-                  {/* Per Head Allowance */}
                   <Form.Group controlId="perHeadAllowance" className="mb-3">
                     <Form.Label>Per Head Allowance</Form.Label>
                     <Form.Control
                       type="number"
-                      placeholder="Enter Per Head Allowance"
                       name="perHeadAllowance"
                       value={schemeData.perHeadAllowance}
                       onChange={handleInputChange}
@@ -241,7 +232,6 @@ const EditScheme = ({ darkMode }) => {
                     />
                   </Form.Group>
 
-                  {/* Allowance Frequency */}
                   <Form.Group controlId="allowanceFrequency" className="mb-3">
                     <Form.Label>Allowance Frequency</Form.Label>
                     <Form.Control
@@ -259,12 +249,10 @@ const EditScheme = ({ darkMode }) => {
                     </Form.Control>
                   </Form.Group>
 
-                  {/* Minimum Qualifications */}
                   <Form.Group controlId="minimumQualifications" className="mb-3">
                     <Form.Label>Minimum Qualifications</Form.Label>
                     <Form.Control
                       type="text"
-                      placeholder="Enter Minimum Qualifications"
                       name="minimumQualifications"
                       value={schemeData.minimumQualifications}
                       onChange={handleInputChange}
@@ -273,12 +261,10 @@ const EditScheme = ({ darkMode }) => {
                     />
                   </Form.Group>
 
-                  {/* Description */}
                   <Form.Group controlId="description" className="mb-3">
                     <Form.Label>Description</Form.Label>
                     <Form.Control
                       as="textarea"
-                      placeholder="Enter Scheme Description"
                       name="description"
                       value={schemeData.description}
                       onChange={handleInputChange}
@@ -286,7 +272,20 @@ const EditScheme = ({ darkMode }) => {
                     />
                   </Form.Group>
 
-                  {/* Buttons */}
+                  {/* ✅ NEW: Edit Comment */}
+                  <Form.Group controlId="editComment" className="mb-3">
+                    <Form.Label>Comment about the Edit <span className="text-danger"></span></Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      placeholder="Enter a comment about the changes"
+                      value={editComment}
+                      onChange={(e) => setEditComment(e.target.value)}
+                      className={`form-control ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"}`}
+                      required
+                    />
+                  </Form.Group>
+
                   <div className="d-flex justify-content-between mt-3">
                     <Button variant="danger" onClick={() => navigate(-1)} disabled={isSubmitting}>
                       Go Back
@@ -302,7 +301,6 @@ const EditScheme = ({ darkMode }) => {
         </Row>
       </Container>
 
-      {/* Notification Components */}
       <Notification
         show={showSuccessNotification}
         onClose={() => setShowSuccessNotification(false)}

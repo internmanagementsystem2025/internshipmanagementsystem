@@ -18,6 +18,13 @@ const schemeSchema = new mongoose.Schema(
     schemeStartDate: { type: String, required: true },
     schemeEndDate: { type: String, required: true },
 
+    // ✅ New field to store comments made when editing a scheme
+    editComment: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     // Fields to track allocation
     totalAllocatedCount: { type: Number, default: 0 },
     totalEmptyCount: { type: Number, default: 0 },

@@ -33,17 +33,17 @@ const SchemeInfo = ({ darkMode }) => {
   const [totalAllocatedCount, setTotalAllocatedCount] = useState(0);
   const [totalEmptyCount, setTotalEmptyCount] = useState(0);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     const fetchSchemeDetails = async () => {
       try {
         const response = await axios.get(`http://localhost:5000/api/schemes/${schemeId}`);
-        setSchemeData(response.data); 
-        
+        setSchemeData(response.data);
+
         // Assuming the API returns these counts or we calculate them
         setTotalAllocatedCount(response.data.totalAllocatedCount || 0);
         setTotalEmptyCount(response.data.totalEmptyCount || 0);
-        
+
         setLoading(false);
       } catch (err) {
         setError("Failed to load scheme details");
@@ -51,10 +51,10 @@ const SchemeInfo = ({ darkMode }) => {
       }
     };
 
-    if (schemeId) { // Ensure schemeId is available before making the request
+    if (schemeId) {
       fetchSchemeDetails();
     }
-  }, [schemeId]); // Add schemeId to the dependency array
+  }, [schemeId]);
 
   // Half Donut chart configuration
   const donutChartData = {
@@ -165,10 +165,10 @@ const SchemeInfo = ({ darkMode }) => {
   const calculatePercentage = () => {
     const total = totalAllocatedCount + totalEmptyCount;
     if (total === 0) return { allocated: '0%', empty: '0%' };
-    
+
     const allocatedPercentage = Math.round((totalAllocatedCount / total) * 100);
     const emptyPercentage = 100 - allocatedPercentage;
-    
+
     return {
       allocated: `${allocatedPercentage}%`,
       empty: `${emptyPercentage}%`
@@ -364,6 +364,18 @@ const SchemeInfo = ({ darkMode }) => {
                         rows={4}
                       />
                     </Form.Group>
+
+                    {/* Comment About the Edit */}
+                    <Form.Group controlId="editComment" className="mb-3">
+                      <Form.Label>Comment About the Edit</Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        value={schemeData.editComment || "Enter a comment about the changes"}
+                        readOnly
+                        className={`form-control ${darkMode ? "bg-secondary text-white" : "bg-white text-dark"}`}
+                        rows={3}
+                      />
+                    </Form.Group>
                   </Form>
                 )}
 
@@ -383,7 +395,7 @@ const SchemeInfo = ({ darkMode }) => {
 };
 
 SchemeInfo.propTypes = {
-  darkMode: PropTypes.bool.isRequired, 
+  darkMode: PropTypes.bool.isRequired,
 };
 
 export default SchemeInfo;
