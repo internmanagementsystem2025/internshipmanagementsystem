@@ -2607,9 +2607,9 @@ const bulkUploadCV = async (req, res) => {
 
     // Process the Excel file
     const workbook = xlsx.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0]; // Get first sheet
+    const sheetName = workbook.SheetNames.find(name => name === 'Sheet1') || workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
-    const data = xlsx.utils.sheet_to_json(sheet);
+    const data = xlsx.utils.sheet_to_json(sheet, { defval: null, blankrows: false });
 
     // Validate row count
     if (data.length > 50) {
@@ -2628,6 +2628,12 @@ const bulkUploadCV = async (req, res) => {
 
     for (const [index, row] of data.entries()) {
       try {
+        // Skip empty or instructional rows
+        if (!row["Full Name"] || row["Full Name"].includes("Enter your") || row["Full Name"].startsWith("mailto:")) {
+          console.log("Skipped row:", row);
+          continue;
+        }
+
         // Validate required fields
         const requiredFields = [
           "Full Name",
@@ -2642,17 +2648,88 @@ const bulkUploadCV = async (req, res) => {
           "Institute",
         ];
 
-        const missingFields = requiredFields.filter((field) => !row[field]);
+        const missingFields = requiredFields.filter(field => {
+          const value = row[field];
+          return value === null || value === undefined || value === '';
+        });
+
         if (missingFields.length > 0) {
           throw new Error(
-            `Missing required fields: ${missingFields.join(", ")}`
+            `Missing or empty required fields in row ${index + 2}: ${missingFields.join(", ")}`
           );
         }
 
-        // Convert Excel date to DD/MM/YYYY format
-        if (row["Birthday"] && typeof row["Birthday"] === "number") {
-          const date = xlsx.SSF.parse_date_code(row["Birthday"]);
-          row["Birthday"] = `${date.d}/${date.m}/${date.y}`;
+        // Normalize and validate Birthday format (DD/MM/YYYY)
+        let birthday = row["Birthday"];
+        if (typeof birthday === "number") {
+          const date = xlsx.SSF.parse_date_code(birthday);
+          birthday = `${date.d.toString().padStart(2, '0')}/${date.m.toString().padStart(2, '0')}/${date.y}`;
+        } else {
+          // Handle short formats like 2/1/01
+          const parts = birthday.split('/');
+          if (parts.length === 3) {
+            const day = parts[0].padStart(2, '0');
+            const month = parts[1].padStart(2, '0');
+            const year = parts[2].length === 2 ? `20${parts[2]}` : parts[2];
+            birthday = `${day}/${month}/${year}`;
+          }
+          const birthdayRegex = /^\d{2}\/\d{2}\/\d{4}$/;
+          if (!birthdayRegex.test(birthday)) {
+            throw new Error(`Invalid Birthday format in row ${index + 2}. Expected DD/MM/YYYY (e.g., 02/01/2001)`);
+          }
+        }
+
+        // Validate Email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(row["Email"])) {
+          throw new Error(`Invalid Email format in row ${index + 2}`);
+        }
+
+        // Validate NIC format (e.g., 200153203383 or 202154788V)
+        const nicRegex = /^[0-9]{9}[vVxX]|[0-9]{12}$/;
+        if (!nicRegex.test(row["NIC"])) {
+          throw new Error(`Invalid NIC format in row ${index + 2}`);
+        }
+
+        // Validate Mobile Number format
+        const mobileRegex = /^\d{9,10}$/;
+        if (!mobileRegex.test(row["Mobile Number"])) {
+          throw new Error(`Invalid Mobile Number format in row ${index + 2}`);
+        }
+
+        // Validate District and Institute against provided lists
+        const validDistricts = [
+          "Colombo", "Kandy", "Galle", "Jaffna", "Kurunegala", "Matara",
+          "Anuradhapura", "Batticaloa", "Nuwara Eliya", "Trincomalee",
+          "Ratnapura", "Vavuniya", "Polonnaruwa", "Monaragala", "Hambantota",
+          "Matale", "Badulla", "Kalutara", "Puttalam", "Mullaitivu",
+          "Kilinochchi", "Ampara", "Kegalle"
+        ];
+        if (!validDistricts.includes(row["District"])) {
+          throw new Error(`Invalid District in row ${index + 2}`);
+        }
+
+        const validInstitutes = [
+          "University of Peradeniya", "University of Moratuwa", 
+          "Open University of Sri Lanka", "Horizon Campus", 
+          "Sri Lanka Institute of Development Administration (SLIDA)",
+          "American National College", "University of Kelaniya",
+          "University of Jaffna", "Imperial Institute of Higher Education",
+          "CINEC Campus", "University of Rajarata", "Kotelawala Defense University",
+          "NIBM - National Institute of Business Management", "University of Ruhuna",
+          "Business Management School (BMS)", "Mahatma Gandhi International University",
+          "Informatics Institute of Technology", "University of Colombo"
+        ];
+        if (!validInstitutes.includes(row["Institute"])) {
+          throw new Error(`Invalid Institute in row ${index + 2}`);
+        }
+
+        // Validate URLs (basic check for non-empty and string format)
+        const urlFields = ["CV File URL", "NIC File URL", "Police Clearance Report URL", "Internship Request Letter URL"];
+        for (const field of urlFields) {
+          if (row[field] && typeof row[field] !== 'string') {
+            throw new Error(`Invalid ${field} format in row ${index + 2}. Expected a valid string URL.`);
+          }
         }
 
         // Build CV data
@@ -2662,7 +2739,7 @@ const bulkUploadCV = async (req, res) => {
           gender: row["Gender"],
           postalAddress: row["Postal Address"],
           district: row["District"],
-          birthday: row["Birthday"],
+          birthday: birthday,
           nic: row["NIC"],
           mobileNumber: row["Mobile Number"],
           landPhone: row["Land Phone"] || "",
@@ -2674,70 +2751,33 @@ const bulkUploadCV = async (req, res) => {
           cvApproval: {
             status: "cv-approved",
           },
-          // Initialize roleData
           roleData: {
-            dataEntry: {},
-            internship: {},
+            internship: {
+              alResults: {
+                aLevelSubject1: row["A/L Subject 1"] || "",
+                aLevelSubject2: row["A/L Subject 2"] || "",
+                aLevelSubject3: row["A/L Subject 3"] || "",
+                git: row["A/L GIT"] || "",
+                gk: row["A/L GK"] || "",
+              },
+              preferredLocation: row["Preferred Location"] || "",
+              otherQualifications: row["Other Qualifications"] || "",
+              higherEducation: row["Higher Education"] || "",
+            },
           },
+          selectedRole: "internship",
+          uploadedFiles: {
+            cvFile: row["CV File URL"] || "",
+            nicFile: row["NIC File URL"] || "",
+            policeClearanceReport: row["Police Clearance Report URL"] || "",
+            internshipRequestLetter: row["Internship Request Letter URL"] || "",
+          },
+          emergencyContactName1: row["Emergency Contact Name 1"] || "",
+          emergencyContactNumber1: row["Emergency Contact Number 1"] || "",
+          emergencyContactName2: row["Emergency Contact Name 2"] || "",
+          emergencyContactNumber2: row["Emergency Contact Number 2"] || "",
+          previousTraining: row["Previous Training"] || "",
         };
-
-        // Set role-specific data
-        if (row["O/L Language"]) {
-          // Data Entry Operator
-          cvData.selectedRole = "dataEntry";
-          cvData.roleData.dataEntry = {
-            proficiency: {
-              msWord: row["MS Word Proficiency"] || 0,
-              msExcel: row["MS Excel Proficiency"] || 0,
-              msPowerPoint: row["MS PowerPoint Proficiency"] || 0,
-            },
-            olResults: {
-              language: row["O/L Language"],
-              mathematics: row["O/L Mathematics"],
-              science: row["O/L Science"],
-              english: row["O/L English"],
-              history: row["O/L History"],
-              religion: row["O/L Religion"],
-              optional1: row["O/L Optional 1"],
-              optional2: row["O/L Optional 2"],
-              optional3: row["O/L Optional 3"],
-            },
-            alResults: {
-              aLevelSubject1: row["A/L Subject 1"] || "",
-              aLevelSubject2: row["A/L Subject 2"] || "",
-              aLevelSubject3: row["A/L Subject 3"] || "",
-              git: row["A/L GIT"] || "",
-              gk: row["A/L GK"] || "",
-            },
-            preferredLocation: row["Preferred Location"] || "",
-            otherQualifications: row["Other Qualifications"] || "",
-          };
-        } else {
-          // Internship
-          cvData.selectedRole = "internship";
-          cvData.roleData.internship = {
-            categoryOfApply: row["Category of Apply"] || "",
-            higherEducation: row["Higher Education"] || "",
-            otherQualifications: row["Other Qualifications"] || "",
-          };
-        }
-
-        // Handle emergency contacts
-        if (row["Emergency Contact Name 1"]) {
-          cvData.emergencyContactName1 = row["Emergency Contact Name 1"];
-          cvData.emergencyContactNumber1 =
-            row["Emergency Contact Number 1"] || "";
-        }
-        if (row["Emergency Contact Name 2"]) {
-          cvData.emergencyContactName2 = row["Emergency Contact Name 2"];
-          cvData.emergencyContactNumber2 =
-            row["Emergency Contact Number 2"] || "";
-        }
-
-        // Handle previous training
-        if (row["Previous Training"]) {
-          cvData.previousTraining = row["Previous Training"];
-        }
 
         // Check for duplicates
         const existingCV = await CV.findOne({
@@ -2748,7 +2788,7 @@ const bulkUploadCV = async (req, res) => {
           throw new Error(
             `CV with ${
               existingCV.emailAddress === cvData.emailAddress ? "email" : "NIC"
-            } already exists`
+            } already exists in row ${index + 2}`
           );
         }
 
@@ -2758,7 +2798,7 @@ const bulkUploadCV = async (req, res) => {
       } catch (error) {
         results.failures++;
         results.errors.push({
-          row: index + 1,
+          row: index + 2, // Adjust for header row
           message: error.message,
         });
       }
@@ -2770,8 +2810,7 @@ const bulkUploadCV = async (req, res) => {
     // Return results
     res.status(200).json({
       message: `Bulk upload processed. Success: ${results.success}, Failures: ${results.failures}`,
-      details:
-        results.errors.length > 0 ? { errors: results.errors } : undefined,
+      details: results.errors.length > 0 ? { errors: results.errors } : undefined,
     });
   } catch (error) {
     console.error("Bulk upload error:", error);
@@ -2787,7 +2826,6 @@ const bulkUploadCV = async (req, res) => {
     });
   }
 };
-
 const handleFileUpload = async (e) => {
   e.preventDefault();
   if (!file) {
