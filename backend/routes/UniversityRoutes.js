@@ -5,13 +5,16 @@ const {
   getUniversityById, 
   updateUniversity, 
   approveUniversity, 
-  deleteUniversity 
+  deleteUniversity ,
+  addUniversity
 } = require("../controllers/UniversityController");
 
 const authMiddleware = require("../middleware/authMiddleware");
 
 // Get universities - Protected Route
 router.get("/", authMiddleware, getUniversities);
+
+router.post("/", authMiddleware, addUniversity );
 
 // Get university by ID - Protected Route
 router.get("/:universityId", authMiddleware, getUniversityById);

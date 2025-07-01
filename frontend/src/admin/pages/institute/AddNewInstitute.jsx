@@ -46,7 +46,7 @@ const AddNewInstitute = ({ darkMode }) => {
           axios.get(`${import.meta.env.VITE_BASE_URL}/api/institutes`),
           axios.get(`${import.meta.env.VITE_BASE_URL}/api/users/emails`)
         ]);
-        
+
         setInstitutes(institutesRes.data.institutes || []);
         setExistingEmails(usersRes.data.emails || []);
       } catch (error) {
@@ -83,7 +83,7 @@ const AddNewInstitute = ({ darkMode }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Prevent entering more than allowed characters for phone numbers
     if (name === "contactNumber" || name === "instituteContactNumber") {
       if (value.startsWith("+94")) {
@@ -92,15 +92,15 @@ const AddNewInstitute = ({ darkMode }) => {
         if (value.length > 10) return;
       }
     }
-    
+
     setInstituteData(prev => ({ ...prev, [name]: value }));
 
     // Validate fields in real-time
     const errors = { ...validationErrors };
 
     if (name === "contactNumber" || name === "instituteContactNumber") {
-      errors[name] = value && !validatePhoneNumber(value) 
-        ? "Please enter a valid 10-digit number (0712345678) or international format (+94712345678)" 
+      errors[name] = value && !validatePhoneNumber(value)
+        ? "Please enter a valid 10-digit number (0712345678) or international format (+94712345678)"
         : "";
     }
 
@@ -124,7 +124,7 @@ const AddNewInstitute = ({ darkMode }) => {
       errors.password = value && !validatePassword(value)
         ? "Password must contain at least 8 characters, one uppercase, one lowercase, one number and one special character"
         : "";
-      
+
       if (instituteData.confirmPassword) {
         errors.confirmPassword = value !== instituteData.confirmPassword
           ? "Passwords do not match"
@@ -169,13 +169,13 @@ const AddNewInstitute = ({ darkMode }) => {
       email: !validateEmail(instituteData.email)
         ? "Please enter a valid email"
         : checkEmailExists(instituteData.email)
-        ? "This email is already registered"
-        : "",
+          ? "This email is already registered"
+          : "",
       instituteContactEmail: !validateEmail(instituteData.instituteContactEmail)
         ? "Please enter a valid institute email"
         : checkEmailExists(instituteData.instituteContactEmail)
-        ? "This email is already registered"
-        : "",
+          ? "This email is already registered"
+          : "",
       password: !validatePassword(instituteData.password)
         ? "Password must contain at least 8 characters, one uppercase, one lowercase, one number and one special character"
         : "",
@@ -193,12 +193,31 @@ const AddNewInstitute = ({ darkMode }) => {
 
     try {
       // Remove confirmPassword from the data being sent
-      const { confirmPassword, ...dataToSend } = instituteData;
-      
-      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/register`, dataToSend, {
+      const { confirmPassword, instituteName, instituteType, ...rest } = instituteData;
+
+      const dataToSend = {
+        username: instituteData.username,
+        email: instituteData.email,
+        fullName: instituteData.fullName,
+        nameWithInitials: instituteData.nameWithInitials,
+        password: instituteData.password,
+        contactNumber: instituteData.contactNumber,
+        nic: instituteData.nic,
+        district: instituteData.district,
+        instituteContactNumber: instituteData.instituteContactNumber,
+        instituteContactEmail: instituteData.instituteContactEmail,
+        instituteName: instituteData.instituteName,
+        department: instituteData.department,
+        instituteType: instituteData.instituteType,
+         startDate: new Date(), // or a proper default
+        endDate: new Date()    
+      };
+
+
+      await axios.post(`${import.meta.env.VITE_BASE_URL}/api/universities/`, dataToSend, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      
+
       setSuccess("Institute added successfully!");
       setInstituteData({
         instituteName: "",
@@ -216,7 +235,7 @@ const AddNewInstitute = ({ darkMode }) => {
         nic: "",
         userType: "institute",
       });
-      
+
       // Refresh existing emails list after successful registration
       const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/users/emails`);
       setExistingEmails(response.data.emails || []);
@@ -338,23 +357,18 @@ const AddNewInstitute = ({ darkMode }) => {
             </Form.Group>
 
             <Form.Group controlId="instituteName" className="mb-3">
-              <Form.Label><strong>Institute:</strong></Form.Label>
+              <Form.Label><strong>Institute Name:</strong></Form.Label>
               <Form.Control
-                as="select"
+                type="text"
                 name="instituteName"
                 value={instituteData.instituteName}
                 onChange={handleChange}
                 required
                 className={darkMode ? "bg-secondary text-white" : ""}
-              >
-                <option value="">Select Institute</option>
-                {institutes.map((institute, index) => (
-                  <option key={institute.id || index} value={institute.name}>
-                    {institute.name}
-                  </option>
-                ))}
-              </Form.Control>
+                placeholder="Enter full institute name"
+              />
             </Form.Group>
+
 
             <Form.Group controlId="instituteContactEmail" className="mb-3">
               <Form.Label><strong>Institute Contact Email:</strong></Form.Label>
@@ -427,7 +441,7 @@ const AddNewInstitute = ({ darkMode }) => {
                   required
                   className={darkMode ? "bg-secondary text-white" : ""}
                 />
-                <InputGroup.Text 
+                <InputGroup.Text
                   className={`cursor-pointer ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}
                   onClick={togglePasswordVisibility}
                 >
@@ -460,7 +474,7 @@ const AddNewInstitute = ({ darkMode }) => {
                   required
                   className={darkMode ? "bg-secondary text-white" : ""}
                 />
-                <InputGroup.Text 
+                <InputGroup.Text
                   className={`cursor-pointer ${darkMode ? "bg-dark text-white" : "bg-light text-dark"}`}
                   onClick={toggleConfirmPasswordVisibility}
                 >

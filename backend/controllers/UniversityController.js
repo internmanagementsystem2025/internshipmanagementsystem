@@ -97,4 +97,60 @@ const deleteUniversity = async (req, res) => {
   }
 };
 
-module.exports = { getUniversities, getUniversityById, updateUniversity, approveUniversity, deleteUniversity };
+const addUniversity = async (req, res) => {
+  try {
+    const {
+      username,
+      email,
+      fullName,
+      nameWithInitials,
+      password,
+      contactNumber,
+      nic,
+      district,
+      instituteContactNumber,
+      instituteContactEmail,
+      instituteName,
+      department,
+      instituteType,
+      startDate,
+      endDate
+    } = req.body;
+
+    // Check if university with same email exists
+    const existing = await University.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ message: "University already exists with this email" });
+    }
+
+    const newUniversity = new University({
+      username,
+      email,
+      fullName,
+      nameWithInitials,
+      password,
+      contactNumber,
+      nic,
+      district,
+      instituteContactNumber,
+      instituteContactEmail,
+      instituteName,
+      department,
+      instituteType,
+      startDate,
+      endDate,
+      approveRequest: false // always false by default
+    });
+
+    await newUniversity.save();
+
+    res.status(201).json({ message: "University added successfully", university: newUniversity });
+  } catch (error) {
+    console.error("Error adding university:", error.message);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+module.exports = { getUniversities, getUniversityById, updateUniversity, approveUniversity, deleteUniversity, addUniversity };
