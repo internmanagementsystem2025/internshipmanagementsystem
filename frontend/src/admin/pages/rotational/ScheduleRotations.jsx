@@ -13,6 +13,9 @@ import {
   Tooltip,
   OverlayTrigger,
   InputGroup,
+  Row,
+  Col,
+  Card,
 } from "react-bootstrap";
 import axios from "axios";
 import logo from "../../../assets/logo.png";
@@ -25,7 +28,7 @@ const ScheduleRotations = ({ darkMode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [view, setView] = useState("all"); 
+  const [view, setView] = useState("all");
   const [selectedCVs, setSelectedCVs] = useState([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedStation, setSelectedStation] = useState("");
@@ -39,6 +42,13 @@ const ScheduleRotations = ({ darkMode }) => {
   const [stationHistory, setStationHistory] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [stationAssignments, setStationAssignments] = useState([
+    {
+      stationId: "",
+      startDate: "",
+      endDate: "",
+    },
+  ]);
 
   // Effect hooks
   useEffect(() => {
@@ -87,70 +97,63 @@ const ScheduleRotations = ({ darkMode }) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
 
-    // Set both dates to midnight to avoid timezone issues
+    // Set time to midnight for accurate calculation
     start.setHours(0, 0, 0, 0);
     end.setHours(0, 0, 0, 0);
 
-    // Calculate difference in days (inclusive of both dates)
-    const diffDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    // Calculate total days (including both start and end dates)
+    const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Calculate weeks and days
+    const weeks = Math.floor(totalDays / 7);
+    const days = totalDays % 7;
 
-    const weeks = Math.floor(diffDays / 7);
-    const remainingDays = diffDays % 7;
-
-    return [
-      weeks > 0 && `${weeks} week${weeks !== 1 ? "s" : ""}`,
-      remainingDays > 0 &&
-        `${remainingDays} day${remainingDays !== 1 ? "s" : ""}`,
-    ]
-      .filter(Boolean)
-      .join(" and ");
+    // Format the duration string
+    if (weeks === 0) {
+      return `${totalDays} day${totalDays !== 1 ? 's' : ''}`;
+    } else if (days === 0) {
+      return `${weeks} week${weeks !== 1 ? 's' : ''}`;
+    } else {
+      return `${weeks}w ${days}d`;
+    }
   };
 
   // Data fetching
   const fetchData = async () => {
     try {
       setLoading(true);
-      let endpoint;
-
-      switch (view) {
-        case "all":
-          endpoint = "/rotational/all-rotational";
-          break;
-        case "pending":
-        case "unassigned":
-        case "assigned":
-          endpoint = `/rotational/${view}-rotational`;
-          break;
-        default:
-          endpoint = "/rotational/all-rotational";
-      }
-
-      const [cvResponse, stationsResponse] = await Promise.all([
-        axios.get(`${API_BASE_URL}${endpoint}`),
-        axios.get(`${API_BASE_URL}/stations/all-stations`),
+      let [allResponse, pendingResponse, analyticsResponse, stationsResponse] = await Promise.all([
+        axios.get('http://localhost:5000/api/rotational/all-rotational'),
+        axios.get('http://localhost:5000/api/rotational/pending-rotational'),
+        axios.get('http://localhost:5000/api/rotational/analytics'),
+        axios.get('http://localhost:5000/api/rotational/stations')
       ]);
 
-      const processCV = (cv) => {
-        const currentAssignment =
-          cv.rotationalAssignment?.assignedStations?.find((as) => as.isCurrent);
+      // Process CVs before setting state
+      const processedPendingCVs = pendingResponse.data.map(processCV);
+      const processedAllCVs = allResponse.data.map(processCV);
 
-        return {
-          ...cv,
-          currentAssignment,
-          hasPreviousAssignments:
-            cv.rotationalAssignment?.assignedStations?.length > 0,
-          isPending: cv.rotationalAssignment?.status === "station-not-assigned",
-          isUnassigned:
-            !currentAssignment &&
-            cv.rotationalAssignment?.status === "station-assigned",
-        };
-      };
+      // Set state based on view
+      switch (view) {
+        case 'all':
+          setCVs(processedAllCVs);
+          break;
+        case 'pending':
+          setCVs(processedPendingCVs);
+          break;
+        case 'assigned':
+          setCVs(processedAllCVs.filter(cv => 
+            cv.rotationalAssignment?.assignedStations?.some(as => as.isCurrent)
+          ));
+          break;
+        default:
+          setCVs(processedAllCVs);
+      }
 
-      setCVs(cvResponse.data.map(processCV));
-      setStations(stationsResponse.data);
+      setStations(stationsResponse.data.data);
     } catch (error) {
       console.error("Error fetching data:", error);
-      setError("Failed to load data. Please try again.");
+      setError(error.response?.data?.message || "Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -242,58 +245,29 @@ const ScheduleRotations = ({ darkMode }) => {
   };
 
   const handleAssignCVs = async () => {
-    if (!selectedStation || !startDate || !endDate) {
-      setError("Please select a station and valid dates.");
-      return;
-    }
-
     try {
-      const assigningCVs = currentCV ? [currentCV._id] : selectedCVs;
-      if (assigningCVs.length === 0) {
-        setError("No CVs selected for assignment");
-        return;
-      }
-
       setAssigning(true);
-      setError("");
-      setSuccessMessage("");
-
+      
       const response = await axios.post(
-        `${API_BASE_URL}/rotational/assign-to-station`,
+        'http://localhost:5000/api/rotational/assign-to-station',
         {
-          cvIds: assigningCVs,
+          cvIds: currentCV ? [currentCV._id] : selectedCVs,
           stationId: selectedStation,
-          startDate: new Date(startDate).toISOString(),
-          endDate: new Date(endDate).toISOString(),
-          status: "station-assigned",
+          startDate: startDate,
+          endDate: endDate
         }
       );
 
-      setSuccessMessage(
-        `Successfully assigned ${assigningCVs.length} CV${
-          assigningCVs.length > 1 ? "s" : ""
-        } to station`
-      );
-
-      // Refresh data immediately
-      await fetchData();
-
-      // Close modal and reset states after slight delay
-      setTimeout(() => {
+      if (response.data) {
+        setSuccessMessage("Successfully assigned CVs");
+        await fetchData();
         setShowAssignModal(false);
-        setAssigning(false);
         resetAssignmentForm();
-      }, 1000);
+      }
     } catch (error) {
+      setError(error.response?.data?.error || "Failed to assign CVs");
+    } finally {
       setAssigning(false);
-      console.error("Assignment Error:", error);
-
-      const errorMessage =
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        "Failed to complete assignment. Please try again.";
-
-      setError(errorMessage);
     }
   };
 
@@ -437,23 +411,50 @@ const ScheduleRotations = ({ darkMode }) => {
         `${API_BASE_URL}/rotational/assignment-history/${cvId}`
       );
 
-      // Process the response data to match what your frontend expects
-      const history = response.data.map((assignment, index, arr) => {
-        const isCurrent = assignment.isCurrent || false;
+      const currentDate = new Date();
+      const categorizedHistory = response.data.map(assignment => {
+        const startDate = new Date(assignment.startDate);
+        const endDate = new Date(assignment.endDate);
+
+        // Set time to midnight for accurate date comparison
+        currentDate.setHours(0, 0, 0, 0);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+
+        let status;
+        let badgeVariant;
+        let dayCount;
+
+        if (currentDate >= startDate && currentDate <= endDate) {
+          // Currently Working - show remaining days
+          const remainingDays = Math.ceil((endDate - currentDate) / (1000 * 60 * 60 * 24));
+          status = `Currently Working (${remainingDays} days remaining)`;
+          badgeVariant = 'success';
+        } else if (currentDate > endDate) {
+          // Completed - show days since completion
+          const daysSinceCompletion = Math.ceil((currentDate - endDate) / (1000 * 60 * 60 * 24));
+          status = `Completed ${daysSinceCompletion} days ago`;
+          badgeVariant = 'secondary';
+        } else if (currentDate < startDate) {
+          // Upcoming - show days until start
+          const daysUntilStart = Math.ceil((startDate - currentDate) / (1000 * 60 * 60 * 24));
+          status = `Starts in ${daysUntilStart} days`;
+          badgeVariant = 'warning';
+        }
+
         return {
-          station: assignment.station,
-          startDate: assignment.startDate,
-          endDate: assignment.endDate,
-          isCurrent,
-          duration: formatDuration(assignment.startDate, assignment.endDate),
+          ...assignment,
+          status,
+          badgeVariant,
+          duration: formatDuration(assignment.startDate, assignment.endDate)
         };
       });
 
-      setStationHistory(history);
+      setStationHistory(categorizedHistory);
       setShowHistoryModal(true);
     } catch (error) {
       console.error("Error fetching history:", error);
-      setError("Failed to load station history. Please try again.");
+      setError("Failed to fetch assignment history");
     }
   };
 
@@ -503,13 +504,13 @@ const ScheduleRotations = ({ darkMode }) => {
     return {
       ...cv,
       currentAssignment,
-
-      hasPreviousAssignments:
-        cv.rotationalAssignment?.assignedStations?.length > 0,
-      isPending: cv.rotationalAssignment?.status === "station-not-assigned",
-      isUnassigned:
-        !currentAssignment &&
-        cv.rotationalAssignment?.status === "station-assigned", // This will be true after removal
+      hasPreviousAssignments: cv.rotationalAssignment?.assignedStations?.length > 0,
+      isPending: cv.rotationalAssignment?.status === "station-not-assigned" 
+                && cv.rotationalAssignment?.isRotational 
+                && (!cv.rotationalAssignment?.assignedStations 
+                    || cv.rotationalAssignment.assignedStations.length === 0),
+      isUnassigned: !currentAssignment 
+                    && cv.rotationalAssignment?.status === "station-assigned"
     };
   };
   // Filter CVs based on search term
@@ -518,15 +519,203 @@ const ScheduleRotations = ({ darkMode }) => {
       (cv.nic && cv.nic.toLowerCase().includes(searchTerm)) ||
       (cv.fullName && cv.fullName.toLowerCase().includes(searchTerm));
 
-    if (view === "pending") {
-      return matchesSearch && cv.isPending;
-    } else if (view === "unassigned") {
-      return matchesSearch && cv.isUnassigned;
-    } else if (view === "assigned") {
-      return matchesSearch && cv.currentAssignment;
+    switch (view) {
+      case 'pending':
+        return matchesSearch && cv.isPending;
+      case 'unassigned':
+        return matchesSearch && cv.isUnassigned;
+      case 'assigned':
+        return matchesSearch && cv.currentAssignment;
+      default:
+        return matchesSearch;
     }
-    return matchesSearch;
   });
+
+  // Handle changes in station assignments
+  const handleStationAssignmentChange = (index, field, value) => {
+    const newAssignments = [...stationAssignments];
+    newAssignments[index][field] = value;
+    
+    // If changing station and we have a start date, calculate end date
+    if (field === 'stationId' && newAssignments[index].startDate) {
+      const station = stations.find(s => s._id === value);
+      if (station?.timePeriod) {
+        const start = new Date(newAssignments[index].startDate);
+        const end = new Date(start);
+        end.setDate(end.getDate() + (station.timePeriod * 7) - 1);
+        newAssignments[index].endDate = end.toISOString().split('T')[0];
+      }
+    }
+    
+    // If changing start date and we have a station, calculate end date
+    if (field === 'startDate' && newAssignments[index].stationId) {
+      const station = stations.find(s => s._id === newAssignments[index].stationId);
+      if (station?.timePeriod) {
+        const start = new Date(value);
+        const end = new Date(start);
+        end.setDate(end.getDate() + (station.timePeriod * 7) - 1);
+        newAssignments[index].endDate = end.toISOString().split('T')[0];
+      }
+    }
+    
+    setStationAssignments(newAssignments);
+  };
+
+  // Add a new station assignment row
+  const handleAddStation = () => {
+    setStationAssignments([...stationAssignments, { stationId: "", startDate: "", endDate: "" }]);
+  };
+
+  // Assign CVs to multiple stations
+  const handleAssignToStations = async () => {
+    try {
+      setAssigning(true);
+      setError('');
+
+      // Validate all assignments have required fields
+      const isValid = stationAssignments.every(assignment => 
+        assignment.stationId && assignment.startDate && assignment.endDate
+      );
+
+      if (!isValid) {
+        setError('Please fill all station assignment details');
+        return;
+      }
+
+      // Format the stations array with all assignments
+      const formattedStations = stationAssignments.map(assignment => ({
+        stationId: assignment.stationId,
+        startDate: new Date(assignment.startDate).toISOString(),
+        endDate: new Date(assignment.endDate).toISOString()
+      }));
+
+      console.log('Sending request with:', {
+        cvIds: selectedCVs,
+        stations: formattedStations
+      });
+
+      const response = await axios.post(
+        `${API_BASE_URL}/rotational/assign-to-multiple-stations`,
+        {
+          cvIds: selectedCVs,
+          stations: formattedStations
+        }
+      );
+
+      if (response.data.successfulAssignments?.length > 0) {
+        setSuccessMessage(`Successfully assigned ${response.data.successfulAssignments.length} CVs to ${formattedStations.length} stations`);
+        setShowAssignModal(false);
+        // Reset states
+        setStationAssignments([{ stationId: '', startDate: '', endDate: '' }]);
+        setSelectedCVs([]);
+        await fetchData(); // Refresh the data
+      } else {
+        throw new Error('No assignments were successful');
+      }
+    } catch (error) {
+      console.error('Assignment error:', error);
+      setError(error.response?.data?.error || error.message);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const renderAssignModalContent = () => {
+    if (view === "assigned") {
+      return (
+        <>
+          <Form.Group>
+            <Form.Label>Select Station</Form.Label>
+            <Form.Control
+              as="select"
+              value={selectedStation}
+              onChange={(e) => handleStationSelection(e.target.value)}
+            >
+              <option value="">Select a station</option>
+              {stations.map((station) => (
+                <option key={station._id} value={station._id}>
+                  {station.stationName} ({station.timePeriod} weeks)
+                </option>
+              ))}
+            </Form.Control>
+          </Form.Group>
+
+          <Form.Group className="mt-3">
+            <Form.Label>Start Date</Form.Label>
+            <Form.Control
+              type="date"
+              value={startDate}
+              onChange={handleStartDateChange}
+              min={new Date().toISOString().split("T")[0]}
+            />
+          </Form.Group>
+
+          <Form.Group className="mt-3">
+            <Form.Label>End Date</Form.Label>
+            <Form.Control type="date" value={endDate} readOnly />
+          </Form.Group>
+        </>
+      );
+    } else {
+      return (
+        <div>
+          <div className="mb-3">
+            <strong>Selected CVs: </strong>
+            {selectedCVs.length} CVs selected
+          </div>
+
+          {stationAssignments.map((assignment, index) => (
+            <Card key={index} className="mb-3">
+              <Card.Body>
+                <Row>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Select Station</Form.Label>
+                      <Form.Select
+                        value={assignment.stationId}
+                        onChange={(e) => handleStationAssignmentChange(index, 'stationId', e.target.value)}
+                      >
+                        <option value="">Choose station...</option>
+                        {stations.map(station => (
+                          <option key={station._id} value={station._id}>
+                            {station.stationName} ({station.availableSeats} seats available, {station.timePeriod} weeks)
+                          </option>
+                        ))}
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Start Date</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={assignment.startDate}
+                        onChange={(e) => handleStationAssignmentChange(index, 'startDate', e.target.value)}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>End Date</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={assignment.endDate}
+                        onChange={(e) => handleStationAssignmentChange(index, 'endDate', e.target.value)}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+          ))}
+
+          <Button variant="secondary" onClick={handleAddStation} className="mb-3">
+            Add Another Station
+          </Button>
+        </div>
+      );
+    }
+  };
 
   return (
     <div
@@ -570,12 +759,6 @@ const ScheduleRotations = ({ darkMode }) => {
                 </Dropdown.Item>
                 <Dropdown.Item onClick={() => setView("pending")}>
                   Pending CVs (Never Assigned)
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => setView("unassigned")}>
-                  Unassigned CVs (Currently Available)
-                </Dropdown.Item>
-                <Dropdown.Item onClick={() => setView("assigned")}>
-                  Currently Assigned CVs
                 </Dropdown.Item>
               </Dropdown.Menu>
             </Dropdown>
@@ -787,6 +970,7 @@ const ScheduleRotations = ({ darkMode }) => {
           }
         }}
         centered
+        size="lg"
       >
         <Modal.Header closeButton>
           <Modal.Title>
@@ -809,59 +993,29 @@ const ScheduleRotations = ({ darkMode }) => {
             </Alert>
           )}
 
-          <Form.Group>
-            <Form.Label>Select Station</Form.Label>
-            <Form.Control
-              as="select"
-              value={selectedStation}
-              onChange={(e) => handleStationSelection(e.target.value)}
-            >
-              <option value="">Select a station</option>
-              {stations.map((station) => (
-                <option key={station._id} value={station._id}>
-                  {station.stationName} ({station.timePeriod} weeks)
-                </option>
-              ))}
-            </Form.Control>
-          </Form.Group>
-
-          <Form.Group className="mt-3">
-            <Form.Label>Start Date</Form.Label>
-            <Form.Control
-              type="date"
-              value={startDate}
-              onChange={handleStartDateChange}
-              min={new Date().toISOString().split("T")[0]}
-            />
-          </Form.Group>
-
-          <Form.Group className="mt-3">
-            <Form.Label>End Date</Form.Label>
-            <Form.Control type="date" value={endDate} readOnly />
-          </Form.Group>
+          {renderAssignModalContent()}
         </Modal.Body>
         <Modal.Footer>
           <Button
             variant="secondary"
-            onClick={() => setShowAssignModal(false)}
+            onClick={() => {
+              setShowAssignModal(false);
+              setStationAssignments([{ stationId: '', startDate: '', endDate: '' }]);
+            }}
             disabled={assigning}
           >
             Cancel
           </Button>
           <Button
             variant="primary"
-            onClick={handleAssignCVs}
-            disabled={assigning || !selectedStation}
+            onClick={view === "assigned" ? handleAssignCVs : handleAssignToStations}
+            disabled={assigning || (view === "assigned" ? !selectedStation : !stationAssignments.some(a => a.stationId))}
           >
             {assigning ? (
               <>
                 <Spinner as="span" size="sm" animation="border" role="status" />
-                <span className="ms-2">
-                  {view === "assigned" ? "Rotating..." : "Assigning..."}
-                </span>
+                <span className="ms-2">Assigning...</span>
               </>
-            ) : view === "assigned" ? (
-              "Rotate"
             ) : (
               "Assign"
             )}
@@ -966,33 +1120,25 @@ const ScheduleRotations = ({ darkMode }) => {
                 <th>Station</th>
                 <th>Start Date</th>
                 <th>End Date</th>
-                <th>Duration</th>
+                <th style={{ width: '100px' }}>Duration</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {stationHistory.map((assignment, index) => (
-                <tr
-                  key={index}
-                  style={
-                    assignment.isCurrent
-                      ? {
-                          backgroundColor: darkMode ? "#2a6b9e" : "#cfe8ff",
-                          fontWeight: "bold",
-                        }
-                      : {}
-                  }
-                >
+                <tr key={index}>
                   <td>{index + 1}</td>
-                  <td>
-                    {assignment.station?.stationName || "Unknown Station"}
-                  </td>
+                  <td>{assignment.station?.stationName || "Unknown Station"}</td>
                   <td>{formatDate(assignment.startDate, "ddmmyyyy")}</td>
                   <td>{formatDate(assignment.endDate, "ddmmyyyy")}</td>
-                  <td>{assignment.duration}</td>
+                  <td className="text-center">
+                    <Badge bg="info">
+                      {formatDuration(assignment.startDate, assignment.endDate)}
+                    </Badge>
+                  </td>
                   <td>
-                    <Badge bg={assignment.isCurrent ? "success" : "secondary"}>
-                      {assignment.isCurrent ? "Current" : "Past"}
+                    <Badge bg={assignment.badgeVariant}>
+                      {assignment.status}
                     </Badge>
                   </td>
                 </tr>

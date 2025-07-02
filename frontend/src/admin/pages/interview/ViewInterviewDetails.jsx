@@ -150,18 +150,16 @@ const ViewInterviewDetails = ({ darkMode, interviewId }) => {
                   </Form.Group>
                 </Form>
 
-                {/* Go Back Button - only show if not used as a tab */}
-                {!interviewId && (
-                  <div className="d-flex justify-content-between mt-3">
-                    <Button
-                      variant="danger"
-                      onClick={() => navigate(-1)}
-                      disabled={loading}
-                    >
-                      Go Back
-                    </Button>
-                  </div>
-                )}
+                {/* Go Back Button - always show */}
+                <div className="d-flex justify-content-between mt-3">
+                  <Button
+                    variant="danger"
+                    onClick={() => navigate(-1)}
+                    disabled={loading}
+                  >
+                    Go Back
+                  </Button>
+                </div>
               </Card.Body>
             </Card>
           </Col>

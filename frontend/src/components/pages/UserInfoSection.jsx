@@ -20,6 +20,11 @@ const UserInfoSection = ({
   const [filteredInstitutes, setFilteredInstitutes] = useState([]);
   const [selectedInstituteId, setSelectedInstituteId] = useState('');
 
+  useEffect(() => {
+  // When cvData.institute changes (e.g., after discard), update the search box
+  setInstituteSearch(cvData.institute || "");
+}, [cvData.institute]);
+
   // Initialize institute data on component mount
   useEffect(() => {
     if (institutes?.length > 0) {

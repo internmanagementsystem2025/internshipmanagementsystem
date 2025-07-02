@@ -8,8 +8,9 @@ const AdminUploadDocumentSection = ({
   cvData,
   darkMode,
   handleInputChange,
+  /*fileInputKey*/
 }) => {
-  const [cvApproved, setCvApproved] = useState(cvData?.cvApproved || false);
+const [cvApproved, setCvApproved] = useState(cvData?.cvApproved || false);
 
   // Validate the form based on required fields
   const isFormValid =
@@ -93,6 +94,7 @@ const AdminUploadDocumentSection = ({
 
             {/* File Upload Input */}
             <input
+              /*key={`${fileInputKey}-${name}`}*/
               type="file"
               name={name}
               onChange={handleFileChange}

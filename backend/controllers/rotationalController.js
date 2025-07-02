@@ -93,7 +93,7 @@ const getAssignedCVs = async (req, res) => {
 
 // Assign CVs to multiple stations
 const assignCVsToMultipleStations = async (req, res) => {
-  const { cvIds, stations } = req.body; // stations is an array of objects with stationId, startDate, and endDate
+  const { cvIds, stations } = req.body;
 
   try {
     // Validate input
@@ -104,7 +104,6 @@ const assignCVsToMultipleStations = async (req, res) => {
       return res.status(400).json({ error: "Stations must be provided as an array" });
     }
 
-    // Process each CV
     const errors = [];
     const successfulAssignments = [];
 
@@ -116,6 +115,24 @@ const assignCVsToMultipleStations = async (req, res) => {
           continue;
         }
 
+        // Initialize rotationalAssignment if it doesn't exist
+        if (!cv.rotationalAssignment) {
+          cv.rotationalAssignment = {
+            isRotational: true,
+            status: 'station-not-assigned',
+            assignedStations: [],
+            internshipDuration: 24
+          };
+        }
+
+        // Mark existing assignments as not current
+        if (cv.rotationalAssignment.assignedStations.length > 0) {
+          cv.rotationalAssignment.assignedStations.forEach(assignment => {
+            assignment.isCurrent = false;
+          });
+        }
+
+        // Add new stations
         for (const stationData of stations) {
           const { stationId, startDate, endDate } = stationData;
 
@@ -134,31 +151,10 @@ const assignCVsToMultipleStations = async (req, res) => {
             continue;
           }
 
-          // Check if already assigned to this station in the same period
-          const existingAssignment = cv.rotationalAssignment.assignedStations.find(
-            (as) =>
-              as.station.equals(stationId) &&
-              ((start >= as.startDate && start <= as.endDate) ||
-                (end >= as.startDate && end <= as.endDate))
-          );
-
-          if (existingAssignment) {
-            errors.push(`CV ${cvId} is already assigned to station ${stationId} for overlapping dates`);
-            continue;
-          }
-
-          // Calculate total assigned weeks
-          const totalAssignedWeeks = cv.rotationalAssignment.assignedStations.reduce((total, as) => {
-            const weeks = (new Date(as.endDate) - new Date(as.startDate)) / (1000 * 60 * 60 * 24 * 7);
-            return total + weeks;
-          }, 0);
-
-          const newAssignmentWeeks = (end - start) / (1000 * 60 * 60 * 24 * 7);
-          const remainingWeeks = cv.rotationalAssignment.internshipDuration - totalAssignedWeeks;
-
-          if (newAssignmentWeeks > remainingWeeks) {
-            errors.push(`CV ${cvId} exceeds available internship duration (${remainingWeeks} weeks remaining)`);
-            continue;
+          // Add CV to station's currentStudents if not already present
+          if (!station.currentStudents.includes(cvId)) {
+            station.currentStudents.push(cvId);
+            await station.save();
           }
 
           // Add new assignment
@@ -166,15 +162,30 @@ const assignCVsToMultipleStations = async (req, res) => {
             station: stationId,
             startDate: start,
             endDate: end,
-            serviceTimePeriod: Math.ceil((end - start) / (1000 * 60 * 60 * 24)), // days
+            serviceTimePeriod: Math.ceil((end - start) / (1000 * 60 * 60 * 24)),
             isCurrent: true,
           });
+        }
 
-          cv.rotationalAssignment.isRotational = true;
+        // Update rotational status
+        cv.rotationalAssignment.isRotational = true;
+        cv.rotationalAssignment.status = 'station-assigned';
+
+        // Update CV's currentStatus if needed
+        if (cv.currentStatus === 'cv-approved' || cv.currentStatus === 'interview-passed') {
+          cv.currentStatus = 'schema-assigned';
         }
 
         await cv.save();
         successfulAssignments.push(cvId);
+
+        console.log('Updated CV Status:', {
+          cvId,
+          rotationalStatus: cv.rotationalAssignment.status,
+          currentStatus: cv.currentStatus,
+          assignedStations: cv.rotationalAssignment.assignedStations.length
+        });
+
       } catch (err) {
         errors.push(`Error processing CV ${cvId}: ${err.message}`);
       }
@@ -546,61 +557,47 @@ const removeFromStation = async (req, res) => {
   const { endDate } = req.body;
 
   try {
-    // Find the CV document
     const cv = await CV.findById(cvId);
     if (!cv) {
       return res.status(404).json({ error: "CV not found" });
     }
 
-    // Check if CV has rotational assignment
-    if (!cv.rotationalAssignment || !cv.rotationalAssignment.assignedStations) {
-      return res.status(400).json({ error: "CV has no rotational assignment" });
-    }
-
     // Find current assignment
-    const currentAssignmentIndex =
-      cv.rotationalAssignment.assignedStations.findIndex((as) => as.isCurrent);
+    const currentAssignmentIndex = cv.rotationalAssignment.assignedStations.findIndex(
+      (as) => as.isCurrent
+    );
 
     if (currentAssignmentIndex === -1) {
-      return res
-        .status(400)
-        .json({ error: "CV has no current station assignment" });
+      return res.status(400).json({ error: "CV has no current station assignment" });
     }
 
-    // Get the current assignment details before updating
-    const currentAssignment =
-      cv.rotationalAssignment.assignedStations[currentAssignmentIndex];
-    const stationId = currentAssignment.station;
+    // Get the current station ID
+    const stationId = cv.rotationalAssignment.assignedStations[currentAssignmentIndex].station;
 
-    // Update current assignment
-    cv.rotationalAssignment.assignedStations[
-      currentAssignmentIndex
-    ].isCurrent = false;
-    cv.rotationalAssignment.assignedStations[currentAssignmentIndex].endDate =
-      endDate ? new Date(endDate) : new Date();
-
-    // Update status to make it appear in unassigned
-    cv.rotationalAssignment.status = "station-assigned";
-
-    // Save the updated CV document
-    await cv.save();
-
-    // Remove CV from station's currentStudents
+    // Update station's currentStudents array
     await Station.findByIdAndUpdate(stationId, {
-      $pull: { currentStudents: cv._id },
+      $pull: { currentStudents: cvId }
     });
+
+    // Update CV assignment
+    cv.rotationalAssignment.assignedStations[currentAssignmentIndex].isCurrent = false;
+    cv.rotationalAssignment.assignedStations[currentAssignmentIndex].endDate = 
+      endDate ? new Date(endDate) : new Date();
+    cv.rotationalAssignment.status = "station-not-assigned";
+
+    await cv.save();
 
     res.status(200).json({
       message: "CV removed from station successfully",
       cvId: cv._id,
       stationId,
-      newStatus: cv.rotationalAssignment.status,
+      newStatus: cv.rotationalAssignment.status
     });
   } catch (error) {
     console.error("Error removing CV from station:", error);
     res.status(500).json({
       error: "Failed to remove CV from station",
-      details: error.message,
+      details: error.message
     });
   }
 };
@@ -615,89 +612,69 @@ const getCVsForStation = async (req, res) => {
     const stationObjectId = new mongoose.Types.ObjectId(stationId);
 
     // First, verify the station exists
-    const station = await mongoose.model("Station").findById(stationObjectId);
+    const station = await Station.findById(stationObjectId);
     if (!station) {
       return res.status(404).json({ error: "Station not found" });
     }
 
     // Get all CVs with current assignments to this station
-    const cvs = await CV.aggregate([
-      // Match CVs that have at least one assignment to this station
-      {
-        $match: {
-          "assignedStation.station": stationObjectId,
-        },
-      },
-      // Unwind the assignments array
-      { $unwind: "$assignedStation" },
-      // Match only assignments to our specific station
-      {
-        $match: {
-          "assignedStation.station": stationObjectId,
-        },
-      },
-      // Sort by assignment end date (descending) to get latest first
-      { $sort: { "assignedStation.endDate": -1 } },
-      // Group by CV ID to get the latest assignment for each CV
-      {
-        $group: {
-          _id: "$_id",
-          doc: { $first: "$$ROOT" },
-          latestAssignment: { $first: "$assignedStation" },
-        },
-      },
-      // Lookup station details
-      {
-        $lookup: {
-          from: "stations",
-          localField: "latestAssignment.station",
-          foreignField: "_id",
-          as: "stationDetails",
-        },
-      },
-      { $unwind: "$stationDetails" },
-      // Project the final output
-      {
-        $project: {
-          _id: 1,
-          nic: "$doc.nic",
-          fullName: "$doc.fullName",
-          selectedRole: "$doc.selectedRole",
-          startDate: "$latestAssignment.startDate",
-          endDate: "$latestAssignment.endDate",
-          stationName: "$stationDetails.stationName",
-          remainingDays: {
-            $ceil: {
-              $divide: [
-                { $subtract: ["$latestAssignment.endDate", "$$NOW"] },
-                1000 * 60 * 60 * 24,
-              ],
-            },
-          },
-        },
-      },
-    ]);
+    const cvs = await CV.find({
+      'rotationalAssignment.assignedStations': {
+        $elemMatch: {
+          station: stationObjectId,
+          isCurrent: true
+        }
+      }
+    }).select({
+      _id: 1,
+      nic: 1,
+      fullName: 1,
+      selectedRole: 1,
+      'rotationalAssignment.assignedStations.$': 1
+    });
 
-    if (cvs.length === 0) {
+    // Transform the results
+    const transformedCVs = cvs.map(cv => {
+      const assignment = cv.rotationalAssignment.assignedStations[0];
+      return {
+        _id: cv._id,
+        nic: cv.nic,
+        fullName: cv.fullName,
+        selectedRole: cv.selectedRole,
+        startDate: assignment.startDate,
+        endDate: assignment.endDate,
+        stationName: station.stationName,
+        remainingDays: Math.ceil(
+          (new Date(assignment.endDate) - new Date()) / (1000 * 60 * 60 * 24)
+        )
+      };
+    });
+
+    if (transformedCVs.length === 0) {
       return res.status(200).json({
         success: true,
         message: "No currently assigned CVs found for this station",
-        data: [],
+        data: []
       });
     }
 
+    // Log for debugging
+    console.log('Station:', station.stationName);
+    console.log('Current Students:', station.currentStudents);
+    console.log('Found CVs:', transformedCVs.length);
+
     res.status(200).json({
       success: true,
-      count: cvs.length,
-      data: cvs,
+      count: transformedCVs.length,
+      data: transformedCVs
     });
+
   } catch (error) {
     console.error("Error in getCVsForStation:", error);
     res.status(500).json({
       success: false,
       error: "Server error while fetching CVs",
-      details:
-        process.env.NODE_ENV === "development" ? error.message : undefined,
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
     });
   }
 };
@@ -730,6 +707,68 @@ const getAllStations = async (req, res) => {
   }
 };
 
+const getStationDetails = async (req, res) => {
+  try {
+    const { stationId } = req.params;
+
+    if (!mongoose.isValidObjectId(stationId)) {
+      return res.status(400).json({ error: "Invalid station ID" });
+    }
+
+    // Get station with populated current students
+    const station = await Station.findById(stationId)
+      .select('_id stationName displayName priority maxStudents timePeriod currentStudents activeStatus')
+      .populate({
+        path: 'currentStudents',
+        select: 'fullName nic selectedRole rotationalAssignment',
+        model: 'CV'
+      })
+      .lean();
+
+    if (!station) {
+      return res.status(404).json({ 
+        success: false,
+        error: "Station not found" 
+      });
+    }
+
+    // Transform the data
+    const stationDetails = {
+      ...station,
+      availableSeats: Math.max(0, station.maxStudents - (station.currentStudents?.length || 0)),
+      utilization: `${Math.round((station.currentStudents?.length || 0) / station.maxStudents * 100)}%`,
+      currentAssignments: station.currentStudents.map(cv => {
+        const assignment = cv.rotationalAssignment?.assignedStations
+          .find(a => a.station.toString() === stationId && a.isCurrent);
+        return {
+          _id: cv._id,
+          fullName: cv.fullName,
+          nic: cv.nic,
+          role: cv.selectedRole,
+          startDate: assignment?.startDate,
+          endDate: assignment?.endDate,
+          remainingDays: assignment ? Math.ceil(
+            (new Date(assignment.endDate) - new Date()) / (1000 * 60 * 60 * 24)
+          ) : 0
+        };
+      })
+    };
+
+    res.status(200).json({
+      success: true,
+      data: stationDetails
+    });
+
+  } catch (error) {
+    console.error("Error fetching station details:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch station details",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getAllRotationalCVs,
   getPendingRotationalCVs,
@@ -743,5 +782,6 @@ module.exports = {
   removeFromStation,
   getCVsForStation,
   assignCVsToMultipleStations,
-  getAllStations
+  getAllStations,
+  getStationDetails
 };

@@ -21,168 +21,31 @@ const ViewInterviewInterns = ({ darkMode, interviewId }) => {
   const [error, setError] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [filter, setFilter] = useState("");
+  const [actionLoading, setActionLoading] = useState({}); // Track loading per intern
   const itemsPerPage = 20;
 
-  // Dummy data for interview interns
-  const dummyInterviewDetails = {
-    _id: interviewId || "dummy-interview-id",
-    interviewName: "Technical Interview Round 1",
-    interviewDate: "2024-02-15",
-    interviewTime: "10:00",
-    location: "Conference Room B, SLT Mobitel Headquarters"
-  };
-
-  const dummyInterns = [
-    {
-      _id: "intern-001",
-      refNo: "INT-2024-001",
-      fullName: "Amal Perera",
-      nic: "199801234567",
-      emailAddress: "amal.perera@email.com",
-      mobileNumber: "0771234567",
-      interview: {
-        interviews: [{
-          interviewId: interviewId || "dummy-interview-id",
-          status: "interview-scheduled",
-          result: {
-            evaluatedDate: "2024-02-15T10:00:00.000Z"
-          }
-        }]
-      }
-    },
-    {
-      _id: "intern-002",
-      refNo: "INT-2024-002",
-      fullName: "Nimal Silva",
-      nic: "199701234568",
-      emailAddress: "nimal.silva@email.com",
-      mobileNumber: "0771234568",
-      interview: {
-        interviews: [{
-          interviewId: interviewId || "dummy-interview-id",
-          status: "interview-passed",
-          result: {
-            evaluatedDate: "2024-02-15T11:30:00.000Z"
-          }
-        }]
-      }
-    },
-    {
-      _id: "intern-003",
-      refNo: "INT-2024-003",
-      fullName: "Saman Fernando",
-      nic: "199901234569",
-      emailAddress: "saman.fernando@email.com",
-      mobileNumber: "0771234569",
-      interview: {
-        interviews: [{
-          interviewId: interviewId || "dummy-interview-id",
-          status: "interview-failed",
-          result: {
-            evaluatedDate: "2024-02-15T14:00:00.000Z"
-          }
-        }]
-      }
-    },
-    {
-      _id: "intern-004",
-      refNo: "INT-2024-004",
-      fullName: "Kamala Jayasinghe",
-      nic: "199801234570",
-      emailAddress: "kamala.jayasinghe@email.com",
-      mobileNumber: "0771234570",
-      interview: {
-        interviews: [{
-          interviewId: interviewId || "dummy-interview-id",
-          status: "interview-rescheduled",
-          result: {
-            evaluatedDate: "2024-02-16T09:00:00.000Z"
-          }
-        }]
-      }
-    },
-    {
-      _id: "intern-005",
-      refNo: "INT-2024-005",
-      fullName: "Ruwan Wijesinghe",
-      nic: "199701234571",
-      emailAddress: "ruwan.wijesinghe@email.com",
-      mobileNumber: "0771234571",
-      interview: {
-        interviews: [{
-          interviewId: interviewId || "dummy-interview-id",
-          status: "interview-scheduled",
-          result: {
-            evaluatedDate: "2024-02-17T10:00:00.000Z"
-          }
-        }]
-      }
-    },
-    {
-      _id: "intern-006",
-      refNo: "INT-2024-006",
-      fullName: "Dilani Kumari",
-      nic: "199901234572",
-      emailAddress: "dilani.kumari@email.com",
-      mobileNumber: "0771234572",
-      interview: {
-        interviews: [{
-          interviewId: interviewId || "dummy-interview-id",
-          status: "interview-passed",
-          result: {
-            evaluatedDate: "2024-02-15T16:00:00.000Z"
-          }
-        }]
-      }
-    }
-  ];
-
-  // Fetch interns assigned to this interview
+  // Fetch interview details and assigned interns from backend
   const fetchInterviewInterns = async () => {
     try {
       setLoading(true);
       setError("");
 
-      // For demo purposes, use dummy data
-      // In production, uncomment the API calls below
-      
-      // First get interview details
-      /*
+      // Fetch interview details
       const interviewResponse = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/api/interviews/${interviewId}`
       );
       setInterviewDetails(interviewResponse.data);
-      */
-      setInterviewDetails(dummyInterviewDetails);
 
-      // Then get CVs assigned to this interview
-      /*
+      // Fetch interns assigned to this interview
       const internsResponse = await axios.get(
-        `${import.meta.env.VITE_BASE_URL}/api/cvs/scheduled-interviews`
+        `${import.meta.env.VITE_BASE_URL}/api/interviews/${interviewId}/interns`
       );
-
-      // Filter CVs that are assigned to this specific interview
-      const filteredInterns = internsResponse.data.filter(
-        (intern) => intern.interview?.interviews?.some(
-          (interview) => interview.interviewId === interviewId
-        )
-      );
-      */
-      
-      const filteredInterns = dummyInterns.filter(
-        (intern) => intern.interview?.interviews?.some(
-          (interview) => interview.interviewId === (interviewId || "dummy-interview-id")
-        )
-      );
-
-      setInterns(filteredInterns);
+      setInterns(internsResponse.data);
     } catch (error) {
       console.error("Error fetching interview interns:", error);
       setError("Failed to load interns for this interview. Please try again.");
-      
-      // Fallback to dummy data on error
-      setInterviewDetails(dummyInterviewDetails);
-      setInterns(dummyInterns);
+      setInterviewDetails(null);
+      setInterns([]);
     } finally {
       setLoading(false);
     }
@@ -237,6 +100,22 @@ const ViewInterviewInterns = ({ darkMode, interviewId }) => {
         return <Badge bg="secondary">Pending</Badge>;
       default:
         return <Badge bg="secondary">{status || "Unknown"}</Badge>;
+    }
+  };
+
+  // Handle status update
+  const handleStatusUpdate = async (internId, newStatus) => {
+    setActionLoading((prev) => ({ ...prev, [internId]: true }));
+    try {
+      await axios.patch(
+        `${import.meta.env.VITE_BASE_URL}/api/interviews/${interviewId}/interns/${internId}/status`,
+        { status: newStatus }
+      );
+      await fetchInterviewInterns();
+    } catch (err) {
+      alert("Failed to update status. Please try again.");
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [internId]: false }));
     }
   };
 
@@ -334,9 +213,7 @@ const ViewInterviewInterns = ({ darkMode, interviewId }) => {
                 <th>Full Name</th>
                 <th>NIC</th>
                 <th>Email</th>
-                <th>Mobile</th>
-                <th>Status</th>
-                <th>Interview Date</th>
+                <th>Category</th>
                 <th className="text-center">View CV</th>
               </tr>
             </thead>
@@ -345,16 +222,21 @@ const ViewInterviewInterns = ({ darkMode, interviewId }) => {
                 currentInterns.map((intern, index) => (
                   <tr key={intern._id}>
                     <td>{indexOfFirstIntern + index + 1}</td>
-                    <td>{intern.refNo || "N/A"}</td>
+                    <td>
+                      {intern.refNo ||
+                        intern.application?.refNo ||
+                        "N/A"}
+                    </td>
                     <td>{intern.fullName || "N/A"}</td>
                     <td>{intern.nic || "N/A"}</td>
                     <td>{intern.emailAddress || "N/A"}</td>
-                    <td>{intern.mobileNumber || "N/A"}</td>
-                    <td>{getStatusBadge(intern.interview?.interviews?.[0]?.status)}</td>
                     <td>
-                      {intern.interview?.interviews?.[0]?.result?.evaluatedDate 
-                        ? new Date(intern.interview.interviews[0].result.evaluatedDate).toLocaleDateString()
-                        : "N/A"}
+                      {intern.category ||
+                        (intern.selectedRole === "dataEntry"
+                          ? "Data Entry Operator"
+                          : intern.selectedRole === "internship"
+                          ? "Internship"
+                          : "N/A")}
                     </td>
                     <td className="text-center">
                       <Button 

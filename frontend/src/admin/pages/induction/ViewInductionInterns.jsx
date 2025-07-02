@@ -23,150 +23,38 @@ const ViewInductionInterns = ({ darkMode, inductionId }) => {
   const [filter, setFilter] = useState("");
   const itemsPerPage = 20;
 
-  // Dummy data for induction interns
-  const dummyInductionDetails = {
-    _id: inductionId || "dummy-induction-id",
-    induction: "Software Development Fundamentals",
-    startDate: "2024-01-15",
-    time: "09:00",
-    location: "Training Room A, SLT Mobitel Headquarters",
-  };
-
-  const dummyInterns = [
-    {
-      _id: "intern-001",
-      refNo: "INT-2024-001",
-      fullName: "Amal Perera",
-      nic: "199801234567",
-      emailAddress: "amal.perera@email.com",
-      mobileNumber: "0771234567",
-      induction: {
-        inductionId: inductionId || "dummy-induction-id",
-        status: "induction-assigned",
-        result: {
-          evaluatedDate: "2024-01-15T10:00:00.000Z",
-        },
-      },
-    },
-    {
-      _id: "intern-002",
-      refNo: "INT-2024-002",
-      fullName: "Nimal Silva",
-      nic: "199701234568",
-      emailAddress: "nimal.silva@email.com",
-      mobileNumber: "0771234568",
-      induction: {
-        inductionId: inductionId || "dummy-induction-id",
-        status: "induction-passed",
-        result: {
-          evaluatedDate: "2024-01-15T11:30:00.000Z",
-        },
-      },
-    },
-    {
-      _id: "intern-003",
-      refNo: "INT-2024-003",
-      fullName: "Saman Fernando",
-      nic: "199901234569",
-      emailAddress: "saman.fernando@email.com",
-      mobileNumber: "0771234569",
-      induction: {
-        inductionId: inductionId || "dummy-induction-id",
-        status: "induction-failed",
-        result: {
-          evaluatedDate: "2024-01-15T14:00:00.000Z",
-        },
-      },
-    },
-    {
-      _id: "intern-004",
-      refNo: "INT-2024-004",
-      fullName: "Kamala Jayasinghe",
-      nic: "199801234570",
-      emailAddress: "kamala.jayasinghe@email.com",
-      mobileNumber: "0771234570",
-      induction: {
-        inductionId: inductionId || "dummy-induction-id",
-        status: "induction-re-scheduled",
-        result: {
-          evaluatedDate: "2024-01-16T09:00:00.000Z",
-        },
-      },
-    },
-    {
-      _id: "intern-005",
-      refNo: "INT-2024-005",
-      fullName: "Ruwan Wijesinghe",
-      nic: "199701234571",
-      emailAddress: "ruwan.wijesinghe@email.com",
-      mobileNumber: "0771234571",
-      induction: {
-        inductionId: inductionId || "dummy-induction-id",
-        status: "induction-pending",
-        result: {
-          evaluatedDate: "2024-01-17T10:00:00.000Z",
-        },
-      },
-    },
-    {
-      _id: "intern-006",
-      refNo: "INT-2024-006",
-      fullName: "Dilani Kumari",
-      nic: "199901234572",
-      emailAddress: "dilani.kumari@email.com",
-      mobileNumber: "0771234572",
-      induction: {
-        inductionId: inductionId || "dummy-induction-id",
-        status: "induction-passed",
-        result: {
-          evaluatedDate: "2024-01-15T16:00:00.000Z",
-        },
-      },
-    },
-  ];
-
   // Fetch interns assigned to this induction
   const fetchInductionInterns = async () => {
     try {
       setLoading(true);
       setError("");
 
-      // For demo purposes, use dummy data
-      // In production, uncomment the API calls below
-
-      // First get induction details
-      
+      // Fetch induction details
       const inductionResponse = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/api/inductions/${inductionId}`
       );
       setInductionDetails(inductionResponse.data);
-      
-      setInductionDetails(dummyInductionDetails);
 
-      // Then get CVs assigned to this induction
-      /*
+      // Fetch all CVs assigned to inductions
       const internsResponse = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/api/cvs/assigned-to-induction`
       );
 
       // Filter CVs that are assigned to this specific induction
-      const filteredInterns = internsResponse.data.filter(
-        (intern) => intern.induction?.inductionId === inductionId
-      );
-      */
-
-      const filteredInterns = dummyInterns.filter(
-        (intern) => intern.induction?.inductionId === (inductionId || "dummy-induction-id")
+      const filteredInterns = (internsResponse.data || []).filter(
+        (intern) =>
+          intern.induction?.inductionId &&
+          (typeof intern.induction.inductionId === "object"
+            ? intern.induction.inductionId._id === inductionId // If populated
+            : intern.induction.inductionId === inductionId) // If just ID
       );
 
       setInterns(filteredInterns);
     } catch (error) {
       console.error("Error fetching induction interns:", error);
       setError("Failed to load interns for this induction. Please try again.");
-
-      // Fallback to dummy data on error
-      setInductionDetails(dummyInductionDetails);
-      setInterns(dummyInterns);
+      setInductionDetails(null);
+      setInterns([]);
     } finally {
       setLoading(false);
     }
@@ -319,8 +207,7 @@ const ViewInductionInterns = ({ darkMode, inductionId }) => {
                 <th>NIC</th>
                 <th>Email</th>
                 <th>Mobile</th>
-                <th>Status</th>
-                <th>Assigned Date</th>
+                <th>Category</th>
                 <th>View CV</th>
               </tr>
             </thead>
@@ -334,11 +221,13 @@ const ViewInductionInterns = ({ darkMode, inductionId }) => {
                     <td>{intern.nic || "N/A"}</td>
                     <td>{intern.emailAddress || "N/A"}</td>
                     <td>{intern.mobileNumber || "N/A"}</td>
-                    <td>{getStatusBadge(intern.induction?.status)}</td>
                     <td>
-                      {intern.induction?.result?.evaluatedDate 
-                        ? new Date(intern.induction.result.evaluatedDate).toLocaleDateString()
-                        : "N/A"}
+                      {intern.category ||
+                        (intern.selectedRole === "dataEntry"
+                          ? "Data Entry Operator"
+                          : intern.selectedRole === "internship"
+                          ? "Internship"
+                          : "N/A")}
                     </td>
                     <td className="text-center">
                       <Button 
