@@ -12,6 +12,8 @@ const jwt = require('jsonwebtoken');
 const { azureConfig } = require('../config/AuthConfig');
 const jwksClient = require('jwks-rsa');
 const Staff = require("../models/Staff");
+const axios = require('axios');
+
 
 // Temporary storage for pending registrations (use Redis in production)
 const pendingRegistrations = new Map();
@@ -720,52 +722,127 @@ const getGoogleProfile = async (req, res) => {
 //   }
 // };`
 
-const azureStaffLogin = async (req, res) => {
-  const decoded = req.azureUser;
+// const azureStaffLogin = async (req, res) => {
+//   const decode = req.azureUser;
   
+//   try {
+//   let staff = await Staff.findOne({
+
+// email
+//   //{ azureId: decoded.oid || decoded.sub },
+
+//    } );
+  
+  
+//   // if (!staff) {
+//   //   staff = await Staff.create({
+//   //     name: decoded.name || decoded.preferred_username.split("@")[0],
+//   //     email: decoded.preferred_username || decoded.email,
+//   //     azureId: decoded.oid || decoded.sub,
+//   //     jobPosition: "Staff",
+//   //   });
+//   // }
+  
+//   // const appToken = jwt.sign(
+//   //   {
+//   //     id: staff.staffId,
+//   //     name: staff.name,
+//   //     email: staff.email,
+//   //     userType: "staff",
+//   //   },
+//   //   process.env.JWT_SECRET,
+//   //   { expiresIn: "7d" }
+//   // );
+
+// //  localStorage.setItem("token", JSON.stringify(appToken));
+  
+//   res.json({staff});
+//   } catch (error) {
+//   console.error("Azure login error:", error.message);
+//   res.status(500).json({ error: "Login failed" });
+//   }
+//   };
+
+const handleAzureCallback = async (req, res) => {
+  const code = req.params.code || req.query.code;
+  // if (process.env.TENANT_ID || process.env.CLIENT_ID || process.env.AZURE_CLIENT_SECRET || process.env.REDIRECT_URI) {
+   // return res.status(500).json( process.env.REDIRECT_URI);
+ // } 
+  
+   // console.log('Azure auth code received:', code)
+
   try {
-  let staff = await Staff.findOne({
-  $or: [
-  { email: decoded.preferred_username || decoded.email },
-  { azureId: decoded.oid || decoded.sub },
-  ],
-  });
-  
-  
-  if (!staff) {
-    staff = await Staff.create({
-      name: decoded.name || decoded.preferred_username.split("@")[0],
-      email: decoded.preferred_username || decoded.email,
-      azureId: decoded.oid || decoded.sub,
-      jobPosition: "Staff",
+    // 1. Exchange code for access token
+    const params = new URLSearchParams({
+      client_id: process.env.CLIENT_ID,
+      scope: 'https://graph.microsoft.com/user.read',
+      code,
+      redirect_uri: process.env.REDIRECT_URI,
+      grant_type: 'authorization_code',
+      client_secret: process.env.AZURE_CLIENT_SECRET,
     });
+    const tokenResponse = await axios.post(
+      `https://login.microsoftonline.com/${process.env.TENANT_ID}/oauth2/v2.0/token`,
+      params,
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded'}
+      }
+    );
+    
+    if(!tokenResponse.data.access_token ) {
+      console.error('No access token received from Azure');
+      return res.status(400).json({ error: 'No access token received from Azure' });
+    }
+    
+
+    const accessToken = tokenResponse.data.access_token;
+
+    // 2. Get user profile from Graph API
+    const userResponse = await axios.get('https://graph.microsoft.com/v1.0/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const userData = userResponse.data;
+
+    // 3. Check or create staff in your DB
+    let staff = await Staff.findOne({
+      $or: [
+        { email: userData.mail || userData.userPrincipalName },
+        { azureId: userData.id }
+      ]
+    });
+    if (!staff) {
+      staff = await Staff.create({
+        name: userData.displayName,
+        email: userData.mail || userData.userPrincipalName,
+        azureId: userData.id,
+        jobPosition: "Staff"
+      });
+    }
+
+    // 4. Issue JWT for your app
+    const jwtToken = jwt.sign(
+      {
+        id: staff._id,
+        email: staff.email,
+        name: staff.name,
+        userType: 'staff',
+        jobPosition: staff.jobPosition,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    // 5. Redirect to frontend with token in query params
+    const redirectUrl = `${process.env.FRONTEND_URL}/staff-home?token=${jwtToken}&userType=staff`;
+    return res.redirect(redirectUrl);
+
+  } catch (err) {
+    console.error('Azure Auth Error:', err.response?.data || err.message);
+    return res.redirect(`${process.env.FRONTEND_URL}/login?error=azure_auth_failed`);
   }
-  
-  const appToken = jwt.sign(
-    {
-      id: staff._id,
-      name: staff.name,
-      email: staff.email,
-      role: "staff",
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
-  
-  res.json({
-    token: appToken,
-    user: {
-      id: staff._id,
-      name: staff.name,
-      email: staff.email,
-      role: "staff",
-    },
-  });
-  } catch (error) {
-  console.error("Azure login error:", error.message);
-  res.status(500).json({ error: "Login failed" });
-  }
-  };
+};
+
+
 
 
 
@@ -782,5 +859,7 @@ module.exports = {
   verifyEmail,
   getGoogleProfile,
   upload,
-  azureStaffLogin
+  handleAzureCallback
+
+  
 };

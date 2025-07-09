@@ -297,10 +297,8 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   };
 
   const theme = darkMode ? darkTheme : lightTheme;
-  const navigate = useNavigate();
-  const [isLoggingIn, setIsLoggingIn] = useState(
-    () => localStorage.getItem("isLoggingIn") === "true"
-  );
+ 
+ 
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -385,6 +383,26 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
   }
   return () => clearInterval(timer);
 }, [accountLocked, remainingTime]);
+
+useEffect(() => {
+  const handleAzureRedirect = async () => {
+    try {
+      const response = await instance.handleRedirectPromise();
+      if (response && response.accessToken) {
+        localStorage.setItem("accessToken", response.accessToken);
+        const authResponse = {
+          token: response.accessToken,
+          userType: "staff"
+        };
+        handleAuthSuccess(authResponse, navigateToUserDashboard);
+      }
+    } catch (error) {
+      setError(error.message || 'Failed to login with Azure. Please try again.');
+    }
+  };
+  handleAzureRedirect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [instance]);
 
   const toggleTheme = () => {
     if (propToggleTheme) {
@@ -482,7 +500,7 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
 //     });
 
 //     // 3. Send token to backend for verification
-//     const backendResponse = await fetch('http://localhost:5000/api/auth/azure/callback', {
+//     const backendResponse = await fetch('http://localhost:3000/api/auth/azure/callback', {
 //       method: 'POST',
 //       headers: {
 //         'Content-Type': 'application/json',
@@ -514,52 +532,74 @@ const LoginPage = ({ darkMode: propDarkMode, toggleTheme: propToggleTheme }) => 
 //   }
 // };
 
-useEffect(() => {
-  const handleAzureRedirect = async () => {
-     try{
-      const msalInstance = new PublicClientApplication(msalConfig);
-      await msalInstance.initialize();
-      const response = await msalInstance.handleRedirectPromise();
-      if (response) {
-        // Successful login
-        console.log("Azure login successful", response);
+// useEffect(() => {
+//   const handleAzureRedirect = async () => {
+//      try{
+
+//       await instance.initialize();
+      
+//       const response = await instance.handleRedirectPromise();
+//       if (response) {
+//         const token = response.accessToken;
+//         // Successful login
+//         console.log("Azure login successful", response);
         
-        // Send token to your backend for verification
-        const backendResponse = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/staff/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${response.accessToken}`
-          }
-        });
+//         // Send token to your backend for verification
+//         const backendResponse = await fetch(`${import.meta.env.VITE_BASE_URL}/api/auth/staff/login`, {
+//           method: 'POST',
+//           headers: {
+           
+//             'Authorization': `Bearer ${token}`
+//           }
+//         });
+//         const data = await backendResponse.json();
   
-        if (backendResponse.ok) {
-          const data = await backendResponse.json();
-          handleAuthSuccess(data, navigateToUserDashboard);
-        } else {
-          throw new Error('Backend token validation failed');
-        }
-      }
-     }catch(error){
-      console.error('Azure login error:', error);
-      setError(error.message || 'Failed to login with Azure. Please try again.');
-     }
 
-  }
+//         localStorage.setItem("token", data.token);
+//         localStorage.setItem("user", JSON.stringify(data.user));
 
-  handleAzureRedirect();
-}, []);
+//         // Redirect to staff dashboard
+//         window.location.href = "/staff-home";
+
+//       }
+
+//       //   if (backendResponse.ok) {
+//       //     const data = await backendResponse.json();
+//       //     handleAuthSuccess(data, navigateToUserDashboard);
+//       //   } else {
+//       //     throw new Error('Backend token validation failed');
+//       //   }
+//       // }
+//      }catch(error){
+//       console.error('Azure login error:', error);
+//       setError(error.message || 'Failed to login with Azure. Please try again.');
+//      }
+
+//   }
+
+//   handleAzureRedirect();
+// }, [instance]);
 
 
-const handleAzureLogin = async () => {
-  try {
-        setIsOAuthLoading(true);
-        await instance.loginRedirect(loginRequest);
-      } catch (err) {
-        console.error('Azure login error', err);
-        setIsOAuthLoading(false);
-      }
+// const handleAzureLogin = async () => {
+//   // try {
+//   //       setIsOAuthLoading(true);
+//   //       await instance.loginRedirect(loginRequest);
+
+//   //     } catch (err) {
+//   //       console.error('Azure login error', err);
+//   //       setIsOAuthLoading(false);
+//   //     }
+// };
+
+const handleAzureLogin = () => {
+  //window.location.href = `${import.meta.env.VITE_BASE_URL}/api/auth/azure`;
+  instance.loginRedirect({
+    scopes: ["user.read"]
+  })
+
 };
+
 
   
   const toggleStaffNotification = () => {

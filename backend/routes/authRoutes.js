@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { 
-  registerUser, 
-  loginUser, 
-  getUserProfile, 
-  updateUserProfile, 
-  upload, 
+const {
+  registerUser,
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  upload,
   getInstitutes,
   changePassword,
   requestPasswordResetOTP,
@@ -13,12 +13,11 @@ const {
   getUserProfileByNic,
   verifyEmail,
   getGoogleProfile,
-  azureStaffLogin
-  
+  handleAzureCallback,
 } = require("../controllers/authController");
-const { passport, generateTokenAndRedirect } = require('../config/oauthStrategies');
+
 const authMiddleware = require("../middleware/authMiddleware");
-const { verifyAzureToken } = require("../middleware/azureAuth");
+const { passport, generateTokenAndRedirect } = require('../config/oauthStrategies');
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
@@ -29,14 +28,14 @@ router.put("/change-password", authMiddleware, changePassword);
 router.get("/profile/:nic", authMiddleware, getUserProfileByNic);
 router.post("/verify-email", verifyEmail);
 
-// OTP-based password reset routes
+// OTP-based password reset
 router.post("/request-password-reset-otp", requestPasswordResetOTP);
 router.post("/verify-otp-reset-password", verifyOTPAndResetPassword);
 
 router.get("/google-profile", authMiddleware, getGoogleProfile);
 
-// OAuth routes - Google only
-router.get('/google', 
+// Google OAuth
+router.get('/google',
   (req, res, next) => {
     req.session = req.session || {};
     req.session.userType = 'individual';
@@ -44,22 +43,28 @@ router.get('/google',
   },
   passport.authenticate('google', { session: false })
 );
-
-router.get('/google/callback', 
-  passport.authenticate('google', { 
-    session: false, 
+router.get('/google/callback',
+  passport.authenticate('google', {
+    session: false,
     failureRedirect: `${process.env.FRONTEND_URL}/login?error=google_auth_failed`
-  }), 
+  }),
   generateTokenAndRedirect
 );
 
-// // Azure AD Authentication Routes
-// router.get('/azure', AuthController.initiateAzureLogin);
-// router.post('/azure/callback', AuthController.handleAzureCallback);
+// Azure AD: start login
+router.get('/azure', (req, res) => {
+  const params = new URLSearchParams({
+    client_id: process.env.CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: process.env.REDIRECT_URI,
+    response_mode: 'query',
+    scope: 'https://graph.microsoft.com/user.read',
+  });
+  const authorizeUrl = `https://login.microsoftonline.com/${process.env.TENANT_ID}/oauth2/v2.0/authorize?${params.toString()}`;
+  res.redirect(authorizeUrl);
+});
 
-// // Token Validation Route
-// router.post('/validate', AuthController.validateToken);
-
-router.post("/staff/login", verifyAzureToken, azureStaffLogin);
+// Azure AD: callback (IMPORTANT: GET, not POST!)
+router.get('/azure/callback', handleAzureCallback);
 
 module.exports = router;
