@@ -6,6 +6,7 @@ import { PersonPlus, ExclamationCircle, Diagram3 } from "react-bootstrap-icons";
 import AssignNewManagerModal from "./AssignNewManagerModal";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import ViewRelativeHierachy from "./ViewRelativeHierachy";
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -19,6 +20,7 @@ export const SchemeManagers = ({ darkMode = false }) => {
   const [hierarchyData, setHierarchyData] = useState([]);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [levelWiseManagers, setLevelWiseManagers] = useState({});
+  const [isHierarchyOpen, setIsHierarchyOpen] = useState(false);
   const { schemeId } = useParams();
   const navigate = useNavigate();
 
@@ -538,13 +540,22 @@ export const SchemeManagers = ({ darkMode = false }) => {
               {assignedLevels.length > 0 && ` | ${assignedLevels.length} levels with managers`}
             </small>
           </div>
-          <Button
-            variant={darkMode ? "outline-light" : "primary"}
-            onClick={() => setIsModalOpen(true)}
-            disabled={loading || employees.length === 0}
-          >
-            <PersonPlus className="me-2" /> Assign Manager
-          </Button>
+          <div className="d-flex gap-2">
+            <Button
+              variant={darkMode ? "outline-light" : "primary"}
+              onClick={() => setIsModalOpen(true)}
+              disabled={loading || employees.length === 0}
+            >
+              <PersonPlus className="me-2" /> Assign Manager
+            </Button>
+            <Button
+              variant={darkMode ? "outline-info" : "info"}
+              onClick={() => setIsHierarchyOpen(true)}
+              disabled={loading || employees.length === 0}
+            >
+              <Diagram3 className="me-2" /> View Hierarchy
+            </Button>
+          </div>
         </div>
 
         <hr className={darkMode ? "border-light" : "border-dark"} />
@@ -772,6 +783,18 @@ export const SchemeManagers = ({ darkMode = false }) => {
           show={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onAssignManager={handleAssignManager}
+          scheme={scheme}
+          employees={employees}
+          hierarchyData={hierarchyData}
+          darkMode={darkMode}
+        />
+      )}
+
+      {/* View Hierarchy Modal */}
+      {isHierarchyOpen && (
+        <ViewRelativeHierachy
+          show={isHierarchyOpen}
+          onClose={() => setIsHierarchyOpen(false)}
           scheme={scheme}
           employees={employees}
           hierarchyData={hierarchyData}
