@@ -3,6 +3,7 @@ const router = express.Router();
 const internRequestController = require('../controllers/internRequestController');
 const { verifyToken } = require('../middleware/verifyToken'); 
 
+
 router.post('/intern-requests', verifyToken, internRequestController.createInternRequest);
 router.get('/user-intern-requests', verifyToken, internRequestController.getUserInternRequests);
 router.delete('/intern-requests/:id', verifyToken, internRequestController.deleteInternRequest);

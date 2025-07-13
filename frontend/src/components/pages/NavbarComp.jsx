@@ -22,17 +22,30 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+    console.log("Token:", token);
+    
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        setUser({ id: decoded.id, username: decoded.username, email: decoded.email });
+        let username = decoded.username;
+        let email = decoded.email;
+        // If username is missing but email exists, extract username from email
+        if ((!username || username === "") && email) {
+          // Extract the part before '@', then take the first part before '.' if present
+          let namePart = email.split("@")[0];
+          username = namePart.split(".")[0];
+        }
+        setUser({ id: decoded.id, username: username || "User", email: email || "user@example.com" });
       } catch (error) {
         console.error("Invalid token:", error);
         handleLogout();
       }
     } else {
-      navigate("/login");
+      console.error("Invalid or missing token.");
+       navigate("/login");
     }
+    
+
 
     // Detect fullscreen change
     const handleFullscreenChange = () => {
@@ -48,7 +61,17 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
   const toggleDropdown = () => setDropdownOpen(!dropdownOpen);
 
   const handleLogout = () => {
+    // Remove all keys except userType
+    const userType = localStorage.getItem("userType");
+    localStorage.clear();
+    if (userType) {
+      localStorage.setItem("userType", userType);
+    }
+    // Remove specific tokens in case they exist
     localStorage.removeItem("token");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    // ...add any other sensitive keys if needed
     navigate("/login");
   };
 

@@ -21,6 +21,20 @@ const StaffHome = ({ darkMode }) => {
     gradientEnd: darkMode ? "#1e40af" : "#059669", 
     buttonHover: darkMode ? "#1d4ed8" : "#047857", 
   };
+  
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    const userType = urlParams.get("userType");
+
+    if (token) {
+      localStorage.setItem("accessToken", token);
+      localStorage.setItem("userType", userType || "staff");
+      window.history.replaceState({}, "", "/staff-home"); // Clean URL
+    }
+  }, []);
+
 
   useEffect(() => {
     const lastPopupTime = localStorage.getItem("lastPopupTime");

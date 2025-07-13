@@ -3,7 +3,7 @@ const InternRequest = require('../models/InternRequest');
 // Create a new intern request
 exports.createInternRequest = async (req, res) => {
   try {
-    const { userId } = req;
+    const userId = req.user?._id || req.user?.id;
     if (!userId) {
       return res.status(400).json({ message: 'User ID is missing in token.' });
     }
@@ -29,7 +29,7 @@ exports.createInternRequest = async (req, res) => {
 
 exports.getUserInternRequests = async (req, res) => {
     try {
-      const { userId } = req;
+      const userId = req.user?._id || req.user?.id;
       
       if (!userId) {
         return res.status(400).json({ message: 'User ID is missing in token.' });
@@ -49,7 +49,7 @@ exports.getUserInternRequests = async (req, res) => {
 
   exports.deleteInternRequest = async (req, res) => {
     try {
-      const { userId } = req;
+      const userId = req.user?._id || req.user?.id;
       const { id } = req.params;
       
       if (!userId) {
@@ -78,7 +78,7 @@ exports.getUserInternRequests = async (req, res) => {
 
   exports.getInternRequestById = async (req, res) => {
     try {
-      const { userId } = req;
+      const userId = req.user?._id || req.user?.id;
       const { id } = req.params;
       
       if (!userId) {
@@ -105,7 +105,7 @@ exports.getUserInternRequests = async (req, res) => {
 
   exports.updateInternRequest = async (req, res) => {
     try {
-      const { userId } = req;
+      const userId = req.user?._id || req.user?.id;
       const { id } = req.params;
       
       if (!userId) {
