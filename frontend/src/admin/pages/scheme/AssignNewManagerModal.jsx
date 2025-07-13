@@ -1,6 +1,173 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Form, Button, Alert, Badge, Table, Card, Spinner } from "react-bootstrap";
-import { CheckCircle, ExclamationCircle, Person, Building, ChevronDown, ChevronRight, Diagram3 } from "react-bootstrap-icons";
+import { Modal, Form, Button, Alert, Badge, Card, Spinner, Row, Col, InputGroup } from "react-bootstrap";
+import { CheckCircle, ExclamationCircle, Diagram3, Search } from "react-bootstrap-icons";
+
+// Dummy manager data with hierarchy (clarified allocation logic)
+// Each manager's 'allocated' is what they keep, 'available' is what can be allocated to their subordinates.
+// The sum of allocations for all subordinates must not exceed the parent's 'available'.
+
+const dummyManagers = [
+  {
+    id: "573824",
+    name: "Alice Johnson",
+    employeeCode: "573824",
+    department: "Management",
+    position: "CEO",
+    costCenter: "CC-001",
+    hierarchyLevel: 1,
+    allocated: 10, // Alice keeps 10 interns
+    available: 10, // 20 total - 10 allocated to Alice = 10 available for subordinates
+    subordinates: [
+      {
+        id: "573825",
+        name: "Bob Smith",
+        employeeCode: "573825",
+        department: "Operations",
+        position: "CXO",
+        costCenter: "CC-002",
+        hierarchyLevel: 2,
+        allocated: 6, // Bob keeps 6 interns
+        available: 0, // Bob has no available interns for subordinates (all 10 available from Alice are allocated: 6 to Bob, 4 to Helen)
+        subordinates: [
+          {
+            id: "573827",
+            name: "Carol Lee",
+            employeeCode: "573827",
+            department: "Operations",
+            position: "DCXO",
+            costCenter: "CC-004",
+            hierarchyLevel: 3,
+            allocated: 0, // Carol gets 0 interns
+            available: 0,
+            subordinates: []
+          }
+        ]
+      },
+      {
+        id: "573826",
+        name: "Helen Black",
+        employeeCode: "573826",
+        department: "Finance",
+        position: "CXO",
+        costCenter: "CC-003",
+        hierarchyLevel: 2,
+        allocated: 4, // Helen keeps 4 interns
+        available: 0, // Helen has no available interns for subordinates
+        subordinates: [
+          {
+            id: "573829",
+            name: "Ian Gray",
+            employeeCode: "573829",
+            department: "Finance",
+            position: "DCXO",
+            costCenter: "CC-006",
+            hierarchyLevel: 3,
+            allocated: 0, // Ian gets 0 interns
+            available: 0,
+            subordinates: []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "573830",
+    name: "David Kim",
+    employeeCode: "573830",
+    department: "IT",
+    position: "GM",
+    costCenter: "CC-007",
+    hierarchyLevel: 4,
+    allocated: 0,
+    available: 0,
+    subordinates: []
+  }
+];
+
+// Helper for position color and badge style
+function getPositionStyles(position, darkMode) {
+  const baseCard = darkMode
+    ? { background: "#23272f", border: "1px solid #374151", borderRadius: "12px", color: "#F3F4F6" }
+    : { background: "#fff", border: "1px solid #E2E8F0", borderRadius: "12px", color: "#1E293B" };
+  switch (position) {
+    case "CEO": return { card: baseCard, badge: { background: "#FFD700", color: "#000" } };
+    case "CXO": return { card: baseCard, badge: { background: "#003366", color: "#fff" } };
+    case "DCXO": return { card: baseCard, badge: { background: "#4169E1", color: "#fff" } };
+    case "GM": return { card: baseCard, badge: { background: "#008080", color: "#fff" } };
+    default: return { card: baseCard, badge: { background: "#CBD5E0", color: "#1E293B" } };
+  }
+}
+
+// Recursive tree renderer for hierarchy
+function HierarchyTree({ node, darkMode, collapsed }) {
+  if (!node) return null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 16 }}>
+      <div
+        style={{
+          ...getPositionStyles(node.position, darkMode).card,
+          minWidth: 200,
+          maxWidth: 220,
+          padding: 16,
+          margin: "8px auto",
+          boxShadow: darkMode
+            ? "0 2px 4px rgba(0,0,0,0.25)"
+            : "0 2px 4px rgba(0,0,0,0.05)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center"
+        }}
+      >
+        <div style={{
+          fontWeight: 600,
+          fontSize: 13,
+          marginBottom: 8,
+          padding: "4px 12px",
+          borderRadius: 4,
+          ...getPositionStyles(node.position, darkMode).badge,
+          display: "inline-block"
+        }}>
+          {node.position}
+        </div>
+        <div style={{ fontWeight: 600, fontSize: 15 }}>{node.name}</div>
+        <div style={{ fontSize: 13, color: darkMode ? "#94a3b8" : "#64748B", marginBottom: 4 }}>Service: {node.employeeCode}</div>
+        <div style={{ fontSize: 13, color: darkMode ? "#94a3b8" : "#64748B", marginBottom: 4 }}>Cost Center: {node.costCenter}</div>
+        <div style={{
+          width: "100%",
+          borderTop: darkMode ? "1px solid #374151" : "1px solid #E2E8F0",
+          marginTop: 8,
+          paddingTop: 8,
+          display: "flex",
+          justifyContent: "space-between"
+        }}>
+          <span style={{ color: "#22C55E", fontSize: 13 }}>Allocated: <strong>{node.allocated ?? "—"}</strong></span>
+          <span style={{ color: "#3B82F6", fontSize: 13 }}>Available: <strong>{node.available ?? "—"}</strong></span>
+        </div>
+      </div>
+      {/* Collapse logic: only show first subordinate if collapsed */}
+      {node.subordinates && node.subordinates.length > 0 && (
+        <>
+          <div style={{ width: 2, height: 24, background: darkMode ? "#374151" : "#CBD5E0", margin: "0 auto" }} />
+          <div style={{
+            display: "flex",
+            gap: 40,
+            justifyContent: "center",
+            alignItems: "center",
+            marginTop: 8
+          }}>
+            {collapsed
+              ? <HierarchyTree node={node.subordinates[0]} darkMode={darkMode} collapsed={collapsed} />
+              : node.subordinates.map(sub => (
+                  <HierarchyTree key={sub.id} node={sub} darkMode={darkMode} collapsed={collapsed} />
+                ))
+            }
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 const AssignNewManagerModal = ({ 
   show, 
@@ -11,618 +178,325 @@ const AssignNewManagerModal = ({
   hierarchyData = [],
   darkMode = false 
 }) => {
+  // UI state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [previewEmployee, setPreviewEmployee] = useState(null);
+  const [selectedManagers, setSelectedManagers] = useState([]);
+  const [allocationMap, setAllocationMap] = useState({});
+  const [allocationError, setAllocationError] = useState("");
+  const [collapsed, setCollapsed] = useState(false);
 
-  const [selectedEmployees, setSelectedEmployees] = useState({});
-  const [employeeHierarchy, setEmployeeHierarchy] = useState({});
-  const [expandedLevels, setExpandedLevels] = useState(new Set([1])); 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  // Search logic (by name or service number)
+  const filteredManagers = dummyManagers.filter(
+    m =>
+      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.employeeCode.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  
+  // When search term changes, preview first match
   useEffect(() => {
-    if (show) {
-      setSelectedEmployees({});
-      setError(null);
-      setSearchTerm('');
-      setExpandedLevels(new Set([1]));
+    if (!searchTerm) {
+      setPreviewEmployee(null);
+      return;
     }
-  }, [show]);
+    setPreviewEmployee(filteredManagers[0] || null);
+  }, [searchTerm, filteredManagers]);
 
-  // Build hierarchy structure from employee data
-  const buildHierarchyMap = () => {
-    const hierarchy = {};
-    
-    // Group employees by hierarchy level (1-6)
-    employees.forEach(emp => {
-      const level = emp.hierarchyLevel || 1;
-      if (level >= 1 && level <= 6) { 
-        if (!hierarchy[level]) {
-          hierarchy[level] = [];
-        }
-        hierarchy[level].push(emp);
-      }
-    });
+  // Allocation summary
+  const allocatedCount = Object.values(allocationMap).reduce((a, b) => a + b, 0);
+  const remainingAllocation = scheme?.totalAllocation - allocatedCount;
 
-    return hierarchy;
+  // Select manager (only one at a time)
+  const handleSelectManager = emp => {
+    if (selectedManagers.length === 1 && selectedManagers[0].id === emp.id) return;
+    setSelectedManagers([emp]);
+    setAllocationMap({ [emp.id]: 1 });
+    setAllocationError("");
   };
 
-  // Get direct subordinates of a specific employee (using subordinates array)
-  const getDirectSubordinates = (managerId) => {
-    if (!managerId) return [];
-    
-    const manager = employees.find(emp => emp.id === managerId);
-    if (!manager || !manager.subordinates) return [];
-    
-    return employees.filter(emp => 
-      manager.subordinates.includes(emp.id)
-    );
+  // Remove manager (just clear selection)
+  const handleRemoveManager = empId => {
+    setSelectedManagers([]);
+    setAllocationMap({});
+    setAllocationError("");
   };
 
-  // Get all subordinates at a specific level under a manager (recursive)
-  const getSubordinatesAtLevel = (managerId, targetLevel) => {
-    const manager = employees.find(emp => emp.id === managerId);
-    if (!manager) return [];
-
-    // If we've reached the target level, return the employee if they match
-    if (manager.hierarchyLevel === targetLevel) {
-      return [manager];
+  // Allocation change: restrict allocation so total never exceeds totalAllocation
+  const handleAllocationChange = (empId, value) => {
+    let allocation = Math.max(1, Math.min(Number(value) || 1, scheme?.totalAllocation));
+    // Calculate current total minus this manager's previous allocation
+    const currentTotal = Object.entries(allocationMap)
+      .filter(([id]) => id !== empId)
+      .reduce((sum, [, val]) => sum + val, 0);
+    // Restrict so sum does not exceed totalAllocation
+    if (allocation + currentTotal > scheme?.totalAllocation) {
+      allocation = scheme.totalAllocation - currentTotal;
+      if (allocation < 1) allocation = 1;
     }
-
-    // Otherwise, look through their subordinates
-    let result = [];
-    const directSubs = getDirectSubordinates(managerId);
-    
-    for (const sub of directSubs) {
-      if (sub.hierarchyLevel === targetLevel) {
-        result.push(sub);
-      } else if (sub.hierarchyLevel < targetLevel) {
-        result = result.concat(getSubordinatesAtLevel(sub.id, targetLevel));
-      }
-    }
-
-    return result;
+    setAllocationMap(prev => ({ ...prev, [empId]: allocation }));
+    setAllocationError("");
   };
 
-  // Get available employees for a specific level based on parent selection
-  const getAvailableEmployeesForLevel = (level) => {
-    if (level === 1) {
-      return employeeHierarchy[1] || [];
+  // Rename handler to allocate interns
+  const handleAllocateInterns = () => {
+    if (allocatedCount > scheme?.totalAllocation) {
+      setAllocationError("Total allocation exceeded!");
+      return;
     }
-    
-    // For other levels, check if there's a parent selected at the previous level
-    const parentLevel = level - 1;
-    const parentEmployee = selectedEmployees[parentLevel];
-    
-    if (!parentEmployee) {
-      // If no parent selected, show all employees at this level
-      return employeeHierarchy[level] || [];
-    }
-    
-    // If parent is selected, show only their subordinates at this level
-    return getSubordinatesAtLevel(parentEmployee.id, level);
-  };
-
-  // Get available levels (1-6)
-  const getAvailableLevels = () => {
-    const levels = [...new Set(employees.map(emp => emp.hierarchyLevel || 1))]
-      .filter(level => level >= 1 && level <= 6)
-      .sort((a, b) => a - b);
-    return levels;
-  };
-
-  // Handle employee selection at a specific level
-  const handleEmployeeSelect = (level, employee) => {
-    setSelectedEmployees(prev => {
-      const newSelected = { ...prev };
-      
-      // Clear selections at all lower levels when selecting at a higher level
-      const levels = getAvailableLevels();
-      const currentLevelIndex = levels.indexOf(level);
-      levels.slice(currentLevelIndex + 1).forEach(lowerLevel => {
-        delete newSelected[lowerLevel];
-      });
-      
-      // Set new selection
-      newSelected[level] = {
-        ...employee,
-        allocationCount: 0
+    if (selectedManagers.length === 0) return;
+    // Prepare allocationData for parent handler
+    const allocationData = {};
+    selectedManagers.forEach(emp => {
+      allocationData[emp.employeeCode] = {
+        id: emp.id,
+        name: emp.name,
+        employeeCode: emp.employeeCode,
+        email: emp.email,
+        department: emp.department,
+        position: emp.position,
+        allocationCount: allocationMap[emp.id] || 1
       };
-      
-      return newSelected;
     });
-
-    // Auto-expand next level if there are potential subordinates
-    const nextLevel = level + 1;
-    if (getAvailableLevels().includes(nextLevel) && nextLevel <= 6) {
-      setExpandedLevels(prev => new Set([...prev, nextLevel]));
-    }
-
-    setError(null);
+    onAssignManager(allocationData); // You may want to rename this prop to onAllocateInterns
+    setSelectedManagers([]);
+    setAllocationMap({});
+    setAllocationError("");
   };
-
-  // Handle allocation count change
-  const handleAllocationChange = (level, allocationCount) => {
-    setSelectedEmployees(prev => ({
-      ...prev,
-      [level]: {
-        ...prev[level],
-        allocationCount: parseInt(allocationCount) || 0
-      }
-    }));
-  };
-
-  // Toggle level expansion
-  const toggleLevel = (level) => {
-    setExpandedLevels(prev => {
-      const newExpanded = new Set(prev);
-      if (newExpanded.has(level)) {
-        newExpanded.delete(level);
-      } else {
-        newExpanded.add(level);
-      }
-      return newExpanded;
-    });
-  };
-
-  // Filter employees based on search
-  const filterEmployees = (employeeList) => {
-    if (!searchTerm) return employeeList;
-    
-    return employeeList.filter(emp => 
-      emp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.employeeCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.department?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.position?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  };
-
-  // Validate form
-  const validateForm = () => {
-    setError(null);
-    
-    const totalAllocation = Object.values(selectedEmployees)
-      .reduce((sum, emp) => sum + (emp.allocationCount || 0), 0);
-
-    if (totalAllocation > (scheme?.totalAllocation || 0)) {
-      setError(`Total allocation (${totalAllocation}) cannot exceed scheme's total allocation (${scheme?.totalAllocation || 0}).`);
-      return false;
-    }
-
-    if (Object.keys(selectedEmployees).length === 0) {
-      setError("At least one employee must be selected from the hierarchy.");
-      return false;
-    }
-
-    return true;
-  };
-
-  // Handle form submission
-  const handleSubmit = () => {
-    if (!validateForm()) return;
-
-    setLoading(true);
-
-    // Convert selected employees to the new level-based format
-    const managerData = {};
-    
-    Object.entries(selectedEmployees)
-      .sort(([a], [b]) => parseInt(a) - parseInt(b))
-      .forEach(([level, employee]) => {
-        const levelKey = `level${level}Manager`;
-        
-        managerData[levelKey] = {
-          id: employee.id,
-          name: employee.name,
-          employeeCode: employee.employeeCode,
-          email: employee.email,
-          department: employee.department,
-          position: employee.position,
-          hierarchyLevel: parseInt(level),
-          allocationCount: employee.allocationCount || 0,
-          divisionCode: employee.divisionCode,
-          costCenter: employee.costCenter,
-          gradeLevel: employee.gradeLevel
-        };
-      });
-
-    // Call the parent handler
-    try {
-      onAssignManager(managerData);
-    } catch (err) {
-      setError("Failed to assign managers: " + err.message);
-      setLoading(false);
-    }
-  };
-
-  // Initialize hierarchy when component mounts or employees change
-  useEffect(() => {
-    if (employees.length > 0) {
-      const hierarchy = buildHierarchyMap();
-      setEmployeeHierarchy(hierarchy);
-    }
-  }, [employees]);
-
-  const availableLevels = getAvailableLevels();
-
-  // Get level display name and color
-  const getLevelInfo = (level) => {
-    const levelNames = {
-      1: { name: 'Executive Level', color: 'danger' },
-      2: { name: 'Senior Management', color: 'warning' },
-      3: { name: 'Middle Management', color: 'primary' },
-      4: { name: 'Team Leadership', color: 'success' },
-      5: { name: 'Supervisory Level', color: 'info' },
-      6: { name: 'Operational Level', color: 'secondary' }
-    };
-    
-    return levelNames[level] || { name: `Level ${level}`, color: 'dark' };
-  };
-
-  // Employee selection component for a specific level
-  const LevelEmployeeSelector = ({ level }) => {
-    const isExpanded = expandedLevels.has(level);
-    const selectedEmployee = selectedEmployees[level];
-    
-    // Get available employees for this level
-    const levelEmployees = getAvailableEmployeesForLevel(level);
-    const availableEmployees = filterEmployees(levelEmployees);
-
-    const levelInfo = getLevelInfo(level);
-    
-    // Determine if this level should be shown
-    const shouldShowLevel = level === 1 || selectedEmployees[level - 1];
-
-    if (!shouldShowLevel && level > 1) {
-      return null;
-    }
-
-    // Get parent info for display
-    const parentLevel = level - 1;
-    const parentEmployee = selectedEmployees[parentLevel];
-    const isFiltered = level > 1 && parentEmployee;
-
-    return (
-      <Card className={`mb-3 ${darkMode ? 'bg-dark text-white border-secondary' : ''}`}>
-        <Card.Header 
-          className={`bg-${levelInfo.color} text-white d-flex justify-content-between align-items-center`}
-          style={{ cursor: 'pointer' }}
-          onClick={() => toggleLevel(level)}
-        >
-          <span>
-            <Person className="me-2" />
-            Level {level} - {levelInfo.name}
-            {isFiltered && (
-              <Badge bg="light" text="dark" className="ms-2">
-                Reports to {parentEmployee.name}
-              </Badge>
-            )}
-            {availableEmployees.length > 0 && (
-              <Badge bg="light" text="dark" className="ms-2">
-                {availableEmployees.length} available
-              </Badge>
-            )}
-          </span>
-          {isExpanded ? <ChevronDown /> : <ChevronRight />}
-        </Card.Header>
-        
-        {isExpanded && (
-          <Card.Body>
-            {availableEmployees.length === 0 ? (
-              <Alert variant="info">
-                {isFiltered ? 
-                  `No subordinates found at level ${level} for ${parentEmployee.name}.` :
-                  `No employees available at level ${level}.`
-                }
-                {level > 1 && isFiltered && (
-                  <div className="mt-2">
-                    <small>
-                      This means {parentEmployee.name} doesn't have any direct or indirect subordinates at Level {level}.
-                    </small>
-                    <br />
-                    <Button 
-                      size="sm" 
-                      variant="outline-primary" 
-                      className="mt-2"
-                      onClick={() => {
-                        // Clear parent selection to show all level employees
-                        setSelectedEmployees(prev => {
-                          const newSelected = { ...prev };
-                          delete newSelected[parentLevel];
-                          return newSelected;
-                        });
-                      }}
-                    >
-                      Show All Level {level} Employees
-                    </Button>
-                  </div>
-                )}
-              </Alert>
-            ) : (
-              <>
-                {/* Employee Selection Table */}
-                <div style={{ maxHeight: '300px', overflowY: 'auto' }} className="mb-3">
-                  <Table striped bordered hover size="sm" variant={darkMode ? "dark" : "light"}>
-                    <thead>
-                      <tr>
-                        <th>Select</th>
-                        <th>Name</th>
-                        <th>Code</th>
-                        <th>Department</th>
-                        <th>Position</th>
-                        <th>Subordinates</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {availableEmployees.map((employee) => {
-                        const subordinateCount = getDirectSubordinates(employee.id).length;
-                        
-                        return (
-                          <tr key={employee.id}>
-                            <td>
-                              <Form.Check
-                                type="radio"
-                                name={`level${level}Select`}
-                                checked={selectedEmployee?.id === employee.id}
-                                onChange={() => handleEmployeeSelect(level, employee)}
-                              />
-                            </td>
-                            <td>
-                              <strong>{employee.name}</strong>
-                              {selectedEmployee?.id === employee.id && (
-                                <Badge bg="success" className="ms-2">Selected</Badge>
-                              )}
-                            </td>
-                            <td>
-                              <Badge bg="secondary">{employee.employeeCode}</Badge>
-                            </td>
-                            <td>{employee.department}</td>
-                            <td>{employee.position}</td>
-                            <td>
-                              <Badge bg="info" className="text-white">
-                                {subordinateCount}
-                              </Badge>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </Table>
-                </div>
-
-                {/* Selected Employee Details and Allocation */}
-                {selectedEmployee && (
-                  <div className={`p-3 rounded ${darkMode ? 'bg-secondary' : 'bg-light'}`}>
-                    <div className="row align-items-center">
-                      <div className="col-md-8">
-                        <strong>Selected: </strong>
-                        <Badge bg={levelInfo.color} className="me-2">{selectedEmployee.name}</Badge>
-                        <small className="text-muted">
-                          <Building className="me-1" />{selectedEmployee.department} | 
-                          Code: {selectedEmployee.employeeCode} | 
-                          Subordinates: {getDirectSubordinates(selectedEmployee.id).length}
-                        </small>
-                      </div>
-                      <div className="col-md-4">
-                        <Form.Group>
-                          <Form.Label>Allocation Count</Form.Label>
-                          <Form.Control
-                            type="number"
-                            value={selectedEmployee.allocationCount || 0}
-                            onChange={(e) => handleAllocationChange(level, e.target.value)}
-                            placeholder="Enter allocation"
-                            className={darkMode ? "bg-dark text-white" : ""}
-                            min="0"
-                          />
-                        </Form.Group>
-                      </div>
-                    </div>
-                    
-                    {/* Preview subordinates at next level */}
-                    {availableLevels.includes(level + 1) && level < 6 && (
-                      <div className="mt-2">
-                        <small className="text-muted">
-                          <strong>Will show subordinates at Level {level + 1}:</strong> {
-                            getSubordinatesAtLevel(selectedEmployee.id, level + 1).length
-                          } employees
-                        </small>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </Card.Body>
-        )}
-      </Card>
-    );
-  };
-
-  const totalSelectedAllocation = Object.values(selectedEmployees)
-    .reduce((sum, emp) => sum + (emp.allocationCount || 0), 0);
 
   return (
     <Modal 
       show={show} 
       onHide={onClose} 
-      size="xl" 
+      fullscreen
       centered 
       data-bs-theme={darkMode ? "dark" : "light"}
     >
-      <Modal.Header closeButton className={darkMode ? "bg-dark text-white" : ""}>
+      <Modal.Header
+        closeButton
+        className={darkMode ? "bg-dark text-white" : ""}
+        closeVariant={darkMode ? "white" : "dark"}
+        style={{
+          borderBottom: darkMode ? "1px solid #374151" : "1px solid #dee2e6",
+          position: "relative"
+        }}
+      >
         <Modal.Title>
           <Diagram3 className="me-2" />
-          6-Level Hierarchy Manager Assignment
+          Allocate Interns
         </Modal.Title>
+        {/* Ensure close icon is visible in both modes */}
+        <style>
+          {`
+            .btn-close {
+              filter: none !important;
+            }
+            .bg-dark .btn-close {
+              filter: invert(100%) brightness(200%) !important;
+            }
+          `}
+        </style>
       </Modal.Header>
-      
-      <Modal.Body className={darkMode ? "bg-dark text-white" : ""} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-        {error && (
-          <Alert variant="danger" className="mb-3">
-            <ExclamationCircle className="me-2" />
-            {error}
-          </Alert>
-        )}
-        
-        {/* Scheme Information */}
-        <div className={`mb-4 p-3 rounded ${darkMode ? 'bg-secondary' : 'bg-light'}`}>
-          <h6 className="mb-2">Scheme Details</h6>
-          <div className="row">
-            <div className="col-md-4">
-              <strong>Scheme:</strong> {scheme?.schemeName || 'N/A'}
-            </div>
-            <div className="col-md-4">
-              <strong>Total Allocation:</strong> 
-              <Badge bg="primary" className="ms-2">{scheme?.totalAllocation || 0}</Badge>
-            </div>
-            <div className="col-md-4">
-              <strong>Available Positions:</strong> 
-              <Badge bg="success" className="ms-2">{scheme?.totalEmptyCount || 0}</Badge>
-            </div>
-          </div>
-        </div>
-
-        {/* Employee System Connection Status */}
-        <Alert variant={employees.length > 0 ? "success" : "warning"} className="mb-4">
-          <Building className="me-2" />
-          Employee System Status: {employees.length > 0 ? 
-            `Connected - ${employees.length} employees loaded across ${availableLevels.length} levels (L1-L6)` : 
-            "No employee data available"
-          }
-          {employees.length > 0 && (
-            <div className="mt-1">
-              <small>
-                Levels available: {availableLevels.join(', ')} | 
-                Level distribution: {availableLevels.map(level => 
-                  `L${level}:${(employeeHierarchy[level] || []).length}`
-                ).join(', ')}
-              </small>
-            </div>
-          )}
-        </Alert>
-
-        {/* Search Box */}
-        <Form.Group className="mb-3">
-          <Form.Control
-            type="text"
-            placeholder="Search employees by name, code, department, or position..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={darkMode ? "bg-secondary text-white" : ""}
-          />
-        </Form.Group>
-
-        {employees.length === 0 ? (
-          <Alert variant="warning">
-            <ExclamationCircle className="me-2" />
-            No employee data available. Please ensure the Employee Management System is connected.
-          </Alert>
-        ) : (
-          <>
-            {/* Hierarchy Level Selectors (1-6) */}
-            {[1, 2, 3, 4, 5, 6].filter(level => availableLevels.includes(level)).map((level) => (
-              <LevelEmployeeSelector key={level} level={level} />
-            ))}
-
-            {/* Selection Summary */}
-            {Object.keys(selectedEmployees).length > 0 && (
-              <Card className={`mt-4 ${darkMode ? 'bg-secondary text-white border-secondary' : 'bg-light'}`}>
-                <Card.Header>
-                  <h6 className="mb-0">Selection Summary & Hierarchy Preview</h6>
-                </Card.Header>
-                <Card.Body>
-                  <div className="row mb-3">
-                    {Object.entries(selectedEmployees)
-                      .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                      .map(([level, employee]) => {
-                        const levelInfo = getLevelInfo(parseInt(level));
-                        return (
-                        <div key={level} className="col-md-6 col-lg-4 mb-3">
-                          <div className="text-center">
-                            <div className="h5 text-primary">{employee.allocationCount || 0}</div>
-                            <small>Level {level}: {employee.name}</small>
-                            <br />
-                            <Badge bg={levelInfo.color} className="mt-1">{employee.employeeCode}</Badge>
-                            <br />
-                            <small className="text-muted">
-                              {levelInfo.name} | {getDirectSubordinates(employee.id).length} subordinates
-                            </small>
+      <Modal.Body className={darkMode ? "bg-dark text-white" : ""} style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+        <Row>
+          {/* Left: Hierarchy & Allocation Info */}
+          <Col md={8}>
+            <Card className={darkMode ? "bg-dark text-white border-secondary" : "bg-light"}>
+              <Card.Body>
+                <div className="mb-4">
+                  <strong>Total Intern Allocation Available:</strong>{" "}
+                  <Badge bg="primary">{scheme?.totalAllocation}</Badge>
+                  <div>
+                    <strong>Allocated:</strong>{" "}
+                    <Badge bg="success">{allocatedCount}</Badge>
+                  </div>
+                  <div>
+                    <strong>Remaining:</strong>{" "}
+                    <Badge bg="info">{remainingAllocation}</Badge>
+                  </div>
+                  {allocationError && (
+                    <div className="text-danger mt-2">{allocationError}</div>
+                  )}
+                </div>
+                <div>
+                  <h5 className="mb-3 d-flex justify-content-between align-items-center">
+                    Organizational Hierarchy
+                    <Button
+                      variant={darkMode ? "outline-secondary" : "outline-primary"}
+                      size="sm"
+                      onClick={() => setCollapsed(c => !c)}
+                    >
+                      {collapsed ? "Expand All" : "Collapse All"}
+                    </Button>
+                  </h5>
+                  {/* Hierarchy/Empty State */}
+                  <div style={{ minHeight: 200 }}>
+                    {selectedManagers.length === 0 ? (
+                      <div className="text-center py-5 text-muted">
+                        <Diagram3 size={48} className="mb-3" />
+                        <h5>Select a manager or employee from the sidebar to view hierarchy</h5>
+                        <p>Click a button to preview their subordinate hierarchy.</p>
+                      </div>
+                    ) : collapsed ? (
+                      <div className="mb-4">
+                        {/* Only show the first selected manager's card, not the full hierarchy */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                          <div
+                            style={{
+                              ...getPositionStyles(selectedManagers[0].position, darkMode).card,
+                              minWidth: 200,
+                              maxWidth: 220,
+                              padding: 16,
+                              margin: "8px auto",
+                              boxShadow: darkMode
+                                ? "0 2px 4px rgba(0,0,0,0.25)"
+                                : "0 2px 4px rgba(0,0,0,0.05)",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}
+                          >
+                            <div style={{
+                              fontWeight: 600,
+                              fontSize: 13,
+                              marginBottom: 8,
+                              padding: "4px 12px",
+                              borderRadius: 4,
+                              ...getPositionStyles(selectedManagers[0].position, darkMode).badge,
+                              display: "inline-block"
+                            }}>
+                              {selectedManagers[0].position}
+                            </div>
+                            <div style={{ fontWeight: 600, fontSize: 15 }}>{selectedManagers[0].name}</div>
+                            <div style={{ fontSize: 13, color: darkMode ? "#94a3b8" : "#64748B", marginBottom: 4 }}>
+                              Service: {selectedManagers[0].employeeCode}
+                            </div>
+                            <div style={{ fontSize: 13, color: darkMode ? "#94a3b8" : "#64748B", marginBottom: 4 }}>
+                              Cost Center: {selectedManagers[0].costCenter}
+                            </div>
+                            <div style={{
+                              width: "100%",
+                              borderTop: darkMode ? "1px solid #374151" : "1px solid #E2E8F0",
+                              marginTop: 8,
+                              paddingTop: 8,
+                              display: "flex",
+                              justifyContent: "space-between"
+                            }}>
+                              <span style={{ color: "#22C55E", fontSize: 13 }}>
+                                Allocated: <strong>{selectedManagers[0].allocated ?? "—"}</strong>
+                              </span>
+                              <span style={{ color: "#3B82F6", fontSize: 13 }}>
+                                Available: <strong>{selectedManagers[0].available ?? "—"}</strong>
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      )})}
-                    <div className="col-md-6 col-lg-4 mb-3">
-                      <div className="text-center">
-                        <div className={`h4 ${
-                          totalSelectedAllocation > (scheme?.totalAllocation || 0)
-                            ? 'text-danger' : 'text-success'
-                        }`}>
-                          {totalSelectedAllocation}
+                      </div>
+                    ) : (
+                      selectedManagers.map(manager => (
+                        <div key={manager.id} className="mb-4">
+                          <HierarchyTree node={manager} darkMode={darkMode} collapsed={false} />
                         </div>
-                        <small>Total Allocation</small>
-                      </div>
-                    </div>
+                      ))
+                    )}
                   </div>
-                  
-                  {/* Progress Bar */}
-                  <div className="mt-3">
-                    <div className="progress">
-                      <div 
-                        className={`progress-bar ${
-                          totalSelectedAllocation > (scheme?.totalAllocation || 0)
-                            ? 'bg-danger' : 'bg-success'
-                        }`}
-                        role="progressbar"
-                        style={{
-                          width: `${Math.min(100, (totalSelectedAllocation / (scheme?.totalAllocation || 1)) * 100)}%`
-                        }}
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+          {/* Right: Sidebar */}
+          <Col md={4}>
+            <Card className={darkMode ? "bg-dark text-white border-secondary" : "bg-white"}>
+              <Card.Header>
+                <Search className="me-2" />
+                <strong>Search Manager/Employee</strong>
+              </Card.Header>
+              <Card.Body>
+                <InputGroup className="mb-3">
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter Service Number or Name"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className={darkMode ? "bg-secondary text-white" : ""}
+                  />
+                </InputGroup>
+                {filteredManagers.length > 0 && (
+                  <div className="mb-3">
+                    {filteredManagers.map(emp => (
+                      <Button
+                        key={emp.id}
+                        variant={selectedManagers.length === 1 && selectedManagers[0].id === emp.id ? "success" : "outline-primary"}
+                        className="w-100 mb-2 text-start"
+                        onClick={() => handleSelectManager(emp)}
+                        disabled={selectedManagers.length === 1 && selectedManagers[0].id === emp.id}
                       >
-                        {Math.round((totalSelectedAllocation / (scheme?.totalAllocation || 1)) * 100)}%
-                      </div>
-                    </div>
-                    <small className="text-muted">
-                      {totalSelectedAllocation} / {scheme?.totalAllocation || 0} allocated
-                    </small>
+                        <Badge bg="primary" className="me-2">{emp.employeeCode}</Badge>
+                        <strong>{emp.name}</strong>
+                        <span className="ms-2 text-muted" style={{ fontSize: 13 }}>
+                          {emp.position} | {emp.department}
+                        </span>
+                      </Button>
+                    ))}
                   </div>
-                </Card.Body>
-              </Card>
-            )}
-          </>
-        )}
+                )}
+              </Card.Body>
+            </Card>
+            {/* Selected Managers/Employees List */}
+            <Card className={`mt-3 ${darkMode ? "bg-dark text-white border-secondary" : "bg-white"}`}>
+              <Card.Header>
+                <strong>Selected for Intern Allocation ({selectedManagers.length})</strong>
+              </Card.Header>
+              <Card.Body>
+                {selectedManagers.length === 0 ? (
+                  <div className="text-muted text-center py-2">No selection made.</div>
+                ) : (
+                  selectedManagers.map(emp => (
+                    <div key={emp.id} className="mb-3 border-bottom pb-2">
+                      <div className="d-flex align-items-center justify-content-between">
+                        <div>
+                          <Badge bg="primary" className="me-2">{emp.employeeCode}</Badge>
+                          <strong>{emp.name}</strong>
+                        </div>
+                        <Button
+                          variant="outline-danger"
+                          size="sm"
+                          onClick={() => handleRemoveManager(emp.id)}
+                        >
+                          ×
+                        </Button>
+                      </div>
+                      <Form.Group className="mt-2">
+                        <Form.Label>Intern Allocation</Form.Label>
+                        <Form.Control
+                          type="number"
+                          min={1}
+                          max={scheme?.totalAllocation}
+                          value={allocationMap[emp.id] || 1}
+                          onChange={e => handleAllocationChange(emp.id, e.target.value)}
+                          className={darkMode ? "bg-secondary text-white" : ""}
+                        />
+                      </Form.Group>
+                    </div>
+                  ))
+                )}
+                <Button
+                  variant="primary"
+                  className="w-100 mt-3"
+                  disabled={selectedManagers.length === 0 || allocatedCount > scheme?.totalAllocation}
+                  onClick={handleAllocateInterns}
+                >
+                  {allocatedCount > scheme?.totalAllocation ? "Allocation Exceeded" : "Allocate Interns"}
+                </Button>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
       </Modal.Body>
-      
       <Modal.Footer className={darkMode ? "bg-dark text-white" : ""}>
-        <div className="d-flex justify-content-between w-100 align-items-center">
-          <small className="text-muted">
-            <i>6-Level Hierarchy System Active</i>
-          </small>
-          <div>
-            <Button 
-              variant={darkMode ? "outline-light" : "secondary"} 
-              onClick={onClose}
-              className="me-2"
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant={darkMode ? "outline-primary" : "primary"} 
-              onClick={handleSubmit}
-              disabled={loading || Object.keys(selectedEmployees).length === 0}
-            >
-              {loading ? (
-                <>
-                  <Spinner as="span" animation="border" size="sm" className="me-2" />
-                  Assigning...
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="me-2" /> 
-                  Assign Selected Managers
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+        <Button variant={darkMode ? "outline-light" : "secondary"} onClick={onClose}>
+          Cancel
+        </Button>
       </Modal.Footer>
     </Modal>
   );
