@@ -228,7 +228,7 @@ const ViewRelativeHierachy = ({
       <Modal.Header
         closeButton
         className={darkMode ? "bg-dark text-white" : ""}
-        closeVariant={darkMode ? "white" : undefined}
+        closeVariant={darkMode ? "white" : "dark"}
         style={{
           borderBottom: darkMode ? "1px solid #374151" : "1px solid #dee2e6",
           position: "relative"
@@ -238,16 +238,14 @@ const ViewRelativeHierachy = ({
           <Diagram3 className="me-2" />
           Manager Hierarchy View
         </Modal.Title>
-        {/* Ensure close icon is visible in light mode */}
+        {/* Ensure close icon is visible in both modes */}
         <style>
           {`
             .btn-close {
               filter: none !important;
-              color: #1E293B !important;
             }
             .bg-dark .btn-close {
-              filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(200%) contrast(101%) !important;
-              color: #fff !important;
+              filter: invert(100%) brightness(200%) !important;
             }
           `}
         </style>
