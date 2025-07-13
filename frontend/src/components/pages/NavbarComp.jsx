@@ -31,7 +31,9 @@ const NavbarComp = ({ toggleTheme, darkMode, scrolled }) => {
         let email = decoded.email;
         // If username is missing but email exists, extract username from email
         if ((!username || username === "") && email) {
-          username = email.split("@")[0];
+          // Extract the part before '@', then take the first part before '.' if present
+          let namePart = email.split("@")[0];
+          username = namePart.split(".")[0];
         }
         setUser({ id: decoded.id, username: username || "User", email: email || "user@example.com" });
       } catch (error) {
